@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy: #0b3d2e;
+  --color-navy-light: #14a673;
+  --color-gold: #e3a13c;
+  --color-gold-light: #f0c078;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+@layer components {
+  .input {
+    @apply w-full rounded-md border border-navy/20 px-3 py-2 text-sm text-navy focus:outline-none focus:ring-2 focus:ring-gold/50;
+  }
+}
