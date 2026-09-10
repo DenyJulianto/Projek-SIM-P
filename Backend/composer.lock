@@ -4,6 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
+<<<<<<< HEAD
     "content-hash": "e3e990baa2fbda59b14cec1428570d3b",
     "packages": [
         {
@@ -84,6 +85,11 @@
             "time": "2026-02-21T08:51:10+00:00"
         },
         {
+=======
+    "content-hash": "cda2add6397422fb1a2eb5b9207f1575",
+    "packages": [
+        {
+>>>>>>> 036bf153b2c0c589dda724a12f6959d2a5c711c1
             "name": "brick/math",
             "version": "0.18.0",
             "source": {
@@ -217,6 +223,7 @@
             "time": "2026-09-06T14:11:38+00:00"
         },
         {
+<<<<<<< HEAD
             "name": "composer/pcre",
             "version": "3.4.0",
             "source": {
@@ -370,6 +377,8 @@
             "time": "2025-08-20T19:15:30+00:00"
         },
         {
+=======
+>>>>>>> 036bf153b2c0c589dda724a12f6959d2a5c711c1
             "name": "dflydev/dot-access-data",
             "version": "v3.0.3",
             "source": {
@@ -445,6 +454,7 @@
             "time": "2024-07-08T12:26:09+00:00"
         },
         {
+<<<<<<< HEAD
             "name": "doctrine/deprecations",
             "version": "1.1.6",
             "source": {
@@ -493,6 +503,8 @@
             "time": "2026-02-07T07:09:04+00:00"
         },
         {
+=======
+>>>>>>> 036bf153b2c0c589dda724a12f6959d2a5c711c1
             "name": "doctrine/inflector",
             "version": "2.1.0",
             "source": {
@@ -660,6 +672,7 @@
             "time": "2024-02-05T11:56:58+00:00"
         },
         {
+<<<<<<< HEAD
             "name": "dompdf/dompdf",
             "version": "v3.1.6",
             "source": {
@@ -815,6 +828,8 @@
             "time": "2026-01-02T16:01:13+00:00"
         },
         {
+=======
+>>>>>>> 036bf153b2c0c589dda724a12f6959d2a5c711c1
             "name": "dragonmantank/cron-expression",
             "version": "v3.6.0",
             "source": {
@@ -946,6 +961,7 @@
             "time": "2025-03-06T22:45:56+00:00"
         },
         {
+<<<<<<< HEAD
             "name": "facade/ignition-contracts",
             "version": "1.0.2",
             "source": {
@@ -999,6 +1015,8 @@
             "time": "2020-10-16T08:27:54+00:00"
         },
         {
+=======
+>>>>>>> 036bf153b2c0c589dda724a12f6959d2a5c711c1
             "name": "fruitcake/php-cors",
             "version": "v1.4.0",
             "source": {
@@ -1832,6 +1850,7 @@
             "time": "2026-08-20T12:55:36+00:00"
         },
         {
+<<<<<<< HEAD
             "name": "laravel/sanctum",
             "version": "v4.3.3",
             "source": {
@@ -1895,6 +1914,8 @@
             "time": "2026-06-23T18:26:55+00:00"
         },
         {
+=======
+>>>>>>> 036bf153b2c0c589dda724a12f6959d2a5c711c1
             "name": "laravel/serializable-closure",
             "version": "v2.0.16",
             "source": {
@@ -2584,6 +2605,7 @@
             "time": "2026-03-08T20:05:35+00:00"
         },
         {
+<<<<<<< HEAD
             "name": "maatwebsite/excel",
             "version": "4.0.2",
             "source": {
@@ -2925,6 +2947,8 @@
             "time": "2026-08-18T06:18:41+00:00"
         },
         {
+=======
+>>>>>>> 036bf153b2c0c589dda724a12f6959d2a5c711c1
             "name": "monolog/monolog",
             "version": "3.12.0",
             "source": {
@@ -3437,6 +3461,7 @@
             "time": "2026-02-16T23:10:27+00:00"
         },
         {
+<<<<<<< HEAD
             "name": "phpdocumentor/reflection-common",
             "version": "2.2.0",
             "source": {
@@ -3657,6 +3682,8 @@
             "time": "2026-07-12T19:17:39+00:00"
         },
         {
+=======
+>>>>>>> 036bf153b2c0c589dda724a12f6959d2a5c711c1
             "name": "phpoption/phpoption",
             "version": "1.10.0",
             "source": {
@@ -3732,6 +3759,7 @@
             "time": "2026-08-24T00:54:40+00:00"
         },
         {
+<<<<<<< HEAD
             "name": "phpstan/phpdoc-parser",
             "version": "2.3.5",
             "source": {
@@ -3779,6 +3807,8 @@
             "time": "2026-08-31T16:05:28+00:00"
         },
         {
+=======
+>>>>>>> 036bf153b2c0c589dda724a12f6959d2a5c711c1
             "name": "psr/clock",
             "version": "1.0.0",
             "source": {
@@ -4424,6 +4454,7 @@
             "time": "2026-06-18T03:57:49+00:00"
         },
         {
+<<<<<<< HEAD
             "name": "sabberworm/php-css-parser",
             "version": "v9.4.0",
             "source": {
@@ -5377,6 +5408,8 @@
             "time": "2025-02-25T13:12:44+00:00"
         },
         {
+=======
+>>>>>>> 036bf153b2c0c589dda724a12f6959d2a5c711c1
             "name": "symfony/clock",
             "version": "v7.4.8",
             "source": {
@@ -8046,6 +8079,7 @@
             "time": "2026-08-30T20:10:52+00:00"
         },
         {
+<<<<<<< HEAD
             "name": "thecodingmachine/safe",
             "version": "v3.4.0",
             "source": {
@@ -8189,6 +8223,8 @@
             "time": "2026-02-04T18:08:13+00:00"
         },
         {
+=======
+>>>>>>> 036bf153b2c0c589dda724a12f6959d2a5c711c1
             "name": "tijsverkoyen/css-to-inline-styles",
             "version": "v2.4.0",
             "source": {
@@ -10713,5 +10749,9 @@
         "php": "^8.3"
     },
     "platform-dev": {},
+<<<<<<< HEAD
     "plugin-api-version": "2.9.0"
+=======
+    "plugin-api-version": "2.6.0"
+>>>>>>> 036bf153b2c0c589dda724a12f6959d2a5c711c1
 }

@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+<<<<<<< HEAD
         User::updateOrCreate(
             ['email' => config('sim.super_admin.email')],
             [
@@ -24,5 +25,13 @@ class DatabaseSeeder extends Seeder
                 'email_verified_at' => now(),
             ]
         );
+=======
+        // User::factory(10)->create();
+
+        User::factory()->create([
+            'name' => 'Test User',
+            'email' => 'test@example.com',
+        ]);
+>>>>>>> 036bf153b2c0c589dda724a12f6959d2a5c711c1
     }
 }
