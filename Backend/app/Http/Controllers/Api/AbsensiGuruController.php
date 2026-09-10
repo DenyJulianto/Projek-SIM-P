@@ -5,25 +5,21 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Absensi;
+use App\Models\AbsensiGuru;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
-class AbsensiController extends Controller
+class AbsensiGuruController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $absensi = QueryBuilder::for(Absensi::class)
-            ->allowedFilters(
-                AllowedFilter::exact('siswa_id'),
-                AllowedFilter::exact('kelas_id'),
-                'status',
-                'tanggal',
-            )
+        $absensi = QueryBuilder::for(AbsensiGuru::class)
+            ->allowedFilters(AllowedFilter::exact('guru_id'), 'status', 'tanggal')
             ->allowedSorts('tanggal', 'created_at')
-            ->allowedIncludes('siswa', 'kelas')
+            ->allowedIncludes('guru')
+            ->orderByDesc('tanggal')
             ->paginate($request->integer('per_page', 15));
 
         return response()->json($absensi);
@@ -33,9 +29,8 @@ class AbsensiController extends Controller
     {
         $tanggal = $request->date('tanggal') ?? now();
 
-        $counts = Absensi::query()
+        $counts = AbsensiGuru::query()
             ->whereDate('tanggal', $tanggal)
-            ->when($request->filled('kelas_id'), fn ($q) => $q->where('kelas_id', $request->integer('kelas_id')))
             ->selectRaw('status, count(*) as total')
             ->groupBy('status')
             ->pluck('total', 'status');
@@ -55,63 +50,55 @@ class AbsensiController extends Controller
         $data = $request->validate([
             'tanggal' => ['required', 'date'],
             'items' => ['required', 'array', 'min:1'],
-            'items.*.siswa_id' => ['required', 'exists:siswa,id'],
-            'items.*.kelas_id' => ['required', 'exists:kelas,id'],
+            'items.*.guru_id' => ['required', 'exists:guru,id'],
             'items.*.status' => ['required', 'in:hadir,izin,sakit,alpha'],
             'items.*.keterangan' => ['nullable', 'string'],
         ]);
 
         foreach ($data['items'] as $item) {
-            $absensi = Absensi::where('siswa_id', $item['siswa_id'])
+            $absensi = AbsensiGuru::where('guru_id', $item['guru_id'])
                 ->whereDate('tanggal', $data['tanggal'])
-                ->first() ?? new Absensi(['siswa_id' => $item['siswa_id'], 'tanggal' => $data['tanggal']]);
+                ->first() ?? new AbsensiGuru(['guru_id' => $item['guru_id'], 'tanggal' => $data['tanggal']]);
 
             $absensi->fill([
-                'kelas_id' => $item['kelas_id'],
                 'status' => $item['status'],
                 'keterangan' => $item['keterangan'] ?? null,
             ])->save();
         }
 
-        return response()->json(['message' => 'Absensi siswa berhasil disimpan.']);
+        return response()->json(['message' => 'Absensi guru berhasil disimpan.']);
     }
 
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'siswa_id' => ['required', 'exists:siswa,id'],
-            'kelas_id' => ['required', 'exists:kelas,id'],
+            'guru_id' => ['required', 'exists:guru,id'],
             'tanggal' => ['required', 'date'],
             'status' => ['required', 'in:hadir,izin,sakit,alpha'],
             'keterangan' => ['nullable', 'string'],
         ]);
 
-        $absensi = Absensi::create($data);
+        $absensi = AbsensiGuru::create($data);
 
         return response()->json($absensi, 201);
     }
 
-    public function show(Absensi $absensi): JsonResponse
-    {
-        return response()->json($absensi->load('siswa', 'kelas'));
-    }
-
-    public function update(Request $request, Absensi $absensi): JsonResponse
+    public function update(Request $request, AbsensiGuru $absensiGuru): JsonResponse
     {
         $data = $request->validate([
             'status' => ['sometimes', 'in:hadir,izin,sakit,alpha'],
             'keterangan' => ['nullable', 'string'],
         ]);
 
-        $absensi->update($data);
+        $absensiGuru->update($data);
 
-        return response()->json($absensi);
+        return response()->json($absensiGuru);
     }
 
-    public function destroy(Absensi $absensi): JsonResponse
+    public function destroy(AbsensiGuru $absensiGuru): JsonResponse
     {
-        $absensi->delete();
+        $absensiGuru->delete();
 
-        return response()->json(['message' => 'Data absensi berhasil dihapus.']);
+        return response()->json(['message' => 'Data absensi guru berhasil dihapus.']);
     }
 }

@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import PasswordInput from '../components/PasswordInput'
 import { useAuth } from '../lib/AuthContext'
+import { api } from '../lib/api'
 
 export default function Login() {
   const { login } = useAuth()
@@ -10,6 +12,11 @@ export default function Login() {
   const [remember, setRemember] = useState(true)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [background, setBackground] = useState('')
+
+  useEffect(() => {
+    api.getProfil().then((p) => setBackground(p.auth_background || '')).catch(() => {})
+  }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -17,7 +24,7 @@ export default function Login() {
     setError('')
     try {
       await login(email, password, remember)
-      navigate('/')
+      navigate('/dashboard')
     } catch (err) {
       setError(err.message)
     } finally {
@@ -26,7 +33,12 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-300 via-emerald-600 to-navy flex items-center justify-center px-4 py-12">
+    <div
+      className={`min-h-screen flex items-center justify-center px-4 py-12 ${
+        background ? 'bg-cover bg-center' : 'bg-gradient-to-br from-teal-300 via-emerald-600 to-navy'
+      }`}
+      style={background ? { backgroundImage: `url(${background})` } : undefined}
+    >
       <div className="w-full max-w-3xl bg-white rounded-[2rem] shadow-2xl shadow-navy/10 overflow-hidden grid md:grid-cols-2">
         <div className="bg-gradient-to-br from-navy via-navy to-navy-light text-white p-10 flex flex-col items-center text-center justify-between">
           <div className="flex flex-col items-center">
@@ -73,13 +85,11 @@ export default function Login() {
               placeholder="Email..............."
               className="w-full bg-emerald-50 rounded-full px-5 py-3 text-sm text-navy placeholder-navy/40 focus:outline-none focus:ring-2 focus:ring-navy-light/50"
             />
-            <input
-              type="password"
+            <PasswordInput
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password..............."
-              className="w-full bg-emerald-50 rounded-full px-5 py-3 text-sm text-navy placeholder-navy/40 focus:outline-none focus:ring-2 focus:ring-navy-light/50"
             />
 
             <div className="flex items-center justify-between text-xs px-1">

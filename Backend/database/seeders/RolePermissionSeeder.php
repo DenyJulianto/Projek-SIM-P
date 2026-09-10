@@ -51,6 +51,24 @@ class RolePermissionSeeder extends Seeder
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $rolePermissions = [
+            'Admin Sekolah' => [
+                'dashboard.view-all',
+                'kurikulum.manage',
+                'pegawai.manage',
+                'siswa.manage',
+                'nilai.manage',
+                'jadwal.manage',
+                'absensi-kelas.manage',
+                'humas.informasi',
+                'humas.pengumuman',
+                'humas.kegiatan',
+                'laporan.view-all',
+                'pengguna.manage',
+                'sarpras.inventaris',
+                'monitoring-guru.absensi-guru',
+                'monitoring-guru.jadwal-mengajar',
+                'persuratan.manage',
+            ],
             'Kepala Sekolah' => [
                 'dashboard.view-all',
                 'rapor.approve',

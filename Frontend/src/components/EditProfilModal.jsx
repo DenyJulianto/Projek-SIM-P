@@ -3,10 +3,17 @@ import { api } from '../lib/api'
 
 export default function EditProfilModal({ profil, onClose, onSaved }) {
   const [form, setForm] = useState({
+    nama_sekolah: profil?.nama_sekolah || '',
+    jenjang: profil?.jenjang || '',
+    alamat: profil?.alamat || '',
+    telepon: profil?.telepon || '',
+    email: profil?.email || '',
+    logo: profil?.logo || '',
     visi: profil?.visi || '',
     misi: profil?.misi || '',
     sambutan_kepala_sekolah: profil?.sambutan_kepala_sekolah || '',
     hero_image: profil?.hero_image || '',
+    auth_background: profil?.auth_background || '',
     facebook: profil?.sosial_media?.facebook || '',
     instagram: profil?.sosial_media?.instagram || '',
     youtube: profil?.sosial_media?.youtube || '',
@@ -40,6 +47,67 @@ export default function EditProfilModal({ profil, onClose, onSaved }) {
         {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <p className="text-xs font-bold text-navy/40 uppercase tracking-wide pt-1">
+            Identitas Sekolah
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Nama Sekolah">
+              <input
+                type="text"
+                value={form.nama_sekolah}
+                onChange={(e) => update('nama_sekolah', e.target.value)}
+                className="input"
+              />
+            </Field>
+            <Field label="Jenjang">
+              <input
+                type="text"
+                value={form.jenjang}
+                onChange={(e) => update('jenjang', e.target.value)}
+                className="input"
+                placeholder="SD / SMP / SMA"
+              />
+            </Field>
+          </div>
+          <Field label="Alamat">
+            <textarea
+              rows={2}
+              value={form.alamat}
+              onChange={(e) => update('alamat', e.target.value)}
+              className="input"
+            />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Telepon">
+              <input
+                type="text"
+                value={form.telepon}
+                onChange={(e) => update('telepon', e.target.value)}
+                className="input"
+              />
+            </Field>
+            <Field label="Email">
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => update('email', e.target.value)}
+                className="input"
+              />
+            </Field>
+          </div>
+          <Field label="URL Logo">
+            <input
+              type="text"
+              value={form.logo}
+              onChange={(e) => update('logo', e.target.value)}
+              className="input"
+              placeholder="https://..."
+            />
+          </Field>
+
+          <p className="text-xs font-bold text-navy/40 uppercase tracking-wide pt-2">
+            Konten Landing Page
+          </p>
           <Field label="Visi">
             <textarea
               rows={2}
@@ -99,6 +167,19 @@ export default function EditProfilModal({ profil, onClose, onSaved }) {
               />
             </Field>
           </div>
+
+          <p className="text-xs font-bold text-navy/40 uppercase tracking-wide pt-2">
+            Halaman Login &amp; Daftar
+          </p>
+          <Field label="URL Gambar Background">
+            <input
+              type="text"
+              value={form.auth_background}
+              onChange={(e) => update('auth_background', e.target.value)}
+              className="input"
+              placeholder="https://... (kosongkan untuk pakai gradasi default)"
+            />
+          </Field>
 
           <div className="flex justify-end gap-3 pt-2">
             <button

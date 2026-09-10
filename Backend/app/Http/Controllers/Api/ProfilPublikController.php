@@ -33,6 +33,7 @@ class ProfilPublikController extends Controller
             'misi' => $settings->misi,
             'sambutan_kepala_sekolah' => $settings->sambutan_kepala_sekolah,
             'hero_image' => $settings->hero_image,
+            'auth_background' => $settings->auth_background,
             'sosial_media' => [
                 'facebook' => $settings->facebook,
                 'instagram' => $settings->instagram,
@@ -44,18 +45,35 @@ class ProfilPublikController extends Controller
     public function updateProfil(Request $request, ProfilSekolahSettings $settings): JsonResponse
     {
         $data = $request->validate([
+            'nama_sekolah' => ['sometimes', 'string', 'max:255'],
+            'jenjang' => ['nullable', 'string', 'max:20'],
+            'alamat' => ['nullable', 'string'],
+            'telepon' => ['nullable', 'string', 'max:20'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'logo' => ['nullable', 'string'],
             'visi' => ['nullable', 'string'],
             'misi' => ['nullable', 'string'],
             'sambutan_kepala_sekolah' => ['nullable', 'string'],
             'hero_image' => ['nullable', 'string'],
+            'auth_background' => ['nullable', 'string'],
             'facebook' => ['nullable', 'string', 'max:255'],
             'instagram' => ['nullable', 'string', 'max:255'],
             'youtube' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $settings->fill($data)->save();
+        $sekolahFields = array_intersect_key(
+            $data,
+            array_flip(['nama_sekolah', 'jenjang', 'alamat', 'telepon', 'email', 'logo'])
+        );
 
-        return response()->json($settings);
+        if ($sekolahFields !== []) {
+            tenant()->update($sekolahFields);
+        }
+
+        $settingsFields = array_diff_key($data, $sekolahFields);
+        $settings->fill($settingsFields)->save();
+
+        return $this->profil($settings);
     }
 
     public function pengumuman(Request $request): JsonResponse

@@ -10,6 +10,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -51,9 +53,15 @@ class AuthController extends Controller
 
         $user = User::where('email', $credentials['email'])->first();
 
-        if (! $user || ! Auth::validate($credentials)) {
+        if (! $user || ! Auth::guard('web')->validate($credentials)) {
             throw ValidationException::withMessages([
                 'email' => ['Email atau password salah.'],
+            ]);
+        }
+
+        if (Schema::hasColumn('users', 'is_active') && ! $user->is_active) {
+            throw ValidationException::withMessages([
+                'email' => ['Akun ini telah dinonaktifkan.'],
             ]);
         }
 
@@ -78,6 +86,65 @@ class AuthController extends Controller
     }
 
     /**
+     * Update profil akun sendiri (nama, email, ganti password). Terpisah
+     * dari UserController::update yang butuh permission pengguna.manage —
+     * ini bisa dipakai siapa pun yang sudah login untuk akunnya sendiri.
+     */
+    public function updateMe(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'current_password' => ['required_with:password', 'string'],
+            'password' => ['nullable', 'string', 'min:8'],
+        ]);
+
+        if (! empty($data['password'])) {
+            if (! Auth::guard('web')->validate(['email' => $user->email, 'password' => $data['current_password']])) {
+                throw ValidationException::withMessages([
+                    'current_password' => ['Password saat ini salah.'],
+                ]);
+            }
+
+            $user->password = $data['password'];
+        }
+
+        $user->name = $data['name'];
+        $user->email = $data['email'];
+        $user->phone = $data['phone'] ?? null;
+        $user->save();
+
+        return response()->json($this->presentUser($user));
+    }
+
+    /**
+     * Ganti foto profil akun sendiri. Disimpan di disk 'public' tenant
+     * (bukan lewat symlink `public/storage` bawaan Laravel, karena tiap
+     * tenant punya direktori storage terpisah) dan disajikan lewat route
+     * AvatarController::show.
+     */
+    public function updateAvatar(Request $request): JsonResponse
+    {
+        $request->validate([
+            'avatar' => ['required', 'image', 'max:2048'],
+        ]);
+
+        $user = $request->user();
+
+        if ($user->avatar) {
+            Storage::disk('public')->delete($user->avatar);
+        }
+
+        $user->avatar = $request->file('avatar')->store('avatars', 'public');
+        $user->save();
+
+        return response()->json($this->presentUser($user));
+    }
+
+    /**
      * Sertakan daftar nama permission efektif (langsung + via role) supaya
      * frontend bisa menentukan menu/aksi apa saja yang boleh ditampilkan
      * tanpa perlu memanggil endpoint tambahan.
@@ -87,6 +154,10 @@ class AuthController extends Controller
         if (Schema::hasTable('roles')) {
             $user->load('roles');
             $user->setAttribute('all_permissions', $user->getAllPermissions()->pluck('name')->values());
+        }
+
+        if (Schema::hasColumn('users', 'avatar')) {
+            $user->setAttribute('avatar_url', $user->avatar ? "/avatar/{$user->avatar}" : null);
         }
 
         return $user;

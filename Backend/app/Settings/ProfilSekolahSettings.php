@@ -16,6 +16,8 @@ class ProfilSekolahSettings extends Settings
 
     public ?string $hero_image;
 
+    public ?string $auth_background;
+
     public ?string $facebook;
 
     public ?string $instagram;
