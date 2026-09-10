@@ -7,7 +7,6 @@
     "license": "MIT",
     "require": {
         "php": "^8.3",
-<<<<<<< HEAD
         "barryvdh/laravel-dompdf": "^3.1",
         "laravel/framework": "^13.17",
         "laravel/sanctum": "^4.0",
@@ -19,10 +18,6 @@
         "spatie/laravel-query-builder": "^7.3",
         "spatie/laravel-settings": "^3.9",
         "stancl/tenancy": "*"
-=======
-        "laravel/framework": "^13.17",
-        "laravel/tinker": "^3.0"
->>>>>>> 036bf153b2c0c589dda724a12f6959d2a5c711c1
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
