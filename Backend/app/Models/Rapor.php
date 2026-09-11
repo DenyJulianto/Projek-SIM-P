@@ -13,7 +13,7 @@ class Rapor extends Model
 
     protected $fillable = [
         'siswa_id', 'semester', 'tahun_ajaran', 'status',
-        'diajukan_oleh', 'disahkan_oleh', 'catatan', 'tanggal_keputusan',
+        'diajukan_oleh', 'disahkan_oleh', 'catatan', 'catatan_wali_kelas', 'tanggal_keputusan',
     ];
 
     protected function casts(): array

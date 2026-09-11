@@ -35,8 +35,12 @@ export function AuthProvider({ children }) {
     return user
   }
 
-  async function register(name, email, password, passwordConfirmation, remember = true) {
-    const { user, token } = await api.register(name, email, password, passwordConfirmation)
+  async function register(email, password, passwordConfirmation) {
+    return api.register(email, password, passwordConfirmation)
+  }
+
+  async function verifyEmail(email, code, remember = true) {
+    const { user, token } = await api.verifyEmail(email, code)
     if (remember) {
       localStorage.setItem('token', token)
     } else {
@@ -44,6 +48,10 @@ export function AuthProvider({ children }) {
     }
     setUser(user)
     return user
+  }
+
+  async function resendVerificationCode(email) {
+    return api.resendVerificationCode(email)
   }
 
   async function logout() {
@@ -62,7 +70,19 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, setUser, loading, login, register, logout, hasPermission }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        setUser,
+        loading,
+        login,
+        register,
+        verifyEmail,
+        resendVerificationCode,
+        logout,
+        hasPermission,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )

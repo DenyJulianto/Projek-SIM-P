@@ -4,7 +4,7 @@ const BULAN = [
 ]
 const HARI = ['M', 'S', 'S', 'R', 'K', 'J', 'S']
 
-export default function MiniCalendar() {
+export default function MiniCalendar({ tone = 'navy' }) {
   const today = new Date()
   const year = today.getFullYear()
   const month = today.getMonth()
@@ -12,17 +12,24 @@ export default function MiniCalendar() {
   const daysInMonth = new Date(year, month + 1, 0).getDate()
   const cells = [...Array(firstDay).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]
 
+  const isBlue = tone === 'blue'
+  const titleClass = isBlue ? 'text-slate-700' : 'text-navy'
+  const subClass = isBlue ? 'text-slate-400' : 'text-navy/50'
+  const headClass = isBlue ? 'text-slate-400' : 'text-navy/40'
+  const todayClass = isBlue ? 'bg-blue-600 text-white font-bold' : 'bg-navy text-white font-bold'
+  const dayClass = isBlue ? 'text-slate-600 hover:bg-blue-50' : 'text-navy/70 hover:bg-gold-light/30'
+
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-base font-extrabold text-navy">Kalender</h2>
-        <p className="text-sm text-navy/50">
+        <h2 className={`text-base font-extrabold ${titleClass}`}>Kalender</h2>
+        <p className={`text-sm ${subClass}`}>
           {BULAN[month]} {year}
         </p>
       </div>
       <div className="grid grid-cols-7 gap-y-1 text-center">
         {HARI.map((h, i) => (
-          <div key={i} className="text-[11px] font-semibold text-navy/40 py-0.5">
+          <div key={i} className={`text-[11px] font-semibold py-0.5 ${headClass}`}>
             {h}
           </div>
         ))}
@@ -30,11 +37,7 @@ export default function MiniCalendar() {
           <div
             key={i}
             className={`text-xs rounded-full h-7 w-7 mx-auto flex items-center justify-center ${
-              day === today.getDate()
-                ? 'bg-navy text-white font-bold'
-                : day
-                  ? 'text-navy/70 hover:bg-gold-light/30'
-                  : ''
+              day === today.getDate() ? todayClass : day ? dayClass : ''
             }`}
           >
             {day || ''}

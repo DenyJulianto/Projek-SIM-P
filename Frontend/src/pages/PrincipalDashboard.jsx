@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import { useAuth } from '../lib/AuthContext'
 import AnggaranView from './principal/AnggaranView'
 import ERaporView from './principal/ERaporView'
@@ -53,6 +54,7 @@ const MENU_GROUPS = [
 export default function PrincipalDashboard() {
   const { user, logout } = useAuth()
   const [view, setView] = useState('home')
+  const [confirmingLogout, setConfirmingLogout] = useState(false)
 
   return (
     <div className="h-screen bg-white flex overflow-hidden">
@@ -107,7 +109,7 @@ export default function PrincipalDashboard() {
         </button>
 
         <button
-          onClick={logout}
+          onClick={() => setConfirmingLogout(true)}
           className="flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium text-white/60 hover:bg-white/10 hover:text-white transition-colors mt-1"
         >
           <LogoutIcon className="h-4.5 w-4.5 shrink-0" />
@@ -129,6 +131,10 @@ export default function PrincipalDashboard() {
         {view === 'laporan' && <LaporanKepsek />}
         {view === 'profile' && <MyProfile onBack={() => setView('home')} />}
       </main>
+
+      {confirmingLogout && (
+        <LogoutConfirmModal onClose={() => setConfirmingLogout(false)} onConfirm={logout} />
+      )}
     </div>
   )
 }

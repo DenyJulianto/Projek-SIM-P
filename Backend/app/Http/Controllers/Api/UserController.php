@@ -63,6 +63,10 @@ class UserController extends Controller
             'password' => $data['password'],
         ]);
 
+        // Akun dibuat langsung oleh admin sudah tepercaya — tidak perlu
+        // alur verifikasi email seperti registrasi mandiri.
+        $user->forceFill(['email_verified_at' => now()])->save();
+
         $user->syncRoles($data['roles'] ?? []);
 
         activity()

@@ -12,6 +12,18 @@ use Illuminate\Http\Request;
 
 class PembayaranController extends Controller
 {
+    public function index(Request $request): JsonResponse
+    {
+        $pembayaran = Pembayaran::query()
+            ->with(['tagihan.siswa:id,nama,kelas_id'])
+            ->when($request->filled('dari_tanggal'), fn ($q) => $q->where('tanggal_bayar', '>=', $request->string('dari_tanggal')))
+            ->when($request->filled('sampai_tanggal'), fn ($q) => $q->where('tanggal_bayar', '<=', $request->string('sampai_tanggal')))
+            ->orderByDesc('tanggal_bayar')
+            ->paginate($request->integer('per_page', 15));
+
+        return response()->json($pembayaran);
+    }
+
     public function store(Request $request, Tagihan $tagihan): JsonResponse
     {
         $data = $request->validate([

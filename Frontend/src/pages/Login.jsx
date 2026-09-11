@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import CompleteNameForm from '../components/CompleteNameForm'
 import PasswordInput from '../components/PasswordInput'
 import { useAuth } from '../lib/AuthContext'
 import { api } from '../lib/api'
 
 export default function Login() {
-  const { login } = useAuth()
+  const { login, setUser } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -13,6 +14,7 @@ export default function Login() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [background, setBackground] = useState('')
+  const [needsName, setNeedsName] = useState(false)
 
   useEffect(() => {
     api.getProfil().then((p) => setBackground(p.auth_background || '')).catch(() => {})
@@ -23,13 +25,22 @@ export default function Login() {
     setLoading(true)
     setError('')
     try {
-      await login(email, password, remember)
-      navigate('/dashboard')
+      const loggedInUser = await login(email, password, remember)
+      if (!loggedInUser.name) {
+        setNeedsName(true)
+      } else {
+        navigate('/dashboard')
+      }
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
     }
+  }
+
+  function handleNameCompleted(updatedUser) {
+    setUser(updatedUser)
+    navigate('/dashboard')
   }
 
   return (
@@ -65,75 +76,81 @@ export default function Login() {
         </div>
 
         <div className="p-8 sm:p-10 flex flex-col justify-center">
-          <h1 className="text-3xl font-extrabold text-navy uppercase">Masuk</h1>
-          <p className="text-navy/50 text-sm mt-1 mb-6">
-            Masuk ke akun Anda untuk melanjutkan
-          </p>
+          {needsName ? (
+            <CompleteNameForm user={{ email }} onDone={handleNameCompleted} />
+          ) : (
+            <>
+              <h1 className="text-3xl font-extrabold text-navy uppercase">Masuk</h1>
+              <p className="text-navy/50 text-sm mt-1 mb-6">
+                Masuk ke akun Anda untuk melanjutkan
+              </p>
 
-          {error && (
-            <p className="text-red-600 bg-red-50 border border-red-200 rounded-lg text-sm text-center py-2 px-3 mb-4">
-              {error}
-            </p>
-          )}
+              {error && (
+                <p className="text-red-600 bg-red-50 border border-red-200 rounded-lg text-sm text-center py-2 px-3 mb-4">
+                  {error}
+                </p>
+              )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email..............."
-              className="w-full bg-emerald-50 rounded-full px-5 py-3 text-sm text-navy placeholder-navy/40 focus:outline-none focus:ring-2 focus:ring-navy-light/50"
-            />
-            <PasswordInput
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password..............."
-            />
-
-            <div className="flex items-center justify-between text-xs px-1">
-              <label className="flex items-center gap-2 text-navy/60 cursor-pointer select-none">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <input
-                  type="checkbox"
-                  checked={remember}
-                  onChange={(e) => setRemember(e.target.checked)}
-                  className="h-3.5 w-3.5 rounded accent-navy-light cursor-pointer"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email..............."
+                  className="w-full bg-emerald-50 rounded-full px-5 py-3 text-sm text-navy placeholder-navy/40 focus:outline-none focus:ring-2 focus:ring-navy-light/50"
                 />
-                Ingat saya
-              </label>
-              <button
-                type="button"
-                onClick={() =>
-                  window.alert('Silakan hubungi admin sekolah untuk mereset password Anda.')
-                }
-                className="text-navy/60 hover:text-navy hover:underline"
-              >
-                Lupa password?
-              </button>
-            </div>
+                <PasswordInput
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password..............."
+                />
 
-            <div className="flex justify-center pt-2">
-              <button
-                type="submit"
-                disabled={loading}
-                className="bg-navy-light hover:bg-emerald-700 text-white font-bold tracking-wide px-10 py-2.5 rounded-full transition-colors disabled:opacity-50"
-              >
-                {loading ? 'MEMPROSES...' : 'MASUK'}
-              </button>
-            </div>
-          </form>
+                <div className="flex items-center justify-between text-xs px-1">
+                  <label className="flex items-center gap-2 text-navy/60 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={remember}
+                      onChange={(e) => setRemember(e.target.checked)}
+                      className="h-3.5 w-3.5 rounded accent-navy-light cursor-pointer"
+                    />
+                    Ingat saya
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      window.alert('Silakan hubungi admin sekolah untuk mereset password Anda.')
+                    }
+                    className="text-navy/60 hover:text-navy hover:underline"
+                  >
+                    Lupa password?
+                  </button>
+                </div>
 
-          <p className="text-center text-sm text-navy/50 mt-6">
-            Belum punya akun?{' '}
-            <Link to="/register" className="text-navy-light font-semibold hover:underline uppercase">
-              Daftar
-            </Link>
-          </p>
+                <div className="flex justify-center pt-2">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="bg-navy-light hover:bg-emerald-700 text-white font-bold tracking-wide px-10 py-2.5 rounded-full transition-colors disabled:opacity-50"
+                  >
+                    {loading ? 'MEMPROSES...' : 'MASUK'}
+                  </button>
+                </div>
+              </form>
 
-          <a href="/" className="block text-center text-xs text-navy/40 hover:text-navy mt-3">
-            ← Kembali ke Beranda
-          </a>
+              <p className="text-center text-sm text-navy/50 mt-6">
+                Belum punya akun?{' '}
+                <Link to="/register" className="text-navy-light font-semibold hover:underline uppercase">
+                  Daftar
+                </Link>
+              </p>
+
+              <a href="/" className="block text-center text-xs text-navy/40 hover:text-navy mt-3">
+                ← Kembali ke Beranda
+              </a>
+            </>
+          )}
         </div>
       </div>
     </div>

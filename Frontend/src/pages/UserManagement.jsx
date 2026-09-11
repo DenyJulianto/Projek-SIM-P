@@ -4,7 +4,7 @@ import ConfirmStatusModal from '../components/ConfirmStatusModal'
 import UserDetailModal from '../components/UserDetailModal'
 import UserFormModal from '../components/UserFormModal'
 import { useAuth } from '../lib/AuthContext'
-import { api } from '../lib/api'
+import { api, BASE_URL } from '../lib/api'
 import { roleBadgeClass } from '../lib/roleColors'
 
 export default function UserManagement({ onBack }) {
@@ -190,7 +190,7 @@ export default function UserManagement({ onBack }) {
                         <div className="h-8 w-8 rounded-full bg-gradient-to-br from-navy to-navy-light text-white flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden">
                           {u.avatar_url ? (
                             <img
-                              src={`${import.meta.env.VITE_API_BASE_URL}${u.avatar_url}`}
+                              src={`${BASE_URL}${u.avatar_url}`}
                               alt={u.name}
                               className="h-full w-full object-cover"
                             />

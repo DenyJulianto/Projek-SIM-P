@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -21,27 +22,99 @@ class AuthController extends Controller
      * Akun baru tidak diberi role/permission apa pun — akses ke fitur
      * internal (data siswa, nilai, dsb.) baru diberikan setelah staf
      * sekolah menetapkan role yang sesuai.
+     *
+     * Cukup email + password — nama lengkap belum ditanyakan di sini
+     * (kolom 'name' diisi string kosong sebagai penanda "belum
+     * dilengkapi"), baru diminta sekali lewat updateMe() setelah kode
+     * verifikasi dikonfirmasi.
+     *
+     * Akun dibuat dalam status belum terverifikasi (email_verified_at
+     * null) dan tidak langsung diberi token. Kode verifikasi 6 digit
+     * dikirim ke email; token API baru diterbitkan setelah kode itu
+     * dikonfirmasi lewat endpoint verifyEmail().
      */
     public function register(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
         $user = User::create([
-            'name' => $data['name'],
+            'name' => '',
             'email' => $data['email'],
             'password' => $data['password'],
         ]);
+
+        $this->issueAndSendVerificationCode($user);
+
+        return response()->json([
+            'message' => 'Registrasi berhasil. Kode verifikasi telah dikirim ke email Anda.',
+            'email' => $user->email,
+        ], 201);
+    }
+
+    /**
+     * Konfirmasi kode verifikasi yang dikirim saat registrasi. Kalau
+     * cocok dan belum kedaluwarsa, akun ditandai terverifikasi dan
+     * langsung diberi token API — pengguna tidak perlu login ulang
+     * secara terpisah.
+     */
+    public function verifyEmail(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'email' => ['required', 'email'],
+            'code' => ['required', 'string'],
+        ]);
+
+        $user = User::where('email', $data['email'])->first();
+
+        if (! $user || $user->verification_code !== $data['code']) {
+            throw ValidationException::withMessages([
+                'code' => ['Kode verifikasi salah.'],
+            ]);
+        }
+
+        if (! $user->verification_code_expires_at || $user->verification_code_expires_at->isPast()) {
+            throw ValidationException::withMessages([
+                'code' => ['Kode verifikasi sudah kedaluwarsa. Silakan minta kode baru.'],
+            ]);
+        }
+
+        $user->forceFill([
+            'email_verified_at' => now(),
+            'verification_code' => null,
+            'verification_code_expires_at' => null,
+        ])->save();
 
         $token = $user->createToken('api-token')->plainTextToken;
 
         return response()->json([
             'user' => $this->presentUser($user),
             'token' => $token,
-        ], 201);
+        ]);
+    }
+
+    /**
+     * Kirim ulang kode verifikasi. Selalu balas dengan pesan generik
+     * (tidak membocorkan apakah email terdaftar) kecuali akunnya memang
+     * ditemukan dan belum terverifikasi.
+     */
+    public function resendVerificationCode(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'email' => ['required', 'email'],
+        ]);
+
+        $user = User::where('email', $data['email'])->first();
+
+        if ($user && ! $user->email_verified_at) {
+            $this->issueAndSendVerificationCode($user);
+        }
+
+        return response()->json([
+            'message' => 'Jika email terdaftar dan belum diverifikasi, kode baru telah dikirim.',
+        ]);
     }
 
     public function login(Request $request): JsonResponse
@@ -56,6 +129,12 @@ class AuthController extends Controller
         if (! $user || ! Auth::guard('web')->validate($credentials)) {
             throw ValidationException::withMessages([
                 'email' => ['Email atau password salah.'],
+            ]);
+        }
+
+        if (Schema::hasColumn('users', 'email_verified_at') && ! $user->email_verified_at) {
+            throw ValidationException::withMessages([
+                'email' => ['Akun belum diverifikasi. Silakan cek email Anda untuk kode verifikasi.'],
             ]);
         }
 
@@ -75,6 +154,32 @@ class AuthController extends Controller
             'user' => $this->presentUser($user),
             'token' => $token,
         ]);
+    }
+
+    /**
+     * Kirim kode verifikasi lewat mailer default aplikasi (dikonfigurasi
+     * di .env — MAIL_MAILER, MAIL_HOST, dst.), bukan lewat integrasi SMTP
+     * yang diatur admin per-sekolah di menu Integrasi. Ini supaya alur
+     * verifikasi akun selalu bisa mengirim email tanpa syarat admin
+     * mengisi form Integrasi dulu.
+     */
+    private function issueAndSendVerificationCode(User $user): void
+    {
+        $code = (string) random_int(100000, 999999);
+
+        $user->forceFill([
+            'verification_code' => $code,
+            'verification_code_expires_at' => now()->addMinutes(15),
+        ])->save();
+
+        try {
+            Mail::raw(
+                "Kode verifikasi akun SIM Pendidikan Anda: {$code}\n\nKode berlaku selama 15 menit. Jangan bagikan kode ini kepada siapa pun.",
+                fn ($message) => $message->to($user->email)->subject('Kode Verifikasi Akun SIM Pendidikan')
+            );
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     public function logout(Request $request): JsonResponse

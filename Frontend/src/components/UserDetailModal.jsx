@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { api } from '../lib/api'
+import { api, BASE_URL } from '../lib/api'
 import { roleBadgeClass } from '../lib/roleColors'
 
 const TABS = [
@@ -50,7 +50,7 @@ export default function UserDetailModal({
               <div className="h-12 w-12 rounded-full bg-gradient-to-br from-navy to-navy-light text-white flex items-center justify-center font-bold text-lg shrink-0 overflow-hidden">
                 {user.avatar_url ? (
                   <img
-                    src={`${import.meta.env.VITE_API_BASE_URL}${user.avatar_url}`}
+                    src={`${BASE_URL}${user.avatar_url}`}
                     alt={user.name}
                     className="h-full w-full object-cover"
                   />

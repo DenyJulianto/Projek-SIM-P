@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react'
 import ArsipDokumenFormModal from '../components/ArsipDokumenFormModal'
 import SuratFormModal from '../components/SuratFormModal'
-import { api } from '../lib/api'
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL
+import { api, BASE_URL } from '../lib/api'
 
 const STATUS_LABEL = {
   baru: { label: 'Baru', tone: 'bg-navy/10 text-navy/60' },
@@ -11,8 +9,8 @@ const STATUS_LABEL = {
   selesai: { label: 'Selesai', tone: 'bg-emerald-100 text-emerald-700' },
 }
 
-export default function SuratArsipManagement({ onBack }) {
-  const [tab, setTab] = useState('surat')
+export default function SuratArsipManagement({ onBack, initialTab = 'surat' }) {
+  const [tab, setTab] = useState(initialTab)
 
   return (
     <div>

@@ -1,8 +1,6 @@
 import { useRef, useState } from 'react'
 import { useAuth } from '../lib/AuthContext'
-import { api } from '../lib/api'
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL
+import { api, BASE_URL } from '../lib/api'
 
 function splitName(fullName) {
   const parts = (fullName || '').trim().split(/\s+/)

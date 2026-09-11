@@ -41,6 +41,7 @@ class RolePermissionSeeder extends Seeder
     private array $guruMapelPermissions = [
         'absensi-kelas.manage',
         'nilai.manage',
+        'sikap.manage',
         'materi.manage',
         'tugas.manage',
         'ujian.manage',
@@ -80,8 +81,12 @@ class RolePermissionSeeder extends Seeder
             'Tata Usaha' => [
                 'siswa.manage',
                 'pegawai.manage',
+                'kurikulum.manage',
                 'persuratan.manage',
-                'inventaris.manage',
+                'sarpras.inventaris',
+                'absensi-kelas.manage',
+                'monitoring-guru.absensi-guru',
+                'humas.pengumuman',
                 'laporan.view',
             ],
             'Kurikulum' => [
@@ -91,6 +96,9 @@ class RolePermissionSeeder extends Seeder
                 'rapor.publish',
             ],
             'Kesiswaan' => [
+                'siswa.manage',
+                'kurikulum.manage',
+                'absensi-kelas.manage',
                 'pelanggaran.manage',
                 'prestasi.manage',
                 'ekstrakurikuler.manage',
@@ -104,29 +112,36 @@ class RolePermissionSeeder extends Seeder
                 'laporan-keuangan.manage',
             ],
             'Guru Mata Pelajaran' => $this->guruMapelPermissions,
+            // Rekap kelas binaan (kehadiran, nilai, pelanggaran, prestasi) disajikan
+            // lewat endpoint /me/wali-kelas/* yang memverifikasi kepemilikan kelas
+            // di controller (kelas.wali_kelas_id), jadi tidak butuh permission
+            // 'rekap-kelas.view' terpisah.
             'Wali Kelas' => [
                 ...$this->guruMapelPermissions,
                 'rapor-kelas.manage',
-                'rekap-kelas.view',
+                'prestasi.manage',
+                'pelanggaran.manage',
             ],
             'Guru BK' => [
                 'konseling.manage',
                 'kasus.manage',
                 'pemanggilan-orangtua.manage',
             ],
+            // Catatan keamanan: JANGAN beri 'nilai.view'/'absensi.view' di sini.
+            // Kedua permission itu cocok dengan gate OR-chain endpoint umum
+            // (GET /nilai, GET /absensi) yang mengembalikan data SEMUA siswa
+            // tanpa filter per-pemilik — siswa yang punya permission itu bisa
+            // melihat nilai/absensi siswa lain. Data milik sendiri disajikan
+            // lewat endpoint /me/siswa/* yang otomatis difilter di server,
+            // tidak butuh permission tambahan sama sekali.
             'Siswa' => [
                 'profil-siswa.view',
-                'jadwal.view',
-                'nilai.view',
-                'absensi.view',
-                'tugas.view',
                 'tugas.submit',
-                'tagihan.view',
             ],
-            'Orang Tua' => [
-                'data-anak.view',
-                'komunikasi-wali-kelas.manage',
-            ],
+            // Data anak (jadwal, nilai, absensi, tagihan, rapor, dst.) disajikan
+            // lewat endpoint /me/anak/* yang memverifikasi kepemilikan anak di
+            // controller (pivot wali_siswa), jadi tidak butuh permission khusus.
+            'Orang Tua' => [],
         ];
 
         foreach ($rolePermissions as $roleName => $permissions) {

@@ -34,24 +34,49 @@ class RaporPengesahanController extends Controller
             'siswa_id' => ['required', 'exists:siswa,id'],
             'semester' => ['required', 'string', 'max:10'],
             'tahun_ajaran' => ['required', 'string', 'max:20'],
+            'catatan_wali_kelas' => ['nullable', 'string'],
         ]);
 
-        $rapor = Rapor::updateOrCreate(
-            ['siswa_id' => $data['siswa_id'], 'semester' => $data['semester'], 'tahun_ajaran' => $data['tahun_ajaran']],
-            [
-                'status' => 'diajukan',
-                'diajukan_oleh' => $request->user()->id,
-                'disahkan_oleh' => null,
-                'catatan' => null,
-                'tanggal_keputusan' => null,
-            ]
-        );
+        $rapor = Rapor::firstOrNew([
+            'siswa_id' => $data['siswa_id'],
+            'semester' => $data['semester'],
+            'tahun_ajaran' => $data['tahun_ajaran'],
+        ]);
+
+        $rapor->fill([
+            'status' => 'diajukan',
+            'diajukan_oleh' => $request->user()->id,
+            'disahkan_oleh' => null,
+            'catatan' => null,
+            'tanggal_keputusan' => null,
+        ]);
+
+        if (array_key_exists('catatan_wali_kelas', $data)) {
+            $rapor->catatan_wali_kelas = $data['catatan_wali_kelas'];
+        }
+
+        $rapor->save();
 
         activity()
             ->causedBy($request->user())
             ->log("Mengajukan rapor siswa \"{$rapor->siswa?->nama}\" untuk pengesahan.");
 
         return response()->json($rapor->load(['siswa:id,nama,nis,kelas_id', 'diajukanOleh:id,name']), 201);
+    }
+
+    /**
+     * Catatan wali kelas adalah komentar/observasi wali kelas untuk rapor
+     * siswa binaannya — terpisah dari `catatan` (yang diisi Kepala Sekolah
+     * saat mengesahkan/menolak) sehingga bisa diedit kapan saja tanpa
+     * mengubah status pengajuan rapor.
+     */
+    public function updateCatatanWaliKelas(Request $request, Rapor $rapor): JsonResponse
+    {
+        $data = $request->validate(['catatan_wali_kelas' => ['nullable', 'string']]);
+
+        $rapor->update($data);
+
+        return response()->json($rapor->load(['siswa:id,nama,nis,kelas_id']));
     }
 
     public function sahkan(Request $request, Rapor $rapor): JsonResponse
