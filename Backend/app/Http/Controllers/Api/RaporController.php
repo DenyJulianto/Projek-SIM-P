@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Siswa;
+use App\Settings\RaporTemplateSettings;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -42,12 +43,16 @@ class RaporController extends Controller
             ->groupBy('status')
             ->pluck('total', 'status');
 
+        $template = app(RaporTemplateSettings::class);
+
         $pdf = Pdf::loadView('rapor.pdf', [
             'siswa' => $siswa->load('kelas'),
             'nilai' => $nilai,
             'rekapAbsensi' => $rekapAbsensi,
             'semester' => $data['semester'],
             'tahunAjaran' => $data['tahun_ajaran'],
+            'sekolah' => tenant(),
+            'template' => $template,
         ]);
 
         $tahunAjaranSlug = str_replace('/', '-', $data['tahun_ajaran']);

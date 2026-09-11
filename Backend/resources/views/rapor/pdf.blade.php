@@ -14,10 +14,27 @@
         .text-center { text-align: center; }
         .text-right { text-align: right; }
         .section-title { margin-top: 20px; font-size: 13px; font-weight: bold; }
+        .kop { display: table; width: 100%; margin-bottom: 8px; }
+        .kop-logo { display: table-cell; width: 60px; vertical-align: middle; }
+        .kop-logo img { max-width: 50px; max-height: 50px; }
+        .kop-text { display: table-cell; vertical-align: middle; text-align: center; }
+        .kop-text h3 { margin: 0; font-size: 13px; }
+        .ttd { margin-top: 40px; width: 260px; margin-left: auto; text-align: center; }
+        .ttd .space { height: 50px; }
+        .footer-note { margin-top: 24px; font-size: 10px; color: #666; }
     </style>
 </head>
 <body>
-    <h1>Laporan Hasil Belajar Siswa</h1>
+    <div class="kop">
+        @if ($template->tampilkan_logo && $sekolah->logo)
+            <div class="kop-logo"><img src="{{ $sekolah->logo }}" alt="Logo"></div>
+        @endif
+        <div class="kop-text">
+            <h3>{{ $sekolah->nama_sekolah }}</h3>
+        </div>
+    </div>
+
+    <h1>{{ $template->header_text }}</h1>
     <h2>Semester {{ $semester }} - Tahun Ajaran {{ $tahunAjaran }}</h2>
 
     <table class="info-table">
@@ -76,5 +93,17 @@
             </tr>
         </tbody>
     </table>
+
+    @if ($template->nama_penandatangan)
+        <div class="ttd">
+            <p>{{ $template->jabatan_penandatangan }}</p>
+            <div class="space"></div>
+            <p><strong>{{ $template->nama_penandatangan }}</strong></p>
+        </div>
+    @endif
+
+    @if ($template->catatan_kaki)
+        <div class="footer-note">{{ $template->catatan_kaki }}</div>
+    @endif
 </body>
 </html>

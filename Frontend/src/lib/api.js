@@ -24,6 +24,29 @@ async function request(path, options = {}) {
   return res.json()
 }
 
+async function downloadFile(path, fallbackName) {
+  const res = await fetch(`${BASE_URL}${path}`, { headers: { ...authHeaders() } })
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.message || `Request gagal (${res.status})`)
+  }
+
+  const disposition = res.headers.get('Content-Disposition') || ''
+  const match = disposition.match(/filename="?([^"]+)"?/)
+  const filename = match ? match[1] : fallbackName
+
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
 async function requestForm(path, formData) {
   const res = await fetch(`${BASE_URL}${path}`, {
     method: 'POST',
@@ -104,6 +127,80 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
+
+  resetUserPassword: (id) => request(`/users/${id}/reset-password`, { method: 'POST' }),
+
+  getUserSessions: (id) => request(`/users/${id}/sessions`),
+
+  revokeUserSession: (id, tokenId) =>
+    request(`/users/${id}/sessions/${tokenId}`, { method: 'DELETE' }),
+
+  listPermissions: () => request('/permissions'),
+
+  createRole: (data) =>
+    request('/roles', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateRole: (id, data) =>
+    request(`/roles/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteRole: (id) => request(`/roles/${id}`, { method: 'DELETE' }),
+
+  getAuditLog: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/audit-log${query ? `?${query}` : ''}`)
+  },
+
+  getDashboardSummary: (days) => request(`/dashboard-summary${days ? `?days=${days}` : ''}`),
+
+  // Tahun Ajaran & Semester
+  listTahunAjaran: () => request('/tahun-ajaran'),
+  createTahunAjaran: (data) => request('/tahun-ajaran', { method: 'POST', body: JSON.stringify(data) }),
+  updateTahunAjaran: (id, data) => request(`/tahun-ajaran/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteTahunAjaran: (id) => request(`/tahun-ajaran/${id}`, { method: 'DELETE' }),
+
+  listSemester: () => request('/semester'),
+  createSemester: (data) => request('/semester', { method: 'POST', body: JSON.stringify(data) }),
+  updateSemester: (id, data) => request(`/semester/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteSemester: (id) => request(`/semester/${id}`, { method: 'DELETE' }),
+
+  // Jam Belajar
+  listJamBelajar: () => request('/jam-belajar'),
+  createJamBelajar: (data) => request('/jam-belajar', { method: 'POST', body: JSON.stringify(data) }),
+  updateJamBelajar: (id, data) => request(`/jam-belajar/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteJamBelajar: (id) => request(`/jam-belajar/${id}`, { method: 'DELETE' }),
+
+  // Template Rapor & Surat
+  getRaporTemplate: () => request('/rapor-template'),
+  updateRaporTemplate: (data) => request('/rapor-template', { method: 'PUT', body: JSON.stringify(data) }),
+  getSuratTemplate: () => request('/surat-template'),
+  updateSuratTemplate: (data) => request('/surat-template', { method: 'PUT', body: JSON.stringify(data) }),
+
+  // Notifikasi
+  getNotificationSettings: () => request('/notification-settings'),
+  updateNotificationSettings: (data) =>
+    request('/notification-settings', { method: 'PUT', body: JSON.stringify(data) }),
+
+  // Integrasi
+  listIntegrations: () => request('/integrations'),
+  updateIntegration: (key, data) =>
+    request(`/integrations/${key}`, { method: 'PUT', body: JSON.stringify(data) }),
+  testEmailIntegration: (to) =>
+    request('/integrations/smtp-email/test', { method: 'POST', body: JSON.stringify({ to }) }),
+
+  // Backup & Pemulihan
+  listBackups: () => request('/backups'),
+  createBackup: () => request('/backups', { method: 'POST' }),
+  deleteBackup: (name) => request(`/backups/${name}`, { method: 'DELETE' }),
+  restoreBackup: (name) => request(`/backups/${name}/restore`, { method: 'POST' }),
+  downloadBackup: (name) => downloadFile(`/backups/${name}/download`, name),
+  getBackupSchedule: () => request('/backup-schedule'),
+  updateBackupSchedule: (data) => request('/backup-schedule', { method: 'PUT', body: JSON.stringify(data) }),
 
   listInventaris: (params = {}) => {
     const query = new URLSearchParams(params).toString()
@@ -329,4 +426,84 @@ export const api = {
 
     return res.blob()
   },
+
+  // Prestasi & Pelanggaran
+  listPrestasi: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/prestasi${query ? `?${query}` : ''}`)
+  },
+  createPrestasi: (data) => request('/prestasi', { method: 'POST', body: JSON.stringify(data) }),
+  updatePrestasi: (id, data) => request(`/prestasi/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deletePrestasi: (id) => request(`/prestasi/${id}`, { method: 'DELETE' }),
+
+  listPelanggaran: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/pelanggaran${query ? `?${query}` : ''}`)
+  },
+  createPelanggaran: (data) => request('/pelanggaran', { method: 'POST', body: JSON.stringify(data) }),
+  updatePelanggaran: (id, data) => request(`/pelanggaran/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deletePelanggaran: (id) => request(`/pelanggaran/${id}`, { method: 'DELETE' }),
+
+  // Kepala Sekolah — data pemantauan (read-only)
+  getPrincipalDashboard: () => request('/principal/dashboard'),
+  getPrincipalAkademik: () => request('/principal/akademik'),
+  getPrincipalKesiswaan: () => request('/principal/kesiswaan'),
+  getPrincipalKehadiran: () => request('/principal/kehadiran'),
+  getPrincipalKepegawaian: () => request('/principal/kepegawaian'),
+  getPrincipalSarpras: () => request('/principal/sarpras'),
+  getPrincipalKeuangan: () => request('/principal/keuangan'),
+
+  // Tagihan & Pembayaran (Keuangan/SPP)
+  listTagihan: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/tagihan${query ? `?${query}` : ''}`)
+  },
+  createTagihan: (data) => request('/tagihan', { method: 'POST', body: JSON.stringify(data) }),
+  createPembayaran: (tagihanId, data) =>
+    request(`/tagihan/${tagihanId}/pembayaran`, { method: 'POST', body: JSON.stringify(data) }),
+
+  // Anggaran Sekolah / RKAS
+  listAnggaranPos: () => request('/anggaran-pos'),
+  createAnggaranPos: (data) => request('/anggaran-pos', { method: 'POST', body: JSON.stringify(data) }),
+  listPengajuanAnggaran: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/pengajuan-anggaran${query ? `?${query}` : ''}`)
+  },
+  createPengajuanAnggaran: (data) =>
+    request('/pengajuan-anggaran', { method: 'POST', body: JSON.stringify(data) }),
+  approvePengajuanAnggaran: (id, data = {}) =>
+    request(`/pengajuan-anggaran/${id}/approve`, { method: 'POST', body: JSON.stringify(data) }),
+  rejectPengajuanAnggaran: (id, data) =>
+    request(`/pengajuan-anggaran/${id}/reject`, { method: 'POST', body: JSON.stringify(data) }),
+  createRealisasiAnggaran: (pengajuanId, data) =>
+    request(`/pengajuan-anggaran/${pengajuanId}/realisasi`, { method: 'POST', body: JSON.stringify(data) }),
+  getRealisasiAnggaran: () => request('/realisasi-anggaran'),
+
+  // Kepegawaian — pengajuan & persetujuan
+  listPengajuanKepegawaian: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/pengajuan-kepegawaian${query ? `?${query}` : ''}`)
+  },
+  createPengajuanKepegawaian: (data) =>
+    request('/pengajuan-kepegawaian', { method: 'POST', body: JSON.stringify(data) }),
+  approvePengajuanKepegawaian: (id, data = {}) =>
+    request(`/pengajuan-kepegawaian/${id}/approve`, { method: 'POST', body: JSON.stringify(data) }),
+  rejectPengajuanKepegawaian: (id, data) =>
+    request(`/pengajuan-kepegawaian/${id}/reject`, { method: 'POST', body: JSON.stringify(data) }),
+
+  // E-Rapor — pengajuan & pengesahan
+  listRaporPengesahan: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/rapor-pengesahan${query ? `?${query}` : ''}`)
+  },
+  ajukanRapor: (data) => request('/rapor-pengesahan', { method: 'POST', body: JSON.stringify(data) }),
+  sahkanRapor: (id, data = {}) =>
+    request(`/rapor-pengesahan/${id}/sahkan`, { method: 'POST', body: JSON.stringify(data) }),
+  tolakRapor: (id, data) =>
+    request(`/rapor-pengesahan/${id}/tolak`, { method: 'POST', body: JSON.stringify(data) }),
+  downloadRapor: (siswaId, semester, tahunAjaran) =>
+    downloadFile(
+      `/siswa/${siswaId}/rapor?semester=${encodeURIComponent(semester)}&tahun_ajaran=${encodeURIComponent(tahunAjaran)}`,
+      `rapor-${siswaId}-${semester}-${tahunAjaran}.pdf`
+    ),
 }

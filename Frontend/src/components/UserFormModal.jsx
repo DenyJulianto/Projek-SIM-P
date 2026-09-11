@@ -3,12 +3,15 @@ import { api } from '../lib/api'
 
 export default function UserFormModal({ user, roles, onClose, onSaved }) {
   const isEdit = Boolean(user)
+  const currentRoleNames = user?.roles?.map((r) => r.name) || []
   const [form, setForm] = useState({
     name: user?.name || '',
     email: user?.email || '',
     password: '',
     is_active: user?.is_active ?? true,
-    roles: user?.roles?.map((r) => r.name) || [],
+    nip_nis: user?.nip_nis || '',
+    primaryRole: currentRoleNames[0] || '',
+    extraRoles: currentRoleNames.slice(1),
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -17,10 +20,12 @@ export default function UserFormModal({ user, roles, onClose, onSaved }) {
     setForm((f) => ({ ...f, [field]: value }))
   }
 
-  function toggleRole(name) {
+  function toggleExtraRole(name) {
     setForm((f) => ({
       ...f,
-      roles: f.roles.includes(name) ? f.roles.filter((r) => r !== name) : [...f.roles, name],
+      extraRoles: f.extraRoles.includes(name)
+        ? f.extraRoles.filter((r) => r !== name)
+        : [...f.extraRoles, name],
     }))
   }
 
@@ -29,13 +34,20 @@ export default function UserFormModal({ user, roles, onClose, onSaved }) {
     setSaving(true)
     setError('')
     try {
+      const allRoles = form.primaryRole
+        ? [form.primaryRole, ...form.extraRoles.filter((r) => r !== form.primaryRole)]
+        : []
+
       const payload = {
         name: form.name,
         email: form.email,
-        roles: form.roles,
+        roles: allRoles,
       }
       if (form.password) payload.password = form.password
-      if (isEdit) payload.is_active = form.is_active
+      if (isEdit) {
+        payload.is_active = form.is_active
+        if (canEditNipNis) payload.nip_nis = form.nip_nis
+      }
 
       if (isEdit) {
         await api.updateUser(user.id, payload)
@@ -51,23 +63,44 @@ export default function UserFormModal({ user, roles, onClose, onSaved }) {
     }
   }
 
+  const extraRoleOptions = roles.filter((r) => r.name !== form.primaryRole)
+  const canEditNipNis = isEdit && Boolean(user?.identitas_type)
+  const nipNisLabel = user?.identitas_type === 'siswa' ? 'NIS' : 'NIP'
+
   return (
     <div className="fixed inset-0 bg-navy/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6">
-        <h2 className="text-lg font-bold text-navy mb-4">
-          {isEdit ? 'Edit Pengguna' : 'Tambah Pengguna'}
-        </h2>
+      <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6">
+        <div className="flex items-start justify-between mb-1">
+          <div>
+            <h2 className="text-lg font-bold text-navy">
+              {isEdit ? 'Edit Pengguna' : 'Tambah Pengguna'}
+            </h2>
+            <p className="text-xs text-navy/50 mt-0.5">
+              {isEdit
+                ? 'Ubah data akun, peran, dan status pengguna.'
+                : 'Isi data pengguna yang akan ditambahkan.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-navy/40 hover:text-navy text-xl leading-none"
+          >
+            &times;
+          </button>
+        </div>
 
-        {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
+        {error && <p className="text-red-600 text-sm mt-3">{error}</p>}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Field label="Nama">
+        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+          <Field label="Nama Lengkap">
             <input
               type="text"
               required
               value={form.name}
               onChange={(e) => update('name', e.target.value)}
               className="input"
+              placeholder="Masukkan nama lengkap"
             />
           </Field>
           <Field label="Email">
@@ -77,8 +110,24 @@ export default function UserFormModal({ user, roles, onClose, onSaved }) {
               value={form.email}
               onChange={(e) => update('email', e.target.value)}
               className="input"
+              placeholder="contoh@email.com"
             />
           </Field>
+          <Field label={`${nipNisLabel} ${canEditNipNis ? '' : '(belum ditautkan ke profil Guru/Siswa)'}`}>
+            <input
+              type="text"
+              value={form.nip_nis}
+              onChange={(e) => update('nip_nis', e.target.value)}
+              disabled={!canEditNipNis}
+              className="input disabled:bg-navy/5 disabled:text-navy/40 disabled:cursor-not-allowed"
+              placeholder={
+                canEditNipNis
+                  ? `Masukkan ${nipNisLabel}`
+                  : 'Tautkan lewat menu Data Guru/Data Siswa dulu'
+              }
+            />
+          </Field>
+
           <Field label={isEdit ? 'Password Baru (kosongkan jika tidak diubah)' : 'Password'}>
             <input
               type="password"
@@ -91,36 +140,63 @@ export default function UserFormModal({ user, roles, onClose, onSaved }) {
             />
           </Field>
 
-          {isEdit && (
-            <label className="flex items-center gap-2 text-sm text-navy/70 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={form.is_active}
-                onChange={(e) => update('is_active', e.target.checked)}
-                className="h-4 w-4 rounded accent-navy-light"
-              />
-              Akun aktif
-            </label>
-          )}
+          <div className="grid grid-cols-2 gap-4 items-end">
+            <Field label="Peran">
+              <select
+                required
+                value={form.primaryRole}
+                onChange={(e) => update('primaryRole', e.target.value)}
+                className="input"
+              >
+                <option value="">Pilih peran</option>
+                {roles.map((role) => (
+                  <option key={role.id} value={role.name}>
+                    {role.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
 
-          <Field label="Role">
-            <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border border-navy/10 rounded-md p-3">
-              {roles.map((role) => (
-                <label
-                  key={role.id}
-                  className="flex items-center gap-2 text-xs text-navy/70 cursor-pointer select-none"
+            {isEdit && (
+              <label className="flex items-center gap-2 text-sm text-navy/70 cursor-pointer select-none pb-2.5">
+                <span className="text-xs font-semibold text-navy/70">Status Akun</span>
+                <button
+                  type="button"
+                  onClick={() => update('is_active', !form.is_active)}
+                  className={`relative w-10 h-5.5 rounded-full transition-colors shrink-0 ${
+                    form.is_active ? 'bg-navy-light' : 'bg-navy/20'
+                  }`}
                 >
-                  <input
-                    type="checkbox"
-                    checked={form.roles.includes(role.name)}
-                    onChange={() => toggleRole(role.name)}
-                    className="h-3.5 w-3.5 rounded accent-navy-light"
+                  <span
+                    className={`absolute top-0.5 h-4.5 w-4.5 rounded-full bg-white transition-transform ${
+                      form.is_active ? 'translate-x-[22px]' : 'translate-x-0.5'
+                    }`}
                   />
-                  {role.name}
-                </label>
-              ))}
-            </div>
-          </Field>
+                </button>
+              </label>
+            )}
+          </div>
+
+          {extraRoleOptions.length > 0 && (
+            <Field label="Multi-Peran (opsional)">
+              <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border border-navy/10 rounded-md p-3">
+                {extraRoleOptions.map((role) => (
+                  <label
+                    key={role.id}
+                    className="flex items-center gap-2 text-xs text-navy/70 cursor-pointer select-none"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={form.extraRoles.includes(role.name)}
+                      onChange={() => toggleExtraRole(role.name)}
+                      className="h-3.5 w-3.5 rounded accent-navy-light"
+                    />
+                    {role.name}
+                  </label>
+                ))}
+              </div>
+            </Field>
+          )}
 
           <div className="flex justify-end gap-3 pt-2">
             <button
@@ -133,7 +209,7 @@ export default function UserFormModal({ user, roles, onClose, onSaved }) {
             <button
               type="submit"
               disabled={saving}
-              className="bg-navy hover:bg-navy-light text-white text-sm font-semibold px-5 py-2 rounded-md disabled:opacity-50"
+              className="bg-navy-light hover:bg-emerald-700 text-white text-sm font-semibold px-5 py-2 rounded-full disabled:opacity-50"
             >
               {saving ? 'Menyimpan...' : 'Simpan'}
             </button>

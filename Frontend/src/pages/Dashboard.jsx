@@ -1,34 +1,53 @@
 import { useEffect, useState } from 'react'
 import EditProfilModal from '../components/EditProfilModal'
+import MiniCalendar from '../components/MiniCalendar'
 import { useAuth } from '../lib/AuthContext'
 import { api } from '../lib/api'
+import AdminHome from './admin/AdminHome'
 import AttendanceRecap from './AttendanceRecap'
+import AuditLog from './AuditLog'
+import BackupRestore from './BackupRestore'
 import GuruManagement from './GuruManagement'
+import Integrations from './Integrations'
 import InventoryManagement from './InventoryManagement'
 import KelasManagement from './KelasManagement'
 import MyProfile from './MyProfile'
+import PrincipalDashboard from './PrincipalDashboard'
+import RoleManagement from './RoleManagement'
 import SiswaManagement from './SiswaManagement'
 import SuratArsipManagement from './SuratArsipManagement'
+import SystemConfig from './SystemConfig'
 import UserManagement from './UserManagement'
 
-const MENU = [
-  { key: 'dashboard', label: 'Dashboard', icon: GridIcon },
-  { key: 'siswa', label: 'Data Siswa', icon: StudentIcon, permission: 'siswa.manage' },
-  { key: 'guru', label: 'Data Guru', icon: StaffIcon, permission: 'pegawai.manage' },
-  { key: 'kelas', label: 'Kelas', icon: ClassIcon, permission: 'kurikulum.manage' },
-  { key: 'absensi-guru', label: 'Absensi Guru', icon: AttendanceIcon, permission: 'monitoring-guru.absensi-guru' },
-  { key: 'landing', label: 'Edit Landing Page', icon: SchoolIcon, permission: 'humas.informasi' },
-  { key: 'persuratan', label: 'Surat & Kearsipan', icon: ArchiveIcon, permission: 'persuratan.manage' },
-  { key: 'pengguna', label: 'Pengguna & Hak Akses', icon: UsersIcon, permission: 'pengguna.manage' },
-  { key: 'inventaris', label: 'Sarana & Prasarana', icon: InventoryIcon, permission: 'sarpras.inventaris' },
-  { key: 'profile', label: 'Profile', icon: ProfileIcon },
+const MENU_GROUPS = [
+  {
+    section: null,
+    items: [{ key: 'dashboard', label: 'Dashboard', icon: GridIcon }],
+  },
+  {
+    section: 'Sistem',
+    items: [
+      { key: 'pengguna', label: 'Pengguna', icon: UsersIcon, permission: 'pengguna.manage' },
+      { key: 'hak-akses', label: 'Hak Akses', icon: ShieldIcon, permission: 'pengguna.manage' },
+      { key: 'konfigurasi', label: 'Konfigurasi Sistem', icon: GearIcon, permission: 'pengguna.manage' },
+      { key: 'integrasi', label: 'Integrasi', icon: PlugIcon, permission: 'pengguna.manage' },
+      { key: 'backup', label: 'Backup & Pemulihan', icon: DatabaseIcon, permission: 'pengguna.manage' },
+      { key: 'audit-log', label: 'Audit Log', icon: LogIcon, permission: 'pengguna.manage' },
+    ],
+  },
+  {
+    section: 'Operasional Sekolah',
+    items: [
+      { key: 'inventaris', label: 'Sarana & Prasarana', icon: InventoryIcon, permission: 'sarpras.inventaris' },
+      { key: 'persuratan', label: 'Surat & Kearsipan', icon: ArchiveIcon, permission: 'persuratan.manage' },
+      { key: 'landing', label: 'Edit Landing Page', icon: SchoolIcon, permission: 'humas.informasi' },
+    ],
+  },
+  {
+    section: null,
+    items: [{ key: 'profile', label: 'Profile', icon: ProfileIcon }],
+  },
 ]
-
-const BULAN = [
-  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
-]
-const HARI = ['M', 'S', 'S', 'R', 'K', 'J', 'S']
 
 export default function Dashboard() {
   const { user, logout, hasPermission } = useAuth()
@@ -39,7 +58,11 @@ export default function Dashboard() {
   const [notices, setNotices] = useState([])
 
   const canEditProfil = hasPermission('humas.informasi')
-  const menu = MENU.filter((item) => !item.permission || hasPermission(item.permission))
+  const isAdmin = hasPermission('pengguna.manage')
+  const menuGroups = MENU_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => !item.permission || hasPermission(item.permission)),
+  })).filter((group) => group.items.length > 0)
 
   useEffect(() => {
     if (canEditProfil) api.getProfil().then(setProfil).catch(() => {})
@@ -52,7 +75,6 @@ export default function Dashboard() {
     if (hasPermission('kurikulum.manage')) {
       api.countKelas().then((r) => setStats((s) => ({ ...s, kelas: r.total }))).catch(() => {})
     }
-
     Promise.all([
       api.getPengumuman().catch(() => ({ data: [] })),
       api.getKegiatan().catch(() => ({ data: [] })),
@@ -93,10 +115,14 @@ export default function Dashboard() {
     setView(item.key)
   }
 
+  const isPrincipal = user?.roles?.some((r) => r.name === 'Kepala Sekolah') && !isAdmin
+  if (isPrincipal) {
+    return <PrincipalDashboard />
+  }
+
   return (
-    <div className="min-h-screen bg-gold-light/25 p-4 sm:p-8">
-      <div className="mx-auto max-w-7xl bg-white rounded-[2rem] shadow-xl shadow-navy/10 overflow-hidden flex min-h-[85vh]">
-        <aside className="w-64 shrink-0 bg-navy text-white flex flex-col py-6 px-4">
+    <div className="h-screen bg-white flex overflow-hidden">
+        <aside className="w-64 shrink-0 bg-navy text-white flex flex-col py-6 px-4 h-screen">
           <div className="flex items-center gap-2 px-2 mb-8">
             <div className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center shrink-0">
               <CapIcon className="h-5 w-5 text-white" />
@@ -104,25 +130,34 @@ export default function Dashboard() {
             <p className="font-bold tracking-wide text-sm">SIM Pendidikan</p>
           </div>
 
-          <nav className="flex-1 space-y-1.5">
-            {menu.map((item) => {
-              const Icon = item.icon
-              const active = item.key === 'dashboard' ? view === 'home' : view === item.key
-              return (
-                <button
-                  key={item.key}
-                  onClick={() => (item.key === 'dashboard' ? setView('home') : handleAction(item))}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                    active
-                      ? 'bg-white text-navy shadow-sm'
-                      : 'text-white/75 hover:bg-white/10 hover:text-white'
-                  }`}
-                >
-                  <Icon className="h-4.5 w-4.5 shrink-0" />
-                  <span className="truncate min-w-0">{item.label}</span>
-                </button>
-              )
-            })}
+          <nav className="flex-1 space-y-4 overflow-y-auto">
+            {menuGroups.map((group, gi) => (
+              <div key={gi} className="space-y-1.5">
+                {group.section && (
+                  <p className="px-4 text-[10px] font-bold text-white/40 uppercase tracking-wider">
+                    {group.section}
+                  </p>
+                )}
+                {group.items.map((item) => {
+                  const Icon = item.icon
+                  const active = item.key === 'dashboard' ? view === 'home' : view === item.key
+                  return (
+                    <button
+                      key={item.key}
+                      onClick={() => (item.key === 'dashboard' ? setView('home') : handleAction(item))}
+                      className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                        active
+                          ? 'bg-navy-light text-white shadow-sm'
+                          : 'text-white/75 hover:bg-white/10 hover:text-white'
+                      }`}
+                    >
+                      <Icon className="h-4.5 w-4.5 shrink-0" />
+                      <span className="truncate min-w-0">{item.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            ))}
           </nav>
 
           <button
@@ -132,6 +167,15 @@ export default function Dashboard() {
             <LogoutIcon className="h-4.5 w-4.5 shrink-0" />
             Keluar
           </button>
+
+          <div className="mt-4 px-3 shrink-0">
+            <SidebarIllustration className="w-full h-auto" />
+            <p className="text-[10px] text-white/35 text-center leading-snug mt-1.5">
+              Bersama Mewujudkan
+              <br />
+              Pendidikan yang Lebih Baik
+            </p>
+          </div>
         </aside>
 
         <main className="flex-1 p-6 sm:p-8 overflow-y-auto">
@@ -149,8 +193,20 @@ export default function Dashboard() {
             <UserManagement onBack={() => setView('home')} />
           ) : view === 'inventaris' ? (
             <InventoryManagement onBack={() => setView('home')} />
+          ) : view === 'hak-akses' ? (
+            <RoleManagement onBack={() => setView('home')} />
+          ) : view === 'konfigurasi' ? (
+            <SystemConfig onBack={() => setView('home')} />
+          ) : view === 'integrasi' ? (
+            <Integrations onBack={() => setView('home')} />
+          ) : view === 'backup' ? (
+            <BackupRestore onBack={() => setView('home')} />
+          ) : view === 'audit-log' ? (
+            <AuditLog onBack={() => setView('home')} />
           ) : view === 'profile' ? (
             <MyProfile onBack={() => setView('home')} />
+          ) : isAdmin ? (
+            <AdminHome user={user} onNavigate={(key) => setView(key)} />
           ) : (
             <div className="flex gap-6">
               <div className="flex-1 min-w-0">
@@ -295,7 +351,6 @@ export default function Dashboard() {
             </div>
           )}
         </main>
-      </div>
 
       {editingProfil && (
         <EditProfilModal
@@ -313,55 +368,12 @@ export default function Dashboard() {
 
 function GradientStatCard({ label, value, icon: Icon, from, to }) {
   return (
-    <div className={`bg-gradient-to-br ${from} ${to} rounded-2xl p-5 flex items-center gap-4 text-white`}>
-      <div className="h-12 w-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
-        <Icon className="h-6 w-6 text-white" />
+    <div className={`bg-gradient-to-br ${from} ${to} rounded-2xl p-5 text-white`}>
+      <div className="h-11 w-11 rounded-xl bg-white/15 flex items-center justify-center mb-3">
+        <Icon className="h-5.5 w-5.5 text-white" />
       </div>
-      <div>
-        <p className="text-2xl font-extrabold leading-none">{value}</p>
-        <p className="text-xs text-white/70 mt-1 uppercase tracking-wide">{label}</p>
-      </div>
-    </div>
-  )
-}
-
-function MiniCalendar() {
-  const today = new Date()
-  const year = today.getFullYear()
-  const month = today.getMonth()
-  const firstDay = new Date(year, month, 1).getDay()
-  const daysInMonth = new Date(year, month + 1, 0).getDate()
-  const cells = [...Array(firstDay).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-extrabold text-navy">Kalender</h2>
-        <p className="text-sm text-navy/50">
-          {BULAN[month]} {year}
-        </p>
-      </div>
-      <div className="grid grid-cols-7 gap-1.5 text-center">
-        {HARI.map((h, i) => (
-          <div key={i} className="text-[11px] font-semibold text-navy/40 py-1">
-            {h}
-          </div>
-        ))}
-        {cells.map((day, i) => (
-          <div
-            key={i}
-            className={`text-xs rounded-full aspect-square flex items-center justify-center ${
-              day === today.getDate()
-                ? 'bg-navy text-white font-bold'
-                : day
-                  ? 'text-navy/70 hover:bg-gold-light/30'
-                  : ''
-            }`}
-          >
-            {day || ''}
-          </div>
-        ))}
-      </div>
+      <p className="text-2xl font-extrabold leading-none">{value}</p>
+      <p className="text-xs text-white/70 mt-1.5 uppercase tracking-wide leading-snug">{label}</p>
     </div>
   )
 }
@@ -496,3 +508,67 @@ function LogoutIcon(props) {
     </svg>
   )
 }
+
+function SidebarIllustration(props) {
+  return (
+    <svg {...props} viewBox="0 0 200 110" fill="none">
+      <path d="M0 110c0-28 40-46 100-46s100 18 100 46Z" fill="#ffffff" fillOpacity="0.04" />
+      <rect x="70" y="40" width="60" height="52" rx="2" fill="#ffffff" fillOpacity="0.08" />
+      <path d="M64 43 100 16 136 43Z" fill="#ffffff" fillOpacity="0.1" />
+      <rect x="96" y="4" width="2" height="13" fill="#ffffff" fillOpacity="0.15" />
+      <path d="M98 4h9l-9 6Z" fill="#e3a13c" fillOpacity="0.55" />
+      <rect x="86" y="62" width="18" height="30" rx="1" fill="#ffffff" fillOpacity="0.1" />
+      <rect x="77" y="51" width="9" height="9" rx="1" fill="#ffffff" fillOpacity="0.12" />
+      <rect x="114" y="51" width="9" height="9" rx="1" fill="#ffffff" fillOpacity="0.12" />
+      <circle cx="46" cy="80" r="13" fill="#ffffff" fillOpacity="0.06" />
+      <circle cx="154" cy="75" r="11" fill="#ffffff" fillOpacity="0.06" />
+    </svg>
+  )
+}
+
+function ShieldIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  )
+}
+
+function GearIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.6 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.6 1Z" />
+    </svg>
+  )
+}
+
+function PlugIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M9 2v4M15 2v4M9 8h6v3a3 3 0 0 1-3 3 3 3 0 0 1-3-3V8Z" />
+      <path d="M12 14v4M9 21h6" />
+    </svg>
+  )
+}
+
+function DatabaseIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <ellipse cx="12" cy="5" rx="8" ry="3" />
+      <path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5" />
+      <path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" />
+    </svg>
+  )
+}
+
+function LogIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 4h16v16H4z" />
+      <path d="M8 9h8M8 13h8M8 17h4" />
+    </svg>
+  )
+}
+
