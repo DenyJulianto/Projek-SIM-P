@@ -117,6 +117,67 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * Minta kode reset password. Selalu balas dengan pesan generik (tidak
+     * membocorkan apakah email terdaftar) — hanya benar-benar mengirim kode
+     * kalau akunnya ditemukan dan kolom password_reset_code tersedia
+     * (fitur ini saat ini hanya berlaku untuk akun per-sekolah, bukan akun
+     * Super Admin di database central).
+     */
+    public function forgotPassword(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'email' => ['required', 'email'],
+        ]);
+
+        if (Schema::hasColumn('users', 'password_reset_code')) {
+            $user = User::where('email', $data['email'])->first();
+
+            if ($user) {
+                $this->issueAndSendPasswordResetCode($user);
+            }
+        }
+
+        return response()->json([
+            'message' => 'Jika email terdaftar, kode reset password telah dikirim.',
+        ]);
+    }
+
+    public function resetPassword(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'email' => ['required', 'email'],
+            'code' => ['required', 'string'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $user = User::where('email', $data['email'])->first();
+
+        if (! $user || ! Schema::hasColumn('users', 'password_reset_code') || $user->password_reset_code !== $data['code']) {
+            throw ValidationException::withMessages([
+                'code' => ['Kode reset password salah.'],
+            ]);
+        }
+
+        if (! $user->password_reset_code_expires_at || $user->password_reset_code_expires_at->isPast()) {
+            throw ValidationException::withMessages([
+                'code' => ['Kode reset password sudah kedaluwarsa. Silakan minta kode baru.'],
+            ]);
+        }
+
+        $user->forceFill([
+            'password' => $data['password'],
+            'password_reset_code' => null,
+            'password_reset_code_expires_at' => null,
+        ])->save();
+
+        $user->tokens()->delete();
+
+        return response()->json([
+            'message' => 'Password berhasil diubah. Silakan masuk dengan password baru Anda.',
+        ]);
+    }
+
     public function login(Request $request): JsonResponse
     {
         $credentials = $request->validate([
@@ -176,6 +237,25 @@ class AuthController extends Controller
             Mail::raw(
                 "Kode verifikasi akun SIM Pendidikan Anda: {$code}\n\nKode berlaku selama 15 menit. Jangan bagikan kode ini kepada siapa pun.",
                 fn ($message) => $message->to($user->email)->subject('Kode Verifikasi Akun SIM Pendidikan')
+            );
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
+
+    private function issueAndSendPasswordResetCode(User $user): void
+    {
+        $code = (string) random_int(100000, 999999);
+
+        $user->forceFill([
+            'password_reset_code' => $code,
+            'password_reset_code_expires_at' => now()->addMinutes(15),
+        ])->save();
+
+        try {
+            Mail::raw(
+                "Kode reset password akun SIM Pendidikan Anda: {$code}\n\nKode berlaku selama 15 menit. Jika Anda tidak meminta ini, abaikan email ini.",
+                fn ($message) => $message->to($user->email)->subject('Kode Reset Password SIM Pendidikan')
             );
         } catch (\Throwable $e) {
             report($e);

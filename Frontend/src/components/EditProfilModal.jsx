@@ -6,6 +6,12 @@ export default function EditProfilModal({ profil, onClose, onSaved }) {
     nama_sekolah: profil?.nama_sekolah || '',
     jenjang: profil?.jenjang || '',
     alamat: profil?.alamat || '',
+    kecamatan: profil?.kecamatan || '',
+    kelurahan: profil?.kelurahan || '',
+    kabupaten_kota: profil?.kabupaten_kota || '',
+    provinsi: profil?.provinsi || '',
+    latitude: profil?.latitude ?? '',
+    longitude: profil?.longitude ?? '',
     telepon: profil?.telepon || '',
     email: profil?.email || '',
     logo: profil?.logo || '',
@@ -26,7 +32,12 @@ export default function EditProfilModal({ profil, onClose, onSaved }) {
     setSaving(true)
     setError('')
     try {
-      await api.updateProfil(form)
+      const payload = {
+        ...form,
+        latitude: form.latitude !== '' ? Number(form.latitude) : null,
+        longitude: form.longitude !== '' ? Number(form.longitude) : null,
+      }
+      await api.updateProfil(payload)
       onSaved()
     } catch (err) {
       setError(err.message)
@@ -77,6 +88,64 @@ export default function EditProfilModal({ profil, onClose, onSaved }) {
               className="input"
             />
           </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Kelurahan">
+              <input
+                type="text"
+                value={form.kelurahan}
+                onChange={(e) => update('kelurahan', e.target.value)}
+                className="input"
+              />
+            </Field>
+            <Field label="Kecamatan">
+              <input
+                type="text"
+                value={form.kecamatan}
+                onChange={(e) => update('kecamatan', e.target.value)}
+                className="input"
+              />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Kabupaten/Kota">
+              <input
+                type="text"
+                value={form.kabupaten_kota}
+                onChange={(e) => update('kabupaten_kota', e.target.value)}
+                className="input"
+              />
+            </Field>
+            <Field label="Provinsi">
+              <input
+                type="text"
+                value={form.provinsi}
+                onChange={(e) => update('provinsi', e.target.value)}
+                className="input"
+              />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Latitude">
+              <input
+                type="number"
+                step="any"
+                value={form.latitude}
+                onChange={(e) => update('latitude', e.target.value)}
+                className="input"
+                placeholder="-6.914744"
+              />
+            </Field>
+            <Field label="Longitude">
+              <input
+                type="number"
+                step="any"
+                value={form.longitude}
+                onChange={(e) => update('longitude', e.target.value)}
+                className="input"
+                placeholder="107.609810"
+              />
+            </Field>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Telepon">
               <input

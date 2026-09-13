@@ -144,6 +144,15 @@ class RolePermissionSeeder extends Seeder
             'Orang Tua' => [],
         ];
 
+        // Super Admin selalu mendapat gabungan SEMUA permission yang ada di
+        // sistem (union dari seluruh role di atas) — "kendali penuh tanpa
+        // batasan" — dan otomatis ikut bertambah kalau nanti ada permission
+        // baru ditambahkan ke role manapun. Pemberian/pencabutan role
+        // 'Super Admin' sendiri hanya boleh dilakukan oleh sesama Super
+        // Admin; itu ditegakkan di UserController & RoleController, bukan
+        // lewat permission biasa.
+        $rolePermissions['Super Admin'] = collect($rolePermissions)->flatten()->unique()->values()->all();
+
         foreach ($rolePermissions as $roleName => $permissions) {
             $role = Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
 

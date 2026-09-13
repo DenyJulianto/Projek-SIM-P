@@ -1,57 +1,170 @@
 import { useEffect, useState } from 'react'
+import MiniCalendar from '../../components/MiniCalendar'
 import { api } from '../../lib/api'
+
+const HARI_LABEL = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
 
 export default function PrincipalHome() {
   const [data, setData] = useState(null)
+  const [akademik, setAkademik] = useState(null)
+  const [keuangan, setKeuangan] = useState(null)
+  const [kehadiran, setKehadiran] = useState(null)
+  const [kegiatan, setKegiatan] = useState(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
     api.getPrincipalDashboard().then(setData).catch((err) => setError(err.message))
+    api.getPrincipalAkademik().then(setAkademik).catch(() => {})
+    api.getPrincipalKeuangan().then(setKeuangan).catch(() => {})
+    api.getPrincipalKehadiran().then(setKehadiran).catch(() => {})
+    api.getKegiatan().then(setKegiatan).catch(() => {})
   }, [])
 
   if (error) return <p className="text-red-600 text-sm">{error}</p>
   if (!data) return <p className="text-navy/40 text-center py-10">Memuat...</p>
 
+  const eventDays = (kegiatan?.data || [])
+    .map((k) => k.tanggal_mulai && new Date(k.tanggal_mulai))
+    .filter((d) => d && d.getMonth() === new Date().getMonth() && d.getFullYear() === new Date().getFullYear())
+    .map((d) => d.getDate())
+
   return (
-    <div>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        <KpiCard label="Total Siswa" value={data.total_siswa} icon={StudentIcon} from="from-navy" to="to-navy-light" />
-        <KpiCard label="Kehadiran Siswa" value={`${data.kehadiran_siswa_persen}%`} icon={AttendanceIcon} from="from-emerald-600" to="to-emerald-500" hint="bulan ini" />
-        <KpiCard label="Rata-rata Nilai" value={data.rata_rata_nilai} icon={BookIcon} from="from-gold" to="to-gold-light" />
-        <KpiCard label="Prestasi" value={data.prestasi_total} icon={TrophyIcon} from="from-navy-light" to="to-navy" hint={`${data.prestasi_bulan_ini} bulan ini`} />
-      </div>
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <KpiCard label="Siswa" value={data.total_siswa} icon={StudentIcon} from="from-navy" to="to-navy-light" />
+          <KpiCard label="Guru" value={data.total_guru} icon={StaffIcon} from="from-navy-light" to="to-navy" />
+          <KpiCard label="Kegiatan" value={kegiatan?.total ?? '-'} icon={CalendarStarIcon} from="from-gold" to="to-gold-light" />
+          <KpiCard
+            label="Pendapatan"
+            value={keuangan ? formatRupiah(keuangan.total_terbayar) : '-'}
+            icon={MoneyIcon}
+            from="from-emerald-600"
+            to="to-emerald-500"
+            small
+          />
+        </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <KpiCard label="Kasus Pembinaan" value={data.kasus_pembinaan_total} icon={AlertIcon} from="from-red-500" to="to-red-400" hint={`${data.kasus_pembinaan_bulan_ini} bulan ini`} />
-        <div className="bg-white rounded-2xl border border-navy/10 p-5 col-span-2 lg:col-span-1">
-          <p className="text-xs font-semibold text-navy/50 uppercase mb-1">Serapan Anggaran</p>
-          {data.anggaran.tersedia ? (
-            <>
-              <p className="text-2xl font-extrabold text-navy">{data.anggaran.persen_serapan}%</p>
-              <p className="text-xs text-navy/40 mt-0.5">
-                {formatRupiah(data.anggaran.total_realisasi)} dari {formatRupiah(data.anggaran.total_anggaran)}
-              </p>
-            </>
+        <div className="bg-white rounded-2xl border border-navy/10 p-5">
+          <h2 className="text-sm font-bold text-navy mb-3">Kalender Kegiatan</h2>
+          {!kegiatan ? (
+            <p className="text-sm text-navy/40 text-center py-6">Memuat...</p>
+          ) : (kegiatan.data || []).length === 0 ? (
+            <p className="text-sm text-navy/40 text-center py-6">Belum ada kegiatan terjadwal.</p>
           ) : (
-            <p className="text-sm text-navy/40">{data.anggaran.catatan}</p>
+            <div className="space-y-3">
+              {kegiatan.data.slice(0, 3).map((k) => (
+                <div key={k.id} className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[11px] text-navy/40">
+                      {k.tanggal_mulai
+                        ? new Date(k.tanggal_mulai).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+                        : '-'}
+                    </p>
+                    <p className="text-sm font-semibold text-navy truncate">{k.judul}</p>
+                  </div>
+                  <ArrowIcon className="h-4 w-4 text-navy/30 shrink-0" />
+                </div>
+              ))}
+            </div>
           )}
         </div>
-        <div className="bg-white rounded-2xl border border-navy/10 p-5 col-span-2 lg:col-span-1">
-          <p className="text-xs font-semibold text-navy/50 uppercase mb-1">Persentase SPP</p>
-          {data.spp.tersedia ? (
-            <p className="text-2xl font-extrabold text-navy">{data.spp.persen_lunas}% lunas</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+        <div className="bg-white rounded-2xl border border-navy/10 p-5">
+          <h2 className="text-sm font-bold text-navy mb-4">Tren Rata-rata Nilai Sekolah</h2>
+          <AcademicTrendChart data={data.grafik_akademik} />
+        </div>
+
+        <div className="bg-white rounded-2xl border border-navy/10 p-5">
+          <MiniCalendar title="Kalender Sekolah" highlightDays={eventDays} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-white rounded-2xl border border-navy/10 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-bold text-navy">Keuangan Sekolah</h2>
+            {keuangan && (
+              <div className="flex items-center gap-4 text-xs">
+                <Legend swatch="bg-gold" label={`Minggu Ini ${formatRupiah(sum(keuangan.mingguan?.minggu_ini))}`} />
+                <Legend swatch="bg-navy/30" label={`Minggu Lalu ${formatRupiah(sum(keuangan.mingguan?.minggu_lalu))}`} />
+              </div>
+            )}
+          </div>
+          {!keuangan ? (
+            <p className="text-sm text-navy/40 text-center py-10">Memuat...</p>
           ) : (
-            <p className="text-sm text-navy/40">{data.spp.catatan}</p>
+            <WeeklyFinanceChart mingguan={keuangan.mingguan} />
+          )}
+        </div>
+
+        <div className="bg-white rounded-2xl border border-navy/10 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-bold text-navy">Ketuntasan Nilai per Mata Pelajaran</h2>
+            <div className="flex items-center gap-4 text-xs">
+              <Legend swatch="bg-navy" label="Tuntas" />
+              <Legend swatch="bg-gold-light" label="Belum Tuntas" />
+            </div>
+          </div>
+          <p className="text-[11px] text-navy/40 mb-3">Berdasarkan ambang standar KKM 75 (KKM resmi per mapel belum dikonfigurasi).</p>
+          {!akademik ? (
+            <p className="text-sm text-navy/40 text-center py-10">Memuat...</p>
+          ) : (
+            <SubjectMasteryChart data={akademik.per_mata_pelajaran} />
           )}
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-navy/10 p-5">
-        <h2 className="text-sm font-bold text-navy mb-4">Grafik Perkembangan Akademik</h2>
-        <AcademicTrendChart data={data.grafik_akademik} />
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+        <div className="bg-white rounded-2xl border border-navy/10 p-5">
+          <h2 className="text-sm font-bold text-navy mb-4">Tagihan Belum Lunas</h2>
+          {!keuangan ? (
+            <p className="text-sm text-navy/40 text-center py-10">Memuat...</p>
+          ) : (keuangan.tunggakan_list || []).length === 0 ? (
+            <p className="text-sm text-navy/40 text-center py-10">Tidak ada tagihan yang belum lunas.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-[11px] uppercase text-navy/40">
+                    <th className="pb-2 font-semibold">Siswa</th>
+                    <th className="pb-2 font-semibold">Judul</th>
+                    <th className="pb-2 font-semibold">Jatuh Tempo</th>
+                    <th className="pb-2 font-semibold text-right">Jumlah</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-navy/5">
+                  {keuangan.tunggakan_list.map((t) => (
+                    <tr key={t.id}>
+                      <td className="py-2.5 font-medium text-navy">{t.siswa?.nama || '-'}</td>
+                      <td className="py-2.5 text-navy/60">{t.judul}</td>
+                      <td className="py-2.5 text-navy/60">{t.jatuh_tempo?.slice(0, 10) || '-'}</td>
+                      <td className="py-2.5 text-right text-navy/70">{formatRupiah(t.jumlah)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white rounded-2xl border border-navy/10 p-5">
+          <h2 className="text-sm font-bold text-navy mb-4">Kehadiran Bulan Ini</h2>
+          {!kehadiran ? (
+            <p className="text-sm text-navy/40 text-center py-10">Memuat...</p>
+          ) : (
+            <AttendanceDonut siswaPersen={kehadiran.siswa.persen_hadir} guruPersen={kehadiran.guru.persen_hadir} />
+          )}
+        </div>
       </div>
     </div>
   )
+}
+
+function sum(arr) {
+  return (arr || []).reduce((a, b) => a + Number(b), 0)
 }
 
 function AcademicTrendChart({ data }) {
@@ -60,28 +173,142 @@ function AcademicTrendChart({ data }) {
   }
 
   const max = 100
+  const w = 100
+  const h = 40
+  const step = data.length > 1 ? w / (data.length - 1) : 0
+  const points = data.map((d, i) => {
+    const x = data.length > 1 ? i * step : w / 2
+    const y = h - (d.rata_rata / max) * h
+    return [x, y]
+  })
+  const linePath = points.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x},${y}`).join(' ')
+  const areaPath = `${linePath} L${points[points.length - 1][0]},${h} L${points[0][0]},${h} Z`
 
   return (
     <div>
-      <div className="flex items-end gap-3 h-40" role="img" aria-label="Grafik rata-rata nilai per periode">
-        {data.map((d) => (
-          <div key={d.periode} className="flex-1 flex flex-col items-center justify-end h-full group">
-            <span className="text-xs font-semibold text-navy mb-1">{d.rata_rata}</span>
-            <div
-              className="w-full max-w-10 bg-navy-light rounded-t-md transition-all group-hover:bg-navy"
-              style={{ height: `${Math.max((d.rata_rata / max) * 100, 4)}%` }}
-            />
-          </div>
+      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="w-full h-40">
+        <path d={areaPath} className="fill-navy-light/15" />
+        <path d={linePath} className="stroke-navy-light" fill="none" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+        {points.map(([x, y], i) => (
+          <circle key={i} cx={x} cy={y} r="1.2" className="fill-navy" vectorEffect="non-scaling-stroke" />
         ))}
-      </div>
-      <div className="flex gap-3 mt-2">
+      </svg>
+      <div className="flex mt-2">
         {data.map((d) => (
           <div key={d.periode} className="flex-1 text-center">
             <span className="text-[11px] text-navy/50">{d.periode}</span>
+            <p className="text-xs font-bold text-navy">{d.rata_rata}</p>
           </div>
         ))}
       </div>
     </div>
+  )
+}
+
+function WeeklyFinanceChart({ mingguan }) {
+  const ini = mingguan?.minggu_ini || Array(7).fill(0)
+  const lalu = mingguan?.minggu_lalu || Array(7).fill(0)
+  const max = Math.max(...ini, ...lalu, 1)
+
+  return (
+    <div className="flex items-end gap-2 h-44">
+      {HARI_LABEL.map((label, i) => (
+        <div key={label} className="flex-1 flex flex-col items-center justify-end h-full gap-1">
+          <div className="w-full flex items-end justify-center gap-1 h-full">
+            <div
+              className="w-1/2 max-w-4 bg-gold rounded-t-sm"
+              style={{ height: `${Math.max((ini[i] / max) * 100, ini[i] > 0 ? 4 : 0)}%` }}
+              title={formatRupiah(ini[i])}
+            />
+            <div
+              className="w-1/2 max-w-4 bg-navy/25 rounded-t-sm"
+              style={{ height: `${Math.max((lalu[i] / max) * 100, lalu[i] > 0 ? 4 : 0)}%` }}
+              title={formatRupiah(lalu[i])}
+            />
+          </div>
+          <span className="text-[11px] text-navy/50">{label}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function SubjectMasteryChart({ data }) {
+  const rows = (data || []).filter((d) => d.jumlah_nilai > 0)
+
+  if (rows.length === 0) {
+    return <p className="text-sm text-navy/40 text-center py-10">Belum ada nilai yang cukup untuk dihitung.</p>
+  }
+
+  return (
+    <div className="space-y-3">
+      {rows.map((d) => (
+        <div key={d.mata_pelajaran}>
+          <div className="flex items-center justify-between text-xs mb-1">
+            <span className="font-semibold text-navy">{d.mata_pelajaran}</span>
+            <span className="text-navy/50">{d.tuntas_persen}% tuntas</span>
+          </div>
+          <div className="h-4 rounded-full bg-gold-light/50 overflow-hidden">
+            <div className="h-full bg-navy rounded-full" style={{ width: `${d.tuntas_persen}%` }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function AttendanceDonut({ siswaPersen, guruPersen }) {
+  const r1 = 15.5
+  const r2 = 11
+  const c1 = 2 * Math.PI * r1
+  const c2 = 2 * Math.PI * r2
+
+  return (
+    <div className="flex flex-col items-center">
+      <svg viewBox="0 0 36 36" className="w-40 h-40 -rotate-90">
+        <circle cx="18" cy="18" r={r1} fill="none" className="stroke-navy/10" strokeWidth="3" />
+        <circle
+          cx="18"
+          cy="18"
+          r={r1}
+          fill="none"
+          className="stroke-navy"
+          strokeWidth="3"
+          strokeDasharray={`${(siswaPersen / 100) * c1} ${c1}`}
+          strokeLinecap="round"
+        />
+        <circle cx="18" cy="18" r={r2} fill="none" className="stroke-gold-light/40" strokeWidth="3" />
+        <circle
+          cx="18"
+          cy="18"
+          r={r2}
+          fill="none"
+          className="stroke-gold"
+          strokeWidth="3"
+          strokeDasharray={`${(guruPersen / 100) * c2} ${c2}`}
+          strokeLinecap="round"
+        />
+      </svg>
+      <div className="flex items-center gap-6 mt-2">
+        <div className="text-center">
+          <p className="text-lg font-extrabold text-navy">{siswaPersen}%</p>
+          <p className="text-[11px] text-navy/50 uppercase tracking-wide">Siswa</p>
+        </div>
+        <div className="text-center">
+          <p className="text-lg font-extrabold text-gold">{guruPersen}%</p>
+          <p className="text-[11px] text-navy/50 uppercase tracking-wide">Guru</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Legend({ swatch, label }) {
+  return (
+    <span className="flex items-center gap-1.5 text-navy/50">
+      <span className={`h-2 w-2 rounded-full ${swatch}`} />
+      {label}
+    </span>
   )
 }
 
@@ -91,13 +318,13 @@ function formatRupiah(value) {
   )
 }
 
-function KpiCard({ label, value, icon: Icon, from, to, hint }) {
+function KpiCard({ label, value, icon: Icon, from, to, hint, small }) {
   return (
     <div className={`bg-gradient-to-br ${from} ${to} rounded-2xl p-5 text-white`}>
       <div className="h-11 w-11 rounded-xl bg-white/15 flex items-center justify-center mb-3">
         <Icon className="h-5.5 w-5.5 text-white" />
       </div>
-      <p className="text-2xl font-extrabold leading-none">{value}</p>
+      <p className={`${small ? 'text-base' : 'text-2xl'} font-extrabold leading-none`}>{value}</p>
       <p className="text-xs text-white/70 mt-1.5 uppercase tracking-wide leading-snug">{label}</p>
       {hint && <p className="text-[11px] text-white/50 mt-1">{hint}</p>}
     </div>
@@ -113,40 +340,39 @@ function StudentIcon(props) {
   )
 }
 
-function AttendanceIcon(props) {
+function StaffIcon(props) {
   return (
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="10" cy="8" r="3.5" />
-      <path d="M3 20c0-3.9 3.1-6.5 7-6.5" />
-      <path d="m14 18 3 3 5-5" />
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" />
     </svg>
   )
 }
 
-function BookIcon(props) {
+function CalendarStarIcon(props) {
   return (
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" />
+      <rect x="3" y="4" width="18" height="17" rx="2" />
+      <path d="M3 9h18M8 2v4M16 2v4" />
+      <path d="m12 12.5 1 2 2.2.3-1.6 1.5.4 2.2-2-1-2 1 .4-2.2-1.6-1.5 2.2-.3Z" />
     </svg>
   )
 }
 
-function TrophyIcon(props) {
+function MoneyIcon(props) {
   return (
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M8 21h8M12 17v4" />
-      <path d="M7 4h10v5a5 5 0 0 1-10 0V4Z" />
-      <path d="M7 5H4a3 3 0 0 0 3 5M17 5h3a3 3 0 0 1-3 5" />
+      <rect x="2" y="6" width="20" height="12" rx="2" />
+      <circle cx="12" cy="12" r="3" />
+      <path d="M6 6v0M18 18v0" />
     </svg>
   )
 }
 
-function AlertIcon(props) {
+function ArrowIcon(props) {
   return (
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 9v4M12 17h.01" />
-      <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+      <path d="M5 12h14M13 6l6 6-6 6" />
     </svg>
   )
 }

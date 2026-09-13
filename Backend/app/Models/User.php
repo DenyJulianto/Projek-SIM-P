@@ -15,7 +15,10 @@ use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable(['name', 'email', 'password'])]
-#[Hidden(['password', 'remember_token', 'verification_code', 'verification_code_expires_at'])]
+#[Hidden([
+    'password', 'remember_token', 'verification_code', 'verification_code_expires_at',
+    'password_reset_code', 'password_reset_code_expires_at',
+])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
@@ -31,6 +34,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'verification_code_expires_at' => 'datetime',
+            'password_reset_code_expires_at' => 'datetime',
             'password' => 'hashed',
             'is_super_admin' => 'boolean',
             'is_active' => 'boolean',

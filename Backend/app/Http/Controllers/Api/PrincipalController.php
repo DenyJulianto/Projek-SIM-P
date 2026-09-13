@@ -61,7 +61,39 @@ class PrincipalController extends Controller
             'total_nilai_tagihan' => $totalTagihan,
             'total_terbayar' => $totalTerbayar,
             'tunggakan' => $totalTagihan - $totalTerbayar,
+            'mingguan' => $this->penerimaanMingguan(),
+            'tunggakan_list' => Tagihan::where('status', 'belum_lunas')
+                ->with('siswa:id,nama,kelas_id')
+                ->orderBy('jatuh_tempo')
+                ->limit(8)
+                ->get(),
         ]);
+    }
+
+    /**
+     * Total penerimaan (pembayaran) per hari-dalam-minggu, minggu berjalan
+     * vs minggu sebelumnya — dipakai untuk grafik "Keuangan Sekolah" di
+     * dashboard. Dihitung langsung dari tabel pembayaran, bukan data karangan.
+     */
+    private function penerimaanMingguan(): array
+    {
+        $awalMingguIni = now()->startOfWeek();
+        $awalMingguLalu = (clone $awalMingguIni)->subWeek();
+
+        $ambilPerHari = function ($mulai, $selesai) {
+            $rows = DB::table('pembayaran')
+                ->whereBetween('tanggal_bayar', [$mulai->toDateString(), $selesai->toDateString()])
+                ->select(DB::raw("strftime('%w', tanggal_bayar) as hari"), DB::raw('sum(jumlah) as total'))
+                ->groupBy('hari')
+                ->pluck('total', 'hari');
+
+            return collect(range(0, 6))->map(fn ($i) => (float) ($rows[(string) $i] ?? 0))->values();
+        };
+
+        return [
+            'minggu_ini' => $ambilPerHari($awalMingguIni, (clone $awalMingguIni)->endOfWeek()),
+            'minggu_lalu' => $ambilPerHari($awalMingguLalu, (clone $awalMingguLalu)->endOfWeek()),
+        ];
     }
 
     public function akademik(): JsonResponse
@@ -79,15 +111,25 @@ class PrincipalController extends Controller
                 ];
             });
 
+        // KKM per mata pelajaran belum dikonfigurasi di sistem (lihat menu
+        // KKM/KKTP di Kurikulum), jadi persentase tuntas di sini dihitung
+        // memakai ambang standar 75 sebagai patokan sementara — bukan KKM
+        // resmi yang ditetapkan sekolah.
+        $kkmStandar = 75;
+
         $perMapel = MataPelajaran::query()
             ->get()
-            ->map(function (MataPelajaran $mapel) {
-                $rata = Nilai::where('mata_pelajaran_id', $mapel->id)->avg('nilai');
+            ->map(function (MataPelajaran $mapel) use ($kkmStandar) {
+                $nilaiMapel = Nilai::where('mata_pelajaran_id', $mapel->id);
+                $rata = (clone $nilaiMapel)->avg('nilai');
+                $jumlah = (clone $nilaiMapel)->count();
+                $tuntas = (clone $nilaiMapel)->where('nilai', '>=', $kkmStandar)->count();
 
                 return [
                     'mata_pelajaran' => $mapel->nama_mapel,
                     'rata_rata_nilai' => $rata ? round((float) $rata, 2) : null,
-                    'jumlah_nilai' => Nilai::where('mata_pelajaran_id', $mapel->id)->count(),
+                    'jumlah_nilai' => $jumlah,
+                    'tuntas_persen' => $jumlah > 0 ? round(($tuntas / $jumlah) * 100, 1) : null,
                 ];
             });
 

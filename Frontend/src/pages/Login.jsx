@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import CompleteNameForm from '../components/CompleteNameForm'
 import PasswordInput from '../components/PasswordInput'
 import { useAuth } from '../lib/AuthContext'
-import { api } from '../lib/api'
+import { api, IS_CENTRAL_DOMAIN } from '../lib/api'
+import LogoStacked from '../components/LogoStacked'
 
 export default function Login() {
   const { login, setUser } = useAuth()
@@ -17,6 +18,8 @@ export default function Login() {
   const [needsName, setNeedsName] = useState(false)
 
   useEffect(() => {
+    // /public/profil khusus data satu sekolah, tidak ada artinya di domain central.
+    if (IS_CENTRAL_DOMAIN) return
     api.getProfil().then((p) => setBackground(p.auth_background || '')).catch(() => {})
   }, [])
 
@@ -52,12 +55,7 @@ export default function Login() {
     >
       <div className="w-full max-w-3xl bg-white rounded-[2rem] shadow-2xl shadow-navy/10 overflow-hidden grid md:grid-cols-2">
         <div className="bg-gradient-to-br from-navy via-navy to-navy-light text-white p-10 flex flex-col items-center text-center justify-between">
-          <div className="flex flex-col items-center">
-            <div className="h-14 w-14 rounded-full bg-white/10 flex items-center justify-center">
-              <CapIcon className="h-7 w-7 text-white" />
-            </div>
-            <p className="mt-3 font-bold tracking-wide">SIM Pendidikan</p>
-          </div>
+          <LogoStacked />
 
           <div>
             <h2 className="text-2xl font-extrabold mb-3">Selamat Datang Kembali!</h2>
@@ -117,15 +115,9 @@ export default function Login() {
                     />
                     Ingat saya
                   </label>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      window.alert('Silakan hubungi admin sekolah untuk mereset password Anda.')
-                    }
-                    className="text-navy/60 hover:text-navy hover:underline"
-                  >
+                  <Link to="/forgot-password" className="text-navy/60 hover:text-navy hover:underline">
                     Lupa password?
-                  </button>
+                  </Link>
                 </div>
 
                 <div className="flex justify-center pt-2">
@@ -157,11 +149,3 @@ export default function Login() {
   )
 }
 
-function CapIcon(props) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="m2 9 10-5 10 5-10 5-10-5Z" />
-      <path d="M6 11v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5" />
-    </svg>
-  )
-}

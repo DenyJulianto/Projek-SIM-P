@@ -19,6 +19,8 @@ class Guru extends Model
         'nama',
         'gelar',
         'jabatan',
+        'mata_pelajaran',
+        'status_kepegawaian',
         'pendidikan_terakhir',
         'tahun_mulai_mengajar',
         'agama',
