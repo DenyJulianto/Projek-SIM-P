@@ -8,7 +8,8 @@ import { api, BASE_URL } from '../lib/api'
 import { roleBadgeClass } from '../lib/roleColors'
 
 export default function UserManagement({ onBack }) {
-  const { user: currentUser } = useAuth()
+  const { user: currentUser, hasRole } = useAuth()
+  const isSuperAdmin = hasRole('Super Admin')
   const [users, setUsers] = useState([])
   const [meta, setMeta] = useState({ current_page: 1, last_page: 1, total: 0 })
   const [roles, setRoles] = useState([])
@@ -76,6 +77,11 @@ export default function UserManagement({ onBack }) {
     setUsers((list) => list.map((u) => (u.id === updated.id ? { ...u, ...updated } : u)))
     setDetailUser((d) => (d ? { ...d, ...updated } : d))
   }
+
+  // Hanya Super Admin yang boleh memberikan/mencabut peran Super Admin —
+  // sembunyikan pilihan ini dari form untuk aktor selain Super Admin
+  // (backend tetap menegakkan aturan yang sama sebagai jaring pengaman).
+  const assignableRoles = isSuperAdmin ? roles : roles.filter((r) => r.name !== 'Super Admin')
 
   return (
     <div>
@@ -243,9 +249,11 @@ export default function UserManagement({ onBack }) {
                         <IconButton title="Detail" onClick={() => setDetailUser(u)}>
                           <EyeIcon className="h-4 w-4" />
                         </IconButton>
-                        <IconButton title="Edit" onClick={() => openEdit(u)}>
-                          <PencilIcon className="h-4 w-4" />
-                        </IconButton>
+                        {(isSuperAdmin || !u.roles?.some((r) => r.name === 'Super Admin')) && (
+                          <IconButton title="Edit" onClick={() => openEdit(u)}>
+                            <PencilIcon className="h-4 w-4" />
+                          </IconButton>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -297,7 +305,7 @@ export default function UserManagement({ onBack }) {
       {showForm && (
         <UserFormModal
           user={editingUser}
-          roles={roles}
+          roles={assignableRoles}
           onClose={() => setShowForm(false)}
           onSaved={handleSaved}
         />

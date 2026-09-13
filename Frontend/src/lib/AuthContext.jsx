@@ -69,6 +69,14 @@ export function AuthProvider({ children }) {
     return user?.all_permissions?.includes(name) || false
   }
 
+  function hasRole(name) {
+    return user?.roles?.some((r) => r.name === name) || false
+  }
+
+  function isSuperAdmin() {
+    return user?.is_super_admin || false
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -81,6 +89,8 @@ export function AuthProvider({ children }) {
         resendVerificationCode,
         logout,
         hasPermission,
+        hasRole,
+        isSuperAdmin,
       }}
     >
       {children}

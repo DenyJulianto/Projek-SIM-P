@@ -9,11 +9,26 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 class RoleController extends Controller
 {
+    /**
+     * Role 'Super Admin' hanya boleh diubah hak aksesnya, diganti nama,
+     * atau dihapus oleh sesama Super Admin — Admin Sekolah dengan
+     * 'pengguna.manage' tidak boleh melemahkan/menghapus role tertinggi ini.
+     */
+    private function assertCanModifyRole(Request $request, Role $role): void
+    {
+        if ($role->name === 'Super Admin' && ! $request->user()->hasRole('Super Admin')) {
+            throw ValidationException::withMessages([
+                'name' => ['Hanya Super Admin yang dapat mengubah atau menghapus role Super Admin.'],
+            ]);
+        }
+    }
+
     public function index(): JsonResponse
     {
         $roles = Role::with('permissions:id,name')->orderBy('name')->get(['id', 'name']);
@@ -63,6 +78,8 @@ class RoleController extends Controller
 
     public function update(Request $request, Role $role): JsonResponse
     {
+        $this->assertCanModifyRole($request, $role);
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255', Rule::unique('roles', 'name')->where('guard_name', 'web')->ignore($role->id)],
             'permissions' => ['array'],
@@ -84,6 +101,8 @@ class RoleController extends Controller
 
     public function destroy(Request $request, Role $role): JsonResponse
     {
+        $this->assertCanModifyRole($request, $role);
+
         if (DB::table('model_has_roles')->where('role_id', $role->id)->exists()) {
             return response()->json([
                 'message' => 'Role masih dipakai oleh pengguna. Pindahkan pengguna ke role lain dahulu.',

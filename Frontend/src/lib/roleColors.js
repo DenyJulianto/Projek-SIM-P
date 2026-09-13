@@ -15,6 +15,7 @@ const PALETTE = [
 
 export function roleBadgeClass(roleName) {
   if (!roleName) return PALETTE[0]
+  if (roleName === 'Super Admin') return 'bg-navy text-white'
   let hash = 0
   for (let i = 0; i < roleName.length; i++) {
     hash = (hash * 31 + roleName.charCodeAt(i)) >>> 0

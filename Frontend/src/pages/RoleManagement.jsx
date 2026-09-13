@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
 import RoleFormModal from '../components/RoleFormModal'
+import { useAuth } from '../lib/AuthContext'
 import { api } from '../lib/api'
 import { roleBadgeClass } from '../lib/roleColors'
 
 export default function RoleManagement({ onBack }) {
+  const { hasRole } = useAuth()
+  const isSuperAdmin = hasRole('Super Admin')
   const [roles, setRoles] = useState([])
   const [permissions, setPermissions] = useState([])
   const [loading, setLoading] = useState(true)
@@ -91,14 +94,16 @@ export default function RoleManagement({ onBack }) {
                 >
                   {role.name}
                 </span>
-                <div className="flex items-center gap-1">
-                  <IconButton title="Edit" onClick={() => openEdit(role)}>
-                    <PencilIcon className="h-3.5 w-3.5" />
-                  </IconButton>
-                  <IconButton title="Hapus" onClick={() => handleDelete(role)}>
-                    <TrashIcon className="h-3.5 w-3.5" />
-                  </IconButton>
-                </div>
+                {(isSuperAdmin || role.name !== 'Super Admin') && (
+                  <div className="flex items-center gap-1">
+                    <IconButton title="Edit" onClick={() => openEdit(role)}>
+                      <PencilIcon className="h-3.5 w-3.5" />
+                    </IconButton>
+                    <IconButton title="Hapus" onClick={() => handleDelete(role)}>
+                      <TrashIcon className="h-3.5 w-3.5" />
+                    </IconButton>
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-4 text-xs text-navy/50">
                 <span className="flex items-center gap-1">

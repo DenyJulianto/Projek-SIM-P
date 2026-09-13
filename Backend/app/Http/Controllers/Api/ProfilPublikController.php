@@ -26,6 +26,12 @@ class ProfilPublikController extends Controller
             'npsn' => $sekolah->npsn,
             'jenjang' => $sekolah->jenjang,
             'alamat' => $sekolah->alamat,
+            'kecamatan' => $sekolah->kecamatan,
+            'kelurahan' => $sekolah->kelurahan,
+            'kabupaten_kota' => $sekolah->kabupaten_kota,
+            'provinsi' => $sekolah->provinsi,
+            'latitude' => $sekolah->latitude,
+            'longitude' => $sekolah->longitude,
             'telepon' => $sekolah->telepon,
             'email' => $sekolah->email,
             'logo' => $sekolah->logo,
@@ -48,6 +54,12 @@ class ProfilPublikController extends Controller
             'nama_sekolah' => ['sometimes', 'string', 'max:255'],
             'jenjang' => ['nullable', 'string', 'max:20'],
             'alamat' => ['nullable', 'string'],
+            'kecamatan' => ['nullable', 'string', 'max:255'],
+            'kelurahan' => ['nullable', 'string', 'max:255'],
+            'kabupaten_kota' => ['nullable', 'string', 'max:255'],
+            'provinsi' => ['nullable', 'string', 'max:255'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'telepon' => ['nullable', 'string', 'max:20'],
             'email' => ['nullable', 'email', 'max:255'],
             'logo' => ['nullable', 'string'],
@@ -63,7 +75,10 @@ class ProfilPublikController extends Controller
 
         $sekolahFields = array_intersect_key(
             $data,
-            array_flip(['nama_sekolah', 'jenjang', 'alamat', 'telepon', 'email', 'logo'])
+            array_flip([
+                'nama_sekolah', 'jenjang', 'alamat', 'kecamatan', 'kelurahan',
+                'kabupaten_kota', 'provinsi', 'latitude', 'longitude', 'telepon', 'email', 'logo',
+            ])
         );
 
         if ($sekolahFields !== []) {

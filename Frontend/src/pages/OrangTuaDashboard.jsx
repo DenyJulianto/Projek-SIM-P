@@ -4,6 +4,7 @@ import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import { useAuth } from '../lib/AuthContext'
 import { api } from '../lib/api'
 import MyProfile from './MyProfile'
+import LogoHorizontal from '../components/LogoHorizontal'
 
 const MENU_GROUPS = [
   { section: null, items: [{ key: 'home', label: 'Dashboard', icon: GridIcon }] },
@@ -74,10 +75,7 @@ export default function OrangTuaDashboard() {
     <div className="h-screen bg-white flex overflow-hidden">
       <aside className="w-64 shrink-0 bg-navy text-white flex flex-col py-6 px-4 h-screen">
         <div className="flex items-center gap-2 px-2 mb-6">
-          <div className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-            <CapIcon className="h-5 w-5 text-white" />
-          </div>
-          <p className="font-bold tracking-wide text-sm">SIM Pendidikan</p>
+          <LogoHorizontal />
         </div>
 
         <nav className="flex-1 space-y-4 overflow-y-auto">
@@ -671,14 +669,6 @@ function ShortcutTile({ label, icon: Icon, onClick }) {
   )
 }
 
-function CapIcon(props) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="m2 9 10-5 10 5-10 5-10-5Z" />
-      <path d="M6 11v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5" />
-    </svg>
-  )
-}
 
 function GridIcon(props) {
   return (

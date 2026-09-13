@@ -7,6 +7,17 @@
 export const BASE_URL =
   import.meta.env.VITE_API_BASE_URL || `${window.location.protocol}//${window.location.hostname}:8000`
 
+// Harus sama dengan config/tenancy.php > central_domains di backend. Dicek
+// dari host tujuan BASE_URL (backend API), bukan host halaman frontend itu
+// sendiri — keduanya bisa beda, mis. saat VITE_API_BASE_URL di-override
+// manual ke satu tenant tertentu untuk development. Rute central
+// (routes/api.php) didaftarkan dengan prefix /api sedangkan rute tenant
+// (routes/tenant.php) tidak — jadi endpoint yang ada di kedua sisi (login,
+// logout, me) perlu tahu API mana yang sedang dituju supaya memanggil path
+// yang benar.
+const CENTRAL_DOMAINS = ['127.0.0.1', 'localhost']
+export const IS_CENTRAL_DOMAIN = CENTRAL_DOMAINS.includes(new URL(BASE_URL).hostname)
+
 function authHeaders() {
   const token = localStorage.getItem('token') || sessionStorage.getItem('token')
   return token ? { Authorization: `Bearer ${token}` } : {}
@@ -75,7 +86,7 @@ export const api = {
   getKegiatan: () => request('/public/kegiatan'),
 
   login: (email, password) =>
-    request('/login', {
+    request(IS_CENTRAL_DOMAIN ? '/api/login' : '/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
@@ -102,8 +113,20 @@ export const api = {
       body: JSON.stringify({ email }),
     }),
 
-  logout: () => request('/logout', { method: 'POST' }),
-  me: () => request('/me'),
+  forgotPassword: (email) =>
+    request('/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+
+  resetPassword: (email, code, password, passwordConfirmation) =>
+    request('/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ email, code, password, password_confirmation: passwordConfirmation }),
+    }),
+
+  logout: () => request(IS_CENTRAL_DOMAIN ? '/api/logout' : '/logout', { method: 'POST' }),
+  me: () => request(IS_CENTRAL_DOMAIN ? '/api/me' : '/me'),
 
   updateProfil: (data) =>
     request('/profil', {
@@ -188,6 +211,72 @@ export const api = {
   },
 
   getDashboardSummary: (days) => request(`/dashboard-summary${days ? `?days=${days}` : ''}`),
+
+  // Super Admin platform (central, lintas sekolah)
+  getGuruDirectoryNasional: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/api/direktori-guru${query ? `?${query}` : ''}`)
+  },
+
+  exportGuruDirectoryNasional: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return downloadFile(`/api/direktori-guru/export${query ? `?${query}` : ''}`, 'data-guru.xlsx')
+  },
+
+  downloadGuruImportTemplate: () =>
+    downloadFile('/api/direktori-guru/import-template', 'template-import-guru.xlsx'),
+
+  importGuruDirectoryNasional: (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return requestForm('/api/direktori-guru/import', formData)
+  },
+
+  getSiswaDirectoryNasional: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/api/direktori-siswa${query ? `?${query}` : ''}`)
+  },
+
+  exportSiswaDirectoryNasional: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return downloadFile(`/api/direktori-siswa/export${query ? `?${query}` : ''}`, 'data-siswa.xlsx')
+  },
+
+  downloadSiswaImportTemplate: () =>
+    downloadFile('/api/direktori-siswa/import-template', 'template-import-siswa.xlsx'),
+
+  importSiswaDirectoryNasional: (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return requestForm('/api/direktori-siswa/import', formData)
+  },
+
+  getDashboardNasional: () => request('/api/dashboard-nasional'),
+
+  getSekolahNasional: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/api/sekolah${query ? `?${query}` : ''}`)
+  },
+
+  createSekolah: (data) =>
+    request('/api/sekolah', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  downloadSekolahImportTemplate: () =>
+    downloadFile('/api/sekolah/import-template', 'template-import-sekolah.xlsx'),
+
+  exportSekolahNasional: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return downloadFile(`/api/sekolah/export${query ? `?${query}` : ''}`, 'data-sekolah.xlsx')
+  },
+
+  importSekolah: (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return requestForm('/api/sekolah/import', formData)
+  },
 
   // Tahun Ajaran & Semester
   listTahunAjaran: () => request('/tahun-ajaran'),
