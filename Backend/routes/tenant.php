@@ -40,6 +40,7 @@ use App\Http\Controllers\Api\RaporPengesahanController;
 use App\Http\Controllers\Api\RealisasiAnggaranController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\SemesterController;
+use App\Http\Controllers\Api\SinkronisasiController;
 use App\Http\Controllers\Api\SiswaController;
 use App\Http\Controllers\Api\ParentSelfController;
 use App\Http\Controllers\Api\StudentSelfController;
@@ -221,11 +222,13 @@ Route::middleware([
         Route::apiResource('kegiatan', KegiatanController::class)
             ->middleware('permission:humas.kegiatan');
 
-        Route::apiResource('inventaris', InventarisController::class)
-            ->middleware('permission:sarpras.inventaris');
+        Route::middleware('module.enabled:sarpras')->group(function () {
+            Route::apiResource('inventaris', InventarisController::class)
+                ->middleware('permission:sarpras.inventaris');
 
-        Route::post('inventaris/{inventari}/riwayat', [InventarisController::class, 'storeRiwayat'])
-            ->middleware('permission:sarpras.inventaris');
+            Route::post('inventaris/{inventari}/riwayat', [InventarisController::class, 'storeRiwayat'])
+                ->middleware('permission:sarpras.inventaris');
+        });
 
         Route::apiResource('users', UserController::class)
             ->only(['index', 'store', 'update'])
@@ -261,11 +264,13 @@ Route::middleware([
         Route::get('dashboard-summary', [DashboardController::class, 'summary'])
             ->middleware('permission:pengguna.manage');
 
-        Route::apiResource('surat', SuratController::class)
-            ->middleware('permission:persuratan.manage');
+        Route::middleware('module.enabled:persuratan')->group(function () {
+            Route::apiResource('surat', SuratController::class)
+                ->middleware('permission:persuratan.manage');
 
-        Route::apiResource('arsip-dokumen', ArsipDokumenController::class)
-            ->middleware('permission:persuratan.manage');
+            Route::apiResource('arsip-dokumen', ArsipDokumenController::class)
+                ->middleware('permission:persuratan.manage');
+        });
 
         Route::apiResource('jam-belajar', JamBelajarController::class)
             ->only(['index', 'store', 'update', 'destroy'])
@@ -298,6 +303,9 @@ Route::middleware([
             Route::post('backups/{name}/restore', [BackupController::class, 'restore']);
             Route::get('backup-schedule', [BackupController::class, 'schedule']);
             Route::put('backup-schedule', [BackupController::class, 'updateSchedule']);
+
+            Route::post('sinkronisasi', [SinkronisasiController::class, 'store']);
+            Route::get('sinkronisasi', [SinkronisasiController::class, 'index']);
         });
 
         Route::apiResource('prestasi', PrestasiController::class)
@@ -308,29 +316,31 @@ Route::middleware([
             ->only(['index', 'store', 'update', 'destroy'])
             ->middleware('permission:pelanggaran.manage|kesiswaan.pelanggaran');
 
-        Route::middleware('permission:konseling.manage')->group(function () {
-            Route::apiResource('konseling', KonselingController::class)
-                ->only(['index', 'store', 'update', 'destroy']);
-        });
+        Route::middleware('module.enabled:bk')->group(function () {
+            Route::middleware('permission:konseling.manage')->group(function () {
+                Route::apiResource('konseling', KonselingController::class)
+                    ->only(['index', 'store', 'update', 'destroy']);
+            });
 
-        Route::middleware('permission:kasus.manage')->group(function () {
-            Route::apiResource('kasus', KasusController::class)
-                ->only(['index', 'store', 'update', 'destroy'])
-                ->parameters(['kasus' => 'kasus']);
-            Route::post('kasus/{kasus}/tindakan', [KasusController::class, 'storeTindakan']);
-            Route::delete('kasus/{kasus}/tindakan/{tindakan}', [KasusController::class, 'destroyTindakan']);
-        });
+            Route::middleware('permission:kasus.manage')->group(function () {
+                Route::apiResource('kasus', KasusController::class)
+                    ->only(['index', 'store', 'update', 'destroy'])
+                    ->parameters(['kasus' => 'kasus']);
+                Route::post('kasus/{kasus}/tindakan', [KasusController::class, 'storeTindakan']);
+                Route::delete('kasus/{kasus}/tindakan/{tindakan}', [KasusController::class, 'destroyTindakan']);
+            });
 
-        Route::middleware('permission:pemanggilan-orangtua.manage')->group(function () {
-            Route::apiResource('pemanggilan', PemanggilanController::class)
-                ->only(['index', 'store', 'update', 'destroy']);
-        });
+            Route::middleware('permission:pemanggilan-orangtua.manage')->group(function () {
+                Route::apiResource('pemanggilan', PemanggilanController::class)
+                    ->only(['index', 'store', 'update', 'destroy']);
+            });
 
-        Route::middleware('permission:konseling.manage|kasus.manage|pemanggilan-orangtua.manage')->prefix('bk')->group(function () {
-            Route::get('perlu-pendampingan', [BkMonitoringController::class, 'perluPendampingan']);
-            Route::get('rekap-kasus', [BkMonitoringController::class, 'rekapKasus']);
-            Route::get('statistik', [BkMonitoringController::class, 'statistik']);
-            Route::get('laporan', [BkMonitoringController::class, 'laporan']);
+            Route::middleware('permission:konseling.manage|kasus.manage|pemanggilan-orangtua.manage')->prefix('bk')->group(function () {
+                Route::get('perlu-pendampingan', [BkMonitoringController::class, 'perluPendampingan']);
+                Route::get('rekap-kasus', [BkMonitoringController::class, 'rekapKasus']);
+                Route::get('statistik', [BkMonitoringController::class, 'statistik']);
+                Route::get('laporan', [BkMonitoringController::class, 'laporan']);
+            });
         });
 
         Route::middleware('permission:dashboard.view-all')->prefix('principal')->group(function () {
@@ -344,57 +354,61 @@ Route::middleware([
         });
 
         // Keuangan / SPP — Bendahara kelola penuh.
-        Route::middleware('permission:tagihan.manage')->group(function () {
-            Route::apiResource('tagihan', TagihanController::class)
-                ->only(['index', 'store', 'update', 'destroy']);
-        });
-        Route::middleware('permission:pembayaran.manage')->group(function () {
-            Route::get('pembayaran', [PembayaranController::class, 'index']);
-            Route::post('tagihan/{tagihan}/pembayaran', [PembayaranController::class, 'store']);
-            Route::delete('tagihan/{tagihan}/pembayaran/{pembayaran}', [PembayaranController::class, 'destroy']);
-        });
+        Route::middleware('module.enabled:keuangan')->group(function () {
+            Route::middleware('permission:tagihan.manage')->group(function () {
+                Route::apiResource('tagihan', TagihanController::class)
+                    ->only(['index', 'store', 'update', 'destroy']);
+            });
+            Route::middleware('permission:pembayaran.manage')->group(function () {
+                Route::get('pembayaran', [PembayaranController::class, 'index']);
+                Route::post('tagihan/{tagihan}/pembayaran', [PembayaranController::class, 'store']);
+                Route::delete('tagihan/{tagihan}/pembayaran/{pembayaran}', [PembayaranController::class, 'destroy']);
+            });
 
-        // Anggaran Sekolah / RKAS — Bendahara kelola (anggaran.manage),
-        // Kepala Sekolah baca + putuskan pengajuan (anggaran.approve).
-        Route::middleware('permission:anggaran.manage|anggaran.approve')->group(function () {
-            Route::get('anggaran-pos', [AnggaranPosController::class, 'index']);
-            Route::get('sumber-dana', [SumberDanaController::class, 'index']);
-            Route::get('pengajuan-anggaran', [PengajuanAnggaranController::class, 'index']);
-            Route::get('realisasi-anggaran', [RealisasiAnggaranController::class, 'index']);
-        });
-        Route::middleware('permission:anggaran.manage')->group(function () {
-            Route::post('anggaran-pos', [AnggaranPosController::class, 'store']);
-            Route::put('anggaran-pos/{anggaranPos}', [AnggaranPosController::class, 'update']);
-            Route::delete('anggaran-pos/{anggaranPos}', [AnggaranPosController::class, 'destroy']);
-            Route::post('sumber-dana', [SumberDanaController::class, 'store']);
-            Route::put('sumber-dana/{sumberDana}', [SumberDanaController::class, 'update']);
-            Route::delete('sumber-dana/{sumberDana}', [SumberDanaController::class, 'destroy']);
-            Route::post('pengajuan-anggaran', [PengajuanAnggaranController::class, 'store']);
-            Route::post('pengajuan-anggaran/{pengajuanAnggaran}/realisasi', [RealisasiAnggaranController::class, 'store']);
-        });
-        Route::middleware('permission:anggaran.approve')->group(function () {
-            Route::post('pengajuan-anggaran/{pengajuanAnggaran}/approve', [PengajuanAnggaranController::class, 'approve']);
-            Route::post('pengajuan-anggaran/{pengajuanAnggaran}/reject', [PengajuanAnggaranController::class, 'reject']);
-        });
+            // Anggaran Sekolah / RKAS — Bendahara kelola (anggaran.manage),
+            // Kepala Sekolah baca + putuskan pengajuan (anggaran.approve).
+            Route::middleware('permission:anggaran.manage|anggaran.approve')->group(function () {
+                Route::get('anggaran-pos', [AnggaranPosController::class, 'index']);
+                Route::get('sumber-dana', [SumberDanaController::class, 'index']);
+                Route::get('pengajuan-anggaran', [PengajuanAnggaranController::class, 'index']);
+                Route::get('realisasi-anggaran', [RealisasiAnggaranController::class, 'index']);
+            });
+            Route::middleware('permission:anggaran.manage')->group(function () {
+                Route::post('anggaran-pos', [AnggaranPosController::class, 'store']);
+                Route::put('anggaran-pos/{anggaranPos}', [AnggaranPosController::class, 'update']);
+                Route::delete('anggaran-pos/{anggaranPos}', [AnggaranPosController::class, 'destroy']);
+                Route::post('sumber-dana', [SumberDanaController::class, 'store']);
+                Route::put('sumber-dana/{sumberDana}', [SumberDanaController::class, 'update']);
+                Route::delete('sumber-dana/{sumberDana}', [SumberDanaController::class, 'destroy']);
+                Route::post('pengajuan-anggaran', [PengajuanAnggaranController::class, 'store']);
+                Route::post('pengajuan-anggaran/{pengajuanAnggaran}/realisasi', [RealisasiAnggaranController::class, 'store']);
+            });
+            Route::middleware('permission:anggaran.approve')->group(function () {
+                Route::post('pengajuan-anggaran/{pengajuanAnggaran}/approve', [PengajuanAnggaranController::class, 'approve']);
+                Route::post('pengajuan-anggaran/{pengajuanAnggaran}/reject', [PengajuanAnggaranController::class, 'reject']);
+            });
 
-        Route::middleware('permission:laporan-keuangan.manage')->prefix('laporan-keuangan')->group(function () {
-            Route::get('penerimaan', [LaporanKeuanganController::class, 'penerimaan']);
-            Route::get('pengeluaran', [LaporanKeuanganController::class, 'pengeluaran']);
-            Route::get('tunggakan', [LaporanKeuanganController::class, 'tunggakan']);
-            Route::get('anggaran', [LaporanKeuanganController::class, 'anggaran']);
-            Route::get('ringkasan', [LaporanKeuanganController::class, 'ringkasan']);
+            Route::middleware('permission:laporan-keuangan.manage')->prefix('laporan-keuangan')->group(function () {
+                Route::get('penerimaan', [LaporanKeuanganController::class, 'penerimaan']);
+                Route::get('pengeluaran', [LaporanKeuanganController::class, 'pengeluaran']);
+                Route::get('tunggakan', [LaporanKeuanganController::class, 'tunggakan']);
+                Route::get('anggaran', [LaporanKeuanganController::class, 'anggaran']);
+                Route::get('ringkasan', [LaporanKeuanganController::class, 'ringkasan']);
+            });
         });
 
         // Kepegawaian: pengajuan (Tata Usaha / pegawai.manage) & persetujuan (Kepala Sekolah).
-        Route::middleware('permission:pegawai.manage|kepegawaian.approve')->group(function () {
-            Route::get('pengajuan-kepegawaian', [PengajuanKepegawaianController::class, 'index']);
-        });
-        Route::middleware('permission:pegawai.manage')->group(function () {
-            Route::post('pengajuan-kepegawaian', [PengajuanKepegawaianController::class, 'store']);
-        });
-        Route::middleware('permission:kepegawaian.approve')->group(function () {
-            Route::post('pengajuan-kepegawaian/{pengajuanKepegawaian}/approve', [PengajuanKepegawaianController::class, 'approve']);
-            Route::post('pengajuan-kepegawaian/{pengajuanKepegawaian}/reject', [PengajuanKepegawaianController::class, 'reject']);
+        Route::middleware('module.enabled:kepegawaian')->group(function () {
+            Route::middleware('permission:pegawai.manage|kepegawaian.approve')->group(function () {
+                Route::get('pengajuan-kepegawaian', [PengajuanKepegawaianController::class, 'index']);
+            });
+            Route::middleware('permission:pegawai.manage')->group(function () {
+                Route::post('pengajuan-kepegawaian', [PengajuanKepegawaianController::class, 'store']);
+            });
+            Route::middleware('permission:kepegawaian.approve')->group(function () {
+                Route::post('pengajuan-kepegawaian/{pengajuanKepegawaian}/approve', [PengajuanKepegawaianController::class, 'approve']);
+                Route::post('pengajuan-kepegawaian/{pengajuanKepegawaian}/reject', [PengajuanKepegawaianController::class, 'reject']);
+            });
         });
 
         // E-Rapor: pengajuan (wali kelas/kurikulum) & pengesahan (Kepala Sekolah).

@@ -44,6 +44,26 @@ class Sekolah extends BaseTenant implements TenantWithDatabase
             'email',
             'logo',
             'status',
+            'module_settings',
         ];
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'module_settings' => 'array',
+        ];
+    }
+
+    /**
+     * Modul opsional aktif untuk sekolah ini, digabung dengan default "semua
+     * aktif" untuk key yang belum pernah diatur — supaya pemanggil (endpoint
+     * central maupun EnsureModuleEnabled) tidak perlu menangani null sendiri.
+     */
+    public function resolvedModuleSettings(): array
+    {
+        $defaults = array_fill_keys(array_keys(config('sim.modules')), true);
+
+        return array_merge($defaults, $this->module_settings ?? []);
     }
 }

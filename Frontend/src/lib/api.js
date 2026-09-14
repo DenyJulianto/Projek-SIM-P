@@ -278,6 +278,135 @@ export const api = {
     return requestForm('/api/sekolah/import', formData)
   },
 
+  // Akses & Hak Sekolah (Super Admin)
+  updateSekolahStatus: (sekolahId, status) =>
+    request(`/api/sekolah/${sekolahId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    }),
+
+  getSekolahAdmins: (sekolahId) => request(`/api/sekolah/${sekolahId}/admins`),
+
+  createSekolahAdmin: (sekolahId, data) =>
+    request(`/api/sekolah/${sekolahId}/admins`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  deleteSekolahAdmin: (sekolahId, userId) =>
+    request(`/api/sekolah/${sekolahId}/admins/${userId}`, { method: 'DELETE' }),
+
+  getSekolahRoles: (sekolahId) => request(`/api/sekolah/${sekolahId}/roles`),
+
+  updateSekolahRolePermissions: (sekolahId, roleId, permissions) =>
+    request(`/api/sekolah/${sekolahId}/roles/${roleId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ permissions }),
+    }),
+
+  getPermissionsCatalog: () => request('/api/permissions-catalog'),
+
+  // Sinkronisasi Data (Super Admin, lintas sekolah)
+  getSyncLogNasional: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/api/sinkronisasi/log${query ? `?${query}` : ''}`)
+  },
+
+  getSyncConflicts: () => request('/api/sinkronisasi/konflik'),
+
+  forceSyncSekolah: (sekolahId) =>
+    request(`/api/sekolah/${sekolahId}/sinkronisasi`, { method: 'POST' }),
+
+  // Audit & Monitoring (Super Admin, lintas sekolah)
+  getAuditLogNasional: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/api/audit/log${query ? `?${query}` : ''}`)
+  },
+
+  getAuditNotifikasi: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/api/audit/notifikasi${query ? `?${query}` : ''}`)
+  },
+
+  getLaporanWilayah: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/api/audit/laporan-wilayah${query ? `?${query}` : ''}`)
+  },
+
+  exportLaporanWilayah: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return downloadFile(`/api/audit/laporan-wilayah/export${query ? `?${query}` : ''}`, 'laporan-aktivitas.xlsx')
+  },
+
+  // Statistik & Analitik (Super Admin, nasional)
+  getStatistikRingkasan: () => request('/api/statistik/ringkasan'),
+
+  getStatistikWilayah: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/api/statistik/wilayah${query ? `?${query}` : ''}`)
+  },
+
+  getStatistikJenjang: () => request('/api/statistik/jenjang'),
+
+  getPetaSebaran: () => request('/api/statistik/peta'),
+
+  // Sistem & Konfigurasi (Super Admin, nasional)
+  getModuleCatalog: () => request('/api/modules/catalog'),
+  getSekolahModules: (sekolahId) => request(`/api/sekolah/${sekolahId}/modules`),
+  updateSekolahModules: (sekolahId, modules) =>
+    request(`/api/sekolah/${sekolahId}/modules`, {
+      method: 'PATCH',
+      body: JSON.stringify({ modules }),
+    }),
+
+  getSystemInfo: () => request('/api/system-info'),
+  listNationalBackups: () => request('/api/backup-nasional'),
+  createNationalBackup: () => request('/api/backup-nasional', { method: 'POST' }),
+  deleteNationalBackup: (name) => request(`/api/backup-nasional/${name}`, { method: 'DELETE' }),
+  restoreNationalBackup: (name) => request(`/api/backup-nasional/${name}/restore`, { method: 'POST' }),
+  downloadNationalBackup: (name) => downloadFile(`/api/backup-nasional/${name}/download`, name),
+
+  listIntegrationTokens: () => request('/api/integrasi-token'),
+  createIntegrationToken: (data) =>
+    request('/api/integrasi-token', { method: 'POST', body: JSON.stringify(data) }),
+  deleteIntegrationToken: (id) => request(`/api/integrasi-token/${id}`, { method: 'DELETE' }),
+
+  // Pengguna & Role (Super Admin, nasional)
+  getAdminSekolahNasional: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/api/admin-sekolah${query ? `?${query}` : ''}`)
+  },
+
+  resetAdminSekolahPassword: (sekolahId, userId) =>
+    request(`/api/sekolah/${sekolahId}/admins/${userId}/reset-password`, { method: 'POST' }),
+
+  toggleAdminSekolahActive: (sekolahId, userId, isActive) =>
+    request(`/api/sekolah/${sekolahId}/admins/${userId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ is_active: isActive }),
+    }),
+
+  getRolesKatalog: () => request('/api/roles-katalog'),
+
+  // Keamanan (Super Admin, nasional)
+  getSecuritySettings: () => request('/api/security/settings'),
+  updatePiiMasking: (enabled) =>
+    request('/api/security/pii', { method: 'PATCH', body: JSON.stringify({ mask_pii_enabled: enabled }) }),
+  updateRetentionPolicy: (days) =>
+    request('/api/security/retention', { method: 'PATCH', body: JSON.stringify({ log_retention_days: days }) }),
+  getRetentionPreview: () => request('/api/security/retention/preview'),
+  purgeRetention: () => request('/api/security/retention/purge', { method: 'POST' }),
+
+  verifyTwoFactor: (challenge, code) =>
+    request('/api/2fa/verify', { method: 'POST', body: JSON.stringify({ challenge, code }) }),
+  getTwoFactorStatus: () => request('/api/2fa/status'),
+  setupTwoFactor: () => request('/api/2fa/setup', { method: 'POST' }),
+  confirmTwoFactor: (code) => request('/api/2fa/confirm', { method: 'POST', body: JSON.stringify({ code }) }),
+  disableTwoFactor: (password) =>
+    request('/api/2fa/disable', { method: 'POST', body: JSON.stringify({ password }) }),
+  regenerateRecoveryCodes: (password) =>
+    request('/api/2fa/recovery-codes/regenerate', { method: 'POST', body: JSON.stringify({ password }) }),
+
   // Tahun Ajaran & Semester
   listTahunAjaran: () => request('/tahun-ajaran'),
   createTahunAjaran: (data) => request('/tahun-ajaran', { method: 'POST', body: JSON.stringify(data) }),
@@ -321,6 +450,12 @@ export const api = {
   downloadBackup: (name) => downloadFile(`/backups/${name}/download`, name),
   getBackupSchedule: () => request('/backup-schedule'),
   updateBackupSchedule: (data) => request('/backup-schedule', { method: 'PUT', body: JSON.stringify(data) }),
+
+  tarikDataSekarang: () => request('/sinkronisasi', { method: 'POST' }),
+  getSyncLogSekolah: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/sinkronisasi${query ? `?${query}` : ''}`)
+  },
 
   listInventaris: (params = {}) => {
     const query = new URLSearchParams(params).toString()

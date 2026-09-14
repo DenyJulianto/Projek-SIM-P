@@ -26,4 +26,35 @@ return [
     */
     'tenant_base_domain' => env('TENANT_BASE_DOMAIN', 'simpendidikan.test'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Versi platform
+    |--------------------------------------------------------------------------
+    |
+    | Ditampilkan di panel "Manajemen Versi/Update Sistem" milik Super Admin.
+    | Platform ini satu basis kode yang sama untuk semua sekolah (bukan
+    | versi terpisah per sekolah), jadi cukup satu nilai di sini — naikkan
+    | manual setiap kali ada rilis baru.
+    */
+    'app_version' => env('SIM_APP_VERSION', '1.0.0'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Katalog modul yang bisa diaktifkan/nonaktifkan per sekolah
+    |--------------------------------------------------------------------------
+    |
+    | Modul inti (data guru/siswa, kurikulum, kesiswaan, pengguna) tidak ada
+    | di sini karena tidak boleh dimatikan — sekolah tidak bisa berjalan
+    | tanpanya. Hanya modul opsional yang terdaftar. Key harus sama persis
+    | dengan yang dicek App\Http\Middleware\EnsureModuleEnabled dan yang
+    | dipakai di routes/tenant.php.
+    */
+    'modules' => [
+        'keuangan' => 'Keuangan (tagihan, pembayaran, anggaran)',
+        'sarpras' => 'Sarana & Prasarana',
+        'persuratan' => 'Surat & Kearsipan',
+        'bk' => 'Bimbingan Konseling',
+        'kepegawaian' => 'Pengajuan Kepegawaian',
+    ],
+
 ];

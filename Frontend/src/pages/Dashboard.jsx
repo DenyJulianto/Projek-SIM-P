@@ -23,6 +23,7 @@ import PrincipalDashboard from './PrincipalDashboard'
 import RoleManagement from './RoleManagement'
 import SiswaDashboard from './SiswaDashboard'
 import SiswaManagement from './SiswaManagement'
+import SinkronisasiData from './SinkronisasiData'
 import SuperAdminDashboard from './SuperAdminDashboard'
 import SuratArsipManagement from './SuratArsipManagement'
 import SystemConfig from './SystemConfig'
@@ -45,6 +46,7 @@ const MENU_GROUPS = [
       { key: 'konfigurasi', label: 'Konfigurasi Sistem', icon: GearIcon, permission: 'pengguna.manage' },
       { key: 'integrasi', label: 'Integrasi', icon: PlugIcon, permission: 'pengguna.manage' },
       { key: 'backup', label: 'Backup & Pemulihan', icon: DatabaseIcon, permission: 'pengguna.manage' },
+      { key: 'sinkronisasi', label: 'Sinkronisasi Data', icon: SyncMenuIcon, permission: 'pengguna.manage' },
       { key: 'audit-log', label: 'Audit Log', icon: LogIcon, permission: 'pengguna.manage' },
     ],
   },
@@ -310,6 +312,8 @@ export default function Dashboard() {
             <Integrations onBack={() => setView('home')} />
           ) : view === 'backup' ? (
             <BackupRestore onBack={() => setView('home')} />
+          ) : view === 'sinkronisasi' ? (
+            <SinkronisasiData onBack={() => setView('home')} />
           ) : view === 'audit-log' ? (
             <AuditLog onBack={() => setView('home')} />
           ) : view === 'profile' ? (
@@ -657,6 +661,15 @@ function DatabaseIcon(props) {
       <ellipse cx="12" cy="5" rx="8" ry="3" />
       <path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5" />
       <path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" />
+    </svg>
+  )
+}
+
+function SyncMenuIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M21 12a9 9 0 0 1-15.3 6.4M3 12a9 9 0 0 1 15.3-6.4" />
+      <path d="M21 3v6h-6M3 21v-6h6" />
     </svg>
   )
 }

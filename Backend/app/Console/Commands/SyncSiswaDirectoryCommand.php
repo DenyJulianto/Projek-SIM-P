@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
-use App\Models\Central\SiswaDirectory;
 use App\Models\Sekolah;
-use App\Models\Siswa;
+use App\Services\DirectorySyncService;
 use Illuminate\Console\Command;
 
 /**
@@ -21,7 +20,7 @@ class SyncSiswaDirectoryCommand extends Command
 
     protected $description = 'Sinkronkan data siswa dari database setiap sekolah ke direktori siswa nasional (central).';
 
-    public function handle(): int
+    public function handle(DirectorySyncService $syncService): int
     {
         $sekolahId = $this->option('sekolah');
 
@@ -36,27 +35,7 @@ class SyncSiswaDirectoryCommand extends Command
         }
 
         foreach ($sekolahs as $sekolah) {
-            $count = 0;
-
-            $sekolah->run(function () use ($sekolah, &$count) {
-                Siswa::with('kelas')->chunk(100, function ($siswas) use ($sekolah, &$count) {
-                    foreach ($siswas as $siswa) {
-                        SiswaDirectory::updateOrCreate(
-                            ['sekolah_id' => $sekolah->id, 'siswa_id' => $siswa->id],
-                            [
-                                'nis' => $siswa->nis,
-                                'nama' => $siswa->nama,
-                                'jenis_kelamin' => $siswa->jenis_kelamin,
-                                'kelas' => $siswa->kelas?->nama_kelas,
-                                'tahun_masuk' => $siswa->tahun_masuk,
-                                'status' => $siswa->status,
-                                'synced_at' => now(),
-                            ]
-                        );
-                        $count++;
-                    }
-                });
-            });
+            $count = $sekolah->run(fn () => $syncService->syncSiswa($sekolah));
 
             $this->info("{$sekolah->nama_sekolah}: {$count} siswa disinkronkan.");
         }

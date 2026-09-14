@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\Central;
 
 use App\Http\Controllers\Controller;
+use App\Models\Central\SecuritySettings;
 use App\Models\Central\SiswaDirectory;
 use App\Models\Sekolah;
 use App\Models\Siswa;
+use App\Support\PiiMasker;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -57,11 +59,13 @@ class SiswaDirectoryController extends Controller
         $sheet->fromArray($headers, null, 'A1');
         $sheet->getStyle('A1:H1')->getFont()->setBold(true);
 
+        $maskPii = SecuritySettings::current()->mask_pii_enabled;
+
         $rows = $siswa->map(fn (SiswaDirectory $s) => [
             $s->sekolah?->npsn,
             $s->sekolah?->nama_sekolah,
             $s->nama,
-            $s->nis,
+            $maskPii ? PiiMasker::id($s->nis) : $s->nis,
             $s->jenis_kelamin,
             $s->kelas,
             $s->tahun_masuk,

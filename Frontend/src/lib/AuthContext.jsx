@@ -25,7 +25,27 @@ export function AuthProvider({ children }) {
   }, [])
 
   async function login(email, password, remember = true) {
-    const { user, token } = await api.login(email, password)
+    const res = await api.login(email, password)
+
+    // Akun dengan 2FA aktif (cuma pernah terjadi untuk Super Admin) belum
+    // dapat token di sini — Login.jsx perlu menampilkan langkah kedua
+    // (kode TOTP/pemulihan) lalu memanggil verifyTwoFactor() di bawah.
+    if (res.requires_2fa) {
+      return { requiresTwoFactor: true, challenge: res.challenge }
+    }
+
+    const { user, token } = res
+    if (remember) {
+      localStorage.setItem('token', token)
+    } else {
+      sessionStorage.setItem('token', token)
+    }
+    setUser(user)
+    return user
+  }
+
+  async function verifyTwoFactor(challenge, code, remember = true) {
+    const { user, token } = await api.verifyTwoFactor(challenge, code)
     if (remember) {
       localStorage.setItem('token', token)
     } else {
@@ -84,6 +104,7 @@ export function AuthProvider({ children }) {
         setUser,
         loading,
         login,
+        verifyTwoFactor,
         register,
         verifyEmail,
         resendVerificationCode,

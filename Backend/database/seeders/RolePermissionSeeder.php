@@ -47,9 +47,16 @@ class RolePermissionSeeder extends Seeder
         'ujian.manage',
     ];
 
-    public function run(): void
+    /**
+     * Peta role => daftar permission, tanpa menyentuh database. Dipakai
+     * oleh run() untuk seeding per-tenant, dan oleh kode central (Super
+     * Admin) yang butuh tahu katalog permission/role apa saja yang ada di
+     * setiap sekolah tanpa harus membuka koneksi ke database tenant mana pun
+     * (isinya identik di semua tenant karena berasal dari seeder yang sama).
+     */
+    public static function rolePermissionMap(): array
     {
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $seeder = new self();
 
         $rolePermissions = [
             'Admin Sekolah' => [
@@ -77,7 +84,7 @@ class RolePermissionSeeder extends Seeder
                 'kepegawaian.approve',
                 'laporan.view-all',
             ],
-            'Wakil Kepala Sekolah' => $this->wakasekPermissions,
+            'Wakil Kepala Sekolah' => $seeder->wakasekPermissions,
             'Tata Usaha' => [
                 'siswa.manage',
                 'pegawai.manage',
@@ -111,13 +118,13 @@ class RolePermissionSeeder extends Seeder
                 'anggaran.manage',
                 'laporan-keuangan.manage',
             ],
-            'Guru Mata Pelajaran' => $this->guruMapelPermissions,
+            'Guru Mata Pelajaran' => $seeder->guruMapelPermissions,
             // Rekap kelas binaan (kehadiran, nilai, pelanggaran, prestasi) disajikan
             // lewat endpoint /me/wali-kelas/* yang memverifikasi kepemilikan kelas
             // di controller (kelas.wali_kelas_id), jadi tidak butuh permission
             // 'rekap-kelas.view' terpisah.
             'Wali Kelas' => [
-                ...$this->guruMapelPermissions,
+                ...$seeder->guruMapelPermissions,
                 'rapor-kelas.manage',
                 'prestasi.manage',
                 'pelanggaran.manage',
@@ -152,6 +159,29 @@ class RolePermissionSeeder extends Seeder
         // Admin; itu ditegakkan di UserController & RoleController, bukan
         // lewat permission biasa.
         $rolePermissions['Super Admin'] = collect($rolePermissions)->flatten()->unique()->values()->all();
+
+        return $rolePermissions;
+    }
+
+    /**
+     * Semua nama permission unik yang dikenal sistem, dari seluruh role,
+     * tanpa duplikat — dipakai untuk membangun form "atur hak akses".
+     */
+    public static function allPermissionNames(): array
+    {
+        return collect(self::rolePermissionMap())
+            ->flatten()
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+    }
+
+    public function run(): void
+    {
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $rolePermissions = self::rolePermissionMap();
 
         foreach ($rolePermissions as $roleName => $permissions) {
             $role = Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);

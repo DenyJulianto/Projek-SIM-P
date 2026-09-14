@@ -193,6 +193,15 @@ class AuthController extends Controller
             ]);
         }
 
+        // tenant() bernilai null di domain central (Super Admin) — cek ini
+        // hanya relevan untuk login lewat domain sekolah, ditolak sebelum
+        // memeriksa apa pun tentang akun user itu sendiri.
+        if (tenant('status') !== null && tenant('status') !== 'active') {
+            throw ValidationException::withMessages([
+                'email' => ['Sekolah ini sedang dinonaktifkan. Hubungi Super Admin untuk informasi lebih lanjut.'],
+            ]);
+        }
+
         if (Schema::hasColumn('users', 'email_verified_at') && ! $user->email_verified_at) {
             throw ValidationException::withMessages([
                 'email' => ['Akun belum diverifikasi. Silakan cek email Anda untuk kode verifikasi.'],
@@ -202,6 +211,19 @@ class AuthController extends Controller
         if (Schema::hasColumn('users', 'is_active') && ! $user->is_active) {
             throw ValidationException::withMessages([
                 'email' => ['Akun ini telah dinonaktifkan.'],
+            ]);
+        }
+
+        // 2FA cuma pernah bisa aktif untuk akun Super Admin (kolomnya cuma
+        // ada di database central) — kalau aktif, belum langsung dapat
+        // token; harus lewat verifyTwoFactor() dulu dengan kode TOTP/
+        // pemulihan yang valid.
+        if (Schema::hasColumn('users', 'two_factor_confirmed_at') && $user->two_factor_confirmed_at) {
+            $challenge = encrypt(['user_id' => $user->id, 'expires' => now()->addMinutes(5)->timestamp]);
+
+            return response()->json([
+                'requires_2fa' => true,
+                'challenge' => $challenge,
             ]);
         }
 
@@ -215,6 +237,86 @@ class AuthController extends Controller
             'user' => $this->presentUser($user),
             'token' => $token,
         ]);
+    }
+
+    /**
+     * Langkah kedua login untuk akun dengan 2FA aktif — menyelesaikan
+     * "challenge" dari login() dengan kode TOTP dari aplikasi authenticator
+     * ATAU salah satu kode pemulihan (dipakai sekali, langsung dicoret dari
+     * daftar begitu terpakai).
+     */
+    public function verifyTwoFactor(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'challenge' => ['required', 'string'],
+            'code' => ['required', 'string'],
+        ]);
+
+        try {
+            $payload = decrypt($data['challenge']);
+        } catch (\Throwable) {
+            throw ValidationException::withMessages([
+                'code' => ['Sesi verifikasi tidak valid. Silakan login ulang.'],
+            ]);
+        }
+
+        if (! is_array($payload) || ($payload['expires'] ?? 0) < now()->timestamp) {
+            throw ValidationException::withMessages([
+                'code' => ['Sesi verifikasi sudah kedaluwarsa. Silakan login ulang.'],
+            ]);
+        }
+
+        $user = User::find($payload['user_id']);
+
+        if (! $user || ! $user->two_factor_confirmed_at) {
+            throw ValidationException::withMessages([
+                'code' => ['Akun tidak ditemukan.'],
+            ]);
+        }
+
+        if (! $this->verifyTwoFactorCode($user, $data['code'])) {
+            throw ValidationException::withMessages([
+                'code' => ['Kode verifikasi salah.'],
+            ]);
+        }
+
+        if (Schema::hasColumn('users', 'last_login_at')) {
+            $user->forceFill(['last_login_at' => now()])->save();
+        }
+
+        $token = $user->createToken('api-token')->plainTextToken;
+
+        return response()->json([
+            'user' => $this->presentUser($user),
+            'token' => $token,
+        ]);
+    }
+
+    /**
+     * Coba cocokkan kode 6-digit TOTP dulu; kalau tidak cocok, coba sebagai
+     * kode pemulihan (case-insensitive) — kalau cocok, kode itu langsung
+     * dihapus dari daftar supaya tidak bisa dipakai ulang.
+     */
+    private function verifyTwoFactorCode(User $user, string $code): bool
+    {
+        $google2fa = new \PragmaRX\Google2FA\Google2FA();
+
+        if ($google2fa->verifyKey($user->two_factor_secret, $code)) {
+            return true;
+        }
+
+        $recoveryCodes = $user->two_factor_recovery_codes ?? [];
+        $normalizedInput = strtoupper(trim($code));
+        $matchIndex = array_search($normalizedInput, array_map('strtoupper', $recoveryCodes), true);
+
+        if ($matchIndex === false) {
+            return false;
+        }
+
+        unset($recoveryCodes[$matchIndex]);
+        $user->forceFill(['two_factor_recovery_codes' => array_values($recoveryCodes)])->save();
+
+        return true;
     }
 
     /**
@@ -347,6 +449,13 @@ class AuthController extends Controller
 
         if (Schema::hasColumn('users', 'avatar')) {
             $user->setAttribute('avatar_url', $user->avatar ? "/avatar/{$user->avatar}" : null);
+        }
+
+        // tenant() null di domain central (Super Admin) — modul opsional
+        // cuma relevan buat akun sekolah, dipakai frontend untuk
+        // menyembunyikan menu yang dinonaktifkan Super Admin.
+        if (tenant()) {
+            $user->setAttribute('enabled_modules', tenant()->resolvedModuleSettings());
         }
 
         return $user;
