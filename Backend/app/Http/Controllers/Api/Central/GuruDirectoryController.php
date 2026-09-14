@@ -6,8 +6,10 @@ namespace App\Http\Controllers\Api\Central;
 
 use App\Http\Controllers\Controller;
 use App\Models\Central\GuruDirectory;
+use App\Models\Central\SecuritySettings;
 use App\Models\Guru;
 use App\Models\Sekolah;
+use App\Support\PiiMasker;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -57,19 +59,25 @@ class GuruDirectoryController extends Controller
         $sheet->fromArray($headers, null, 'A1');
         $sheet->getStyle('A1:M1')->getFont()->setBold(true);
 
+        // Data pribadi (NIP/NUPTK/telepon) disamarkan kalau Super Admin
+        // mengaktifkannya lewat menu Pengaturan Keamanan > Kontrol Data
+        // Pribadi (PII) — lihat App\Support\PiiMasker. Tidak berlaku untuk
+        // tampilan internal (index()), cuma untuk file yang keluar sistem.
+        $maskPii = SecuritySettings::current()->mask_pii_enabled;
+
         $rows = $guru->map(fn (GuruDirectory $g) => [
             $g->sekolah?->npsn,
             $g->sekolah?->nama_sekolah,
             $g->nama,
             $g->gelar,
             $g->jenis_kelamin,
-            $g->nip,
-            $g->nuptk,
+            $maskPii ? PiiMasker::id($g->nip) : $g->nip,
+            $maskPii ? PiiMasker::id($g->nuptk) : $g->nuptk,
             $g->jabatan,
             $g->mata_pelajaran,
             $g->status_kepegawaian,
             $g->pendidikan_terakhir,
-            $g->no_telepon,
+            $maskPii ? PiiMasker::phone($g->no_telepon) : $g->no_telepon,
             $g->status,
         ])->all();
 

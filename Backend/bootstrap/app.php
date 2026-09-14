@@ -15,6 +15,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'super_admin' => \App\Http\Middleware\EnsureUserIsSuperAdmin::class,
+            'module.enabled' => \App\Http\Middleware\EnsureModuleEnabled::class,
+            'integration.token' => \App\Http\Middleware\AuthenticateIntegrationToken::class,
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,

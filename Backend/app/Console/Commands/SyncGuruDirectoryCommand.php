@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
-use App\Models\Central\GuruDirectory;
-use App\Models\Guru;
 use App\Models\Sekolah;
+use App\Services\DirectorySyncService;
 use Illuminate\Console\Command;
 
 /**
@@ -21,7 +20,7 @@ class SyncGuruDirectoryCommand extends Command
 
     protected $description = 'Sinkronkan data guru dari database setiap sekolah ke direktori guru nasional (central).';
 
-    public function handle(): int
+    public function handle(DirectorySyncService $syncService): int
     {
         $sekolahId = $this->option('sekolah');
 
@@ -36,32 +35,7 @@ class SyncGuruDirectoryCommand extends Command
         }
 
         foreach ($sekolahs as $sekolah) {
-            $count = 0;
-
-            $sekolah->run(function () use ($sekolah, &$count) {
-                Guru::query()->chunk(100, function ($gurus) use ($sekolah, &$count) {
-                    foreach ($gurus as $guru) {
-                        GuruDirectory::updateOrCreate(
-                            ['sekolah_id' => $sekolah->id, 'guru_id' => $guru->id],
-                            [
-                                'nip' => $guru->nip,
-                                'nuptk' => $guru->nuptk,
-                                'nama' => $guru->nama,
-                                'gelar' => $guru->gelar,
-                                'jabatan' => $guru->jabatan,
-                                'mata_pelajaran' => $guru->mata_pelajaran,
-                                'status_kepegawaian' => $guru->status_kepegawaian,
-                                'pendidikan_terakhir' => $guru->pendidikan_terakhir,
-                                'jenis_kelamin' => $guru->jenis_kelamin,
-                                'no_telepon' => $guru->no_telepon,
-                                'status' => $guru->status,
-                                'synced_at' => now(),
-                            ]
-                        );
-                        $count++;
-                    }
-                });
-            });
+            $count = $sekolah->run(fn () => $syncService->syncGuru($sekolah));
 
             $this->info("{$sekolah->nama_sekolah}: {$count} guru disinkronkan.");
         }
