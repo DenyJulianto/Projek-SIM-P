@@ -24,7 +24,7 @@ export default function EditProfilModal({ profil, onClose, onSaved }) {
     instagram: profil?.sosial_media?.instagram || '',
     youtube: profil?.sosial_media?.youtube || '',
   })
-  const [saving, setSaving] = useState(false)
+  const [saving, setSaving] = useState(false)/*  */
   const [error, setError] = useState('')
 
   async function handleSubmit(e) {

@@ -32,6 +32,7 @@ function PlatformLanding() {
     <div className="min-h-screen bg-white">
       <PlatformNav />
       <PlatformHero />
+      <PlatformCapabilityStrip />
       <PlatformFeatureIcons />
       <PlatformWhySection />
       <PlatformCta />
@@ -82,32 +83,36 @@ function PlatformNav() {
 
 function PlatformHero() {
   return (
-    <section id="beranda" className="bg-emerald-50/60 overflow-hidden">
-      <div className="max-w-6xl mx-auto px-6 py-16 md:py-20 grid md:grid-cols-2 gap-12 items-center">
+    <section id="beranda" className="relative overflow-hidden bg-gradient-to-br from-navy via-navy to-emerald-900">
+      <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-navy-light/20 blur-3xl" />
+      <div className="absolute left-1/3 -bottom-32 h-72 w-72 rounded-full bg-gold/10 blur-3xl" />
+      <div className="absolute right-1/4 top-1/3 h-56 w-56 rounded-full bg-indigo-500/10 blur-3xl" />
+
+      <div className="relative max-w-6xl mx-auto px-6 py-16 md:py-20 grid md:grid-cols-2 gap-12 items-center">
         <div>
-          <span className="inline-flex items-center gap-2 bg-white text-navy text-xs font-semibold px-4 py-1.5 rounded-full border border-navy/10 mb-5">
+          <span className="inline-flex items-center gap-2 bg-gold-light/15 text-gold-light text-xs font-semibold px-4 py-1.5 rounded-full border border-gold-light/25 mb-5">
             <ShieldIcon className="h-3.5 w-3.5" />
-            Untuk Super Admin
+            Untuk Administrator
           </span>
-          <h1 className="text-4xl md:text-5xl font-extrabold text-navy leading-tight mb-5">
+          <h1 className="text-4xl md:text-5xl font-extrabold text-white leading-tight mb-5">
             Kelola Seluruh Sistem Pendidikan dengan{' '}
-            <span className="text-navy-light">Mudah, Aman, dan Terintegrasi</span>
+            <span className="text-gold-light">Mudah, Aman, dan Terintegrasi</span>
           </h1>
-          <p className="text-navy/60 text-base leading-relaxed mb-8 max-w-lg">
-            SIM Pendidikan hadir sebagai solusi digital untuk membantu Super Admin dalam mengelola
+          <p className="text-white/65 text-base leading-relaxed mb-8 max-w-lg">
+            SIM Pendidikan hadir sebagai solusi digital untuk membantu Administrator dalam mengelola
             data, pengguna, dan seluruh aspek manajemen pendidikan secara terpusat dan efisien.
           </p>
           <div className="flex flex-wrap items-center gap-4">
             <Link
               to="/login"
-              className="inline-flex items-center gap-2 bg-navy hover:bg-navy-light text-white font-semibold px-6 py-3 rounded-full transition-colors"
+              className="inline-flex items-center gap-2 bg-gold hover:bg-gold-light text-navy font-semibold px-6 py-3 rounded-full transition-colors"
             >
               <ArrowRightIcon className="h-4 w-4" />
               Masuk ke Sistem
             </Link>
             <a
               href="#fitur"
-              className="inline-flex items-center gap-2 border border-navy/15 text-navy font-semibold px-6 py-3 rounded-full hover:bg-white transition-colors"
+              className="inline-flex items-center gap-2 border border-white/25 text-white font-semibold px-6 py-3 rounded-full hover:bg-white/10 transition-colors"
             >
               <PlayIcon className="h-4 w-4" />
               Pelajari Fitur
@@ -117,7 +122,7 @@ function PlatformHero() {
 
         <div className="relative">
           <p
-            className="hidden md:block absolute -top-8 right-2 text-navy-light text-xl leading-snug rotate-[-6deg] text-right"
+            className="hidden md:block absolute -top-24 right-2 text-gold-light text-xl leading-snug rotate-[-6deg] text-right"
             style={{ fontFamily: "'Caveat', cursive" }}
           >
             Manajemen Pendidikan
@@ -133,69 +138,165 @@ function PlatformHero() {
   )
 }
 
+const PLATFORM_CAPABILITIES = [
+  {
+    icon: SchoolIcon,
+    label: 'Multi-Sekolah / Tenant',
+    desc: 'Kelola banyak sekolah, data masing-masing terpisah aman.',
+    tone: 'bg-emerald-50 text-emerald-700',
+  },
+  {
+    icon: ShieldIcon,
+    label: 'Akses Berbasis Peran',
+    desc: 'Tiap peran hanya melihat & mengelola yang relevan baginya.',
+    tone: 'bg-blue-50 text-blue-600',
+  },
+  {
+    icon: LogIcon,
+    label: 'Audit Log Lengkap',
+    desc: 'Setiap aksi tercatat otomatis, mudah ditelusuri kapan pun.',
+    tone: 'bg-gold-light/25 text-gold',
+  },
+  {
+    icon: DatabaseIcon,
+    label: 'Backup & Pemulihan Otomatis',
+    desc: 'Data dicadangkan berkala, siap dipulihkan kapan saja.',
+    tone: 'bg-purple-50 text-purple-600',
+  },
+]
+
+function PlatformCapabilityStrip() {
+  return (
+    <div className="bg-navy/[0.03] border-b border-navy/5">
+      <div className="max-w-6xl mx-auto px-6 py-8 grid grid-cols-2 md:grid-cols-4 gap-5">
+        {PLATFORM_CAPABILITIES.map((c) => {
+          const Icon = c.icon
+          return (
+            <div key={c.label} className="flex items-start gap-3">
+              <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${c.tone}`}>
+                <Icon className="h-4.5 w-4.5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-navy leading-tight">{c.label}</p>
+                <p className="text-xs text-navy/50 leading-snug mt-1">{c.desc}</p>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 const PLATFORM_FEATURES = [
-  { icon: UsersIcon, title: 'Kelola Pengguna', desc: 'Atur hak akses dan data pengguna sistem dengan fleksibel.' },
-  { icon: SchoolIcon, title: 'Manajemen Sekolah', desc: 'Kelola data sekolah, profil, dan informasi umum.' },
-  { icon: DatabaseIcon, title: 'Data Terpusat', desc: 'Semua data terintegrasi dalam satu sistem yang aman.' },
+  {
+    icon: UsersIcon,
+    title: 'Kelola Pengguna',
+    desc: 'Atur hak akses dan data pengguna sistem dengan fleksibel.',
+    tone: 'bg-emerald-100 text-emerald-700',
+    card: 'bg-emerald-50/60 border-emerald-100',
+    bar: 'bg-emerald-500',
+  },
+  {
+    icon: SchoolIcon,
+    title: 'Manajemen Sekolah',
+    desc: 'Kelola data sekolah, profil, dan informasi umum.',
+    tone: 'bg-blue-100 text-blue-600',
+    card: 'bg-blue-50/60 border-blue-100',
+    bar: 'bg-blue-500',
+  },
+  {
+    icon: DatabaseIcon,
+    title: 'Data Terpusat',
+    desc: 'Semua data terintegrasi dalam satu sistem yang aman.',
+    tone: 'bg-gold-light/35 text-gold',
+    card: 'bg-gold-light/15 border-gold-light/40',
+    bar: 'bg-gold',
+  },
   {
     icon: ChartIcon,
     title: 'Monitoring & Laporan',
     desc: 'Pantau perkembangan dan hasil melalui laporan yang komprehensif.',
+    tone: 'bg-purple-100 text-purple-600',
+    card: 'bg-purple-50/60 border-purple-100',
+    bar: 'bg-purple-500',
   },
 ]
 
 function PlatformFeatureIcons() {
   return (
-    <section id="fitur" className="max-w-6xl mx-auto px-6 py-16 grid grid-cols-2 md:grid-cols-4 gap-8">
-      {PLATFORM_FEATURES.map((f) => {
-        const Icon = f.icon
-        return (
-          <div key={f.title}>
-            <div className="h-12 w-12 rounded-2xl bg-emerald-50 flex items-center justify-center mb-4">
-              <Icon className="h-6 w-6 text-navy" />
-            </div>
-            <h3 className="font-bold text-navy mb-1.5">{f.title}</h3>
-            <p className="text-sm text-navy/55 leading-relaxed">{f.desc}</p>
-          </div>
-        )
-      })}
+    <section id="fitur" className="bg-white py-16">
+      <div className="max-w-6xl mx-auto px-6">
+        <div className="text-center max-w-xl mx-auto mb-10">
+          <span className="inline-block bg-emerald-50 text-navy text-xs font-semibold px-4 py-1.5 rounded-full border border-navy/10 mb-4">
+            Fitur Utama
+          </span>
+          <h2 className="text-2xl md:text-3xl font-extrabold text-navy leading-snug">
+            Semua yang Administrator Butuhkan
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+          {PLATFORM_FEATURES.map((f) => {
+            const Icon = f.icon
+            return (
+              <div
+                key={f.title}
+                className={`relative overflow-hidden rounded-2xl border shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 p-6 pt-7 ${f.card}`}
+              >
+                <span className={`absolute top-0 left-0 right-0 h-1.5 ${f.bar}`} />
+                <div className={`h-12 w-12 rounded-2xl flex items-center justify-center mb-4 ${f.tone}`}>
+                  <Icon className="h-6 w-6" />
+                </div>
+                <h3 className="font-bold text-navy mb-1.5">{f.title}</h3>
+                <p className="text-sm text-navy/55 leading-relaxed">{f.desc}</p>
+              </div>
+            )
+          })}
+        </div>
+      </div>
     </section>
   )
 }
 
 const PLATFORM_WHY_ITEMS = [
-  { title: 'Akses Terpusat', desc: 'Kelola seluruh data dan aktivitas sistem dari satu tempat.' },
-  { title: 'Mudah Digunakan', desc: 'Antarmuka yang intuitif dan responsif di berbagai perangkat.' },
-  { title: 'Keamanan Data', desc: 'Sistem dilengkapi dengan keamanan berlapis dan backup data.' },
-  { title: 'Dukungan Teknis', desc: 'Tim kami siap membantu kapan saja jika Anda membutuhkan bantuan.' },
+  { title: 'Akses Terpusat', desc: 'Kelola seluruh data dan aktivitas sistem dari satu tempat.', tone: 'bg-emerald-500' },
+  { title: 'Mudah Digunakan', desc: 'Antarmuka yang intuitif dan responsif di berbagai perangkat.', tone: 'bg-blue-500' },
+  { title: 'Keamanan Data', desc: 'Sistem dilengkapi dengan keamanan berlapis dan backup data.', tone: 'bg-gold' },
+  { title: 'Dukungan Teknis', desc: 'Tim kami siap membantu kapan saja jika Anda membutuhkan bantuan.', tone: 'bg-purple-500' },
 ]
 
 function PlatformWhySection() {
   return (
     <section id="tentang" className="max-w-6xl mx-auto px-6 pb-16">
-      <div className="bg-emerald-50/60 rounded-[2rem] p-8 md:p-12 grid md:grid-cols-2 gap-10">
-        <div>
-          <span className="inline-block bg-white text-navy text-xs font-semibold px-4 py-1.5 rounded-full border border-navy/10 mb-5">
+      <div className="relative overflow-hidden bg-gradient-to-br from-navy to-emerald-900 rounded-[2rem] p-8 md:p-12 grid md:grid-cols-2 gap-10">
+        <div className="absolute -right-16 -bottom-16 h-64 w-64 rounded-full bg-gold-light/15 blur-3xl" />
+        <div className="absolute -left-10 top-1/2 -translate-y-1/2 h-40 w-40 rounded-full bg-indigo-500/10 blur-3xl" />
+        <div className="relative">
+          <span className="inline-block bg-white/10 text-gold-light text-xs font-semibold px-4 py-1.5 rounded-full border border-white/15 mb-5">
             Mengapa SIM Pendidikan?
           </span>
-          <h2 className="text-2xl md:text-3xl font-extrabold text-navy leading-snug mb-4">
+          <h2 className="text-2xl md:text-3xl font-extrabold text-white leading-snug mb-4">
             Solusi Terbaik untuk Pengelolaan Pendidikan
           </h2>
-          <p className="text-navy/60 text-sm leading-relaxed">
-            Dirancang khusus untuk mempermudah pekerjaan Super Admin dalam mengelola sistem
+          <p className="text-white/60 text-sm leading-relaxed">
+            Dirancang khusus untuk mempermudah pekerjaan Administrator dalam mengelola sistem
             pendidikan secara efektif, efisien, dan transparan.
           </p>
         </div>
 
-        <div className="grid sm:grid-cols-2 gap-x-8 gap-y-6">
+        <div className="relative grid sm:grid-cols-2 gap-4">
           {PLATFORM_WHY_ITEMS.map((item) => (
-            <div key={item.title} className="flex items-start gap-3">
-              <div className="h-6 w-6 rounded-full bg-navy-light flex items-center justify-center shrink-0 mt-0.5">
-                <CheckIcon className="h-3.5 w-3.5 text-white" />
+            <div
+              key={item.title}
+              className="bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 rounded-2xl p-4 flex items-start gap-3 transition-colors"
+            >
+              <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${item.tone}`}>
+                <CheckIcon className="h-4 w-4 text-white" />
               </div>
               <div>
-                <p className="font-bold text-navy text-sm mb-1">{item.title}</p>
-                <p className="text-xs text-navy/55 leading-relaxed">{item.desc}</p>
+                <p className="font-bold text-white text-sm mb-1">{item.title}</p>
+                <p className="text-xs text-white/55 leading-relaxed">{item.desc}</p>
               </div>
             </div>
           ))}
@@ -223,7 +324,7 @@ function PlatformCta() {
         </div>
         <Link
           to="/login"
-          className="relative shrink-0 inline-flex items-center gap-2 bg-white text-navy font-semibold px-6 py-3 rounded-full hover:bg-emerald-50 transition-colors whitespace-nowrap"
+          className="relative shrink-0 inline-flex items-center gap-2 bg-gold hover:bg-gold-light text-navy font-semibold px-6 py-3 rounded-full transition-colors whitespace-nowrap"
         >
           Masuk ke Sistem
           <ArrowRightIcon className="h-4 w-4" />
@@ -313,6 +414,15 @@ function DatabaseIcon(props) {
       <ellipse cx="12" cy="5" rx="8" ry="3" />
       <path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5" />
       <path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" />
+    </svg>
+  )
+}
+
+function LogIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 4h16v16H4z" />
+      <path d="M8 9h8M8 13h8M8 17h4" />
     </svg>
   )
 }

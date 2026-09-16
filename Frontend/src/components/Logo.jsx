@@ -1,9 +1,10 @@
 import { useId } from 'react'
 
 // Ikon lambang SIM Pendidikan: buku terbuka + topi wisuda + siluet orang
-// yang tumbuh dari buku, plus aksen kotak kecil ala data/teknologi di
-// kanan atas. useId() dipakai supaya id gradient tidak bentrok kalau
-// komponen ini dirender lebih dari sekali di halaman yang sama.
+// yang tumbuh dari buku, plus klaster aksen kotak ala data/teknologi di
+// kanan atas — meniru logo resmi SIM Pendidikan. useId() dipakai supaya id
+// gradient tidak bentrok kalau komponen ini dirender lebih dari sekali di
+// halaman yang sama.
 export default function Logo({ className = 'h-8 w-8' }) {
   const uid = useId()
   const gBook1 = `logo-book1-${uid}`
@@ -22,36 +23,37 @@ export default function Logo({ className = 'h-8 w-8' }) {
           <stop offset="0" stopColor="#0b3d2e" />
           <stop offset="1" stopColor="#14a673" />
         </linearGradient>
-        <linearGradient id={gLeaf1} x1="50" y1="50" x2="26" y2="28" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#0b3d2e" />
-          <stop offset="1" stopColor="#5ecf9c" />
+        <linearGradient id={gLeaf1} x1="50" y1="52" x2="24" y2="26" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#1f9d63" />
+          <stop offset="1" stopColor="#6fe0a8" />
         </linearGradient>
-        <linearGradient id={gLeaf2} x1="50" y1="50" x2="74" y2="28" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#0b3d2e" />
-          <stop offset="1" stopColor="#14a673" />
+        <linearGradient id={gLeaf2} x1="50" y1="52" x2="76" y2="26" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#0e7a52" />
+          <stop offset="1" stopColor="#3fbf8f" />
         </linearGradient>
       </defs>
 
-      {/* aksen kotak kanan atas */}
-      <rect x="74" y="9" width="12" height="12" rx="2.5" fill="#14a673" />
-      <rect x="87" y="20" width="8" height="8" rx="1.5" fill="#e3a13c" />
-      <rect x="76" y="25" width="6" height="6" rx="1.5" fill="#0b3d2e" />
+      {/* klaster aksen kotak kanan atas */}
+      <rect x="72" y="7" width="16" height="16" rx="3" fill="#1f9d63" />
+      <rect x="70" y="26" width="10" height="10" rx="2" fill="#0e7a52" />
+      <rect x="85" y="27" width="9" height="9" rx="2" fill="#e3a13c" />
+      <rect x="81" y="19" width="6" height="6" rx="1.3" fill="#0b3d2e" />
 
       {/* buku terbuka */}
       <path d="M50 47 L15 57 Q11 59 15 63 L48 73 L50 73 Z" fill={`url(#${gBook1})`} />
       <path d="M50 47 L85 57 Q89 59 85 63 L52 73 L50 73 Z" fill={`url(#${gBook2})`} />
 
       {/* siluet orang / daun yang tumbuh dari buku */}
-      <path d="M50 51 Q33 47 27 30 Q46 36 50 51 Z" fill={`url(#${gLeaf1})`} />
-      <path d="M50 51 Q67 47 73 30 Q54 36 50 51 Z" fill={`url(#${gLeaf2})`} />
+      <path d="M50 51 Q32 48 26 29 Q46 35 50 51 Z" fill={`url(#${gLeaf1})`} />
+      <path d="M50 51 Q68 48 74 29 Q54 35 50 51 Z" fill={`url(#${gLeaf2})`} />
       <path d="M45.5 49 L54.5 49 L50 58 Z" fill="#0b3d2e" />
       <circle cx="50" cy="35" r="7.5" fill="#0b3d2e" />
 
       {/* topi wisuda */}
-      <path d="M50 17 L69 24.5 L50 32 L31 24.5 Z" fill="#0b3d2e" />
-      <rect x="42.5" y="24.5" width="15" height="6.5" rx="1.5" fill="#0b3d2e" />
-      <path d="M65 23.5 Q69.5 30 64 36.5" stroke="#e3a13c" strokeWidth="2.2" fill="none" strokeLinecap="round" />
-      <circle cx="64" cy="37.5" r="2.3" fill="#e3a13c" />
+      <path d="M50 15 L70 23 L50 31 L30 23 Z" fill="#0b3d2e" />
+      <rect x="42" y="23" width="16" height="7" rx="1.5" fill="#0b3d2e" />
+      <path d="M66 22 Q71 29 65 36" stroke="#e3a13c" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+      <circle cx="65" cy="37" r="2.3" fill="#e3a13c" />
     </svg>
   )
 }

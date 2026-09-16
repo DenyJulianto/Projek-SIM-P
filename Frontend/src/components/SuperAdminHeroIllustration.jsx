@@ -1,91 +1,158 @@
 export default function SuperAdminHeroIllustration(props) {
   return (
     <svg viewBox="0 0 600 440" fill="none" {...props}>
-      {/* background blobs */}
-      <circle cx="430" cy="190" r="180" fill="#0b3d2e" fillOpacity="0.06" />
-      <circle cx="120" cy="90" r="90" fill="#14a673" fillOpacity="0.08" />
+      <defs>
+        <clipPath id="sahiCard">
+          <rect x="90" y="50" width="420" height="300" rx="18" />
+        </clipPath>
+        <linearGradient id="sahiChartFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#14a673" stopOpacity="0.28" />
+          <stop offset="100%" stopColor="#14a673" stopOpacity="0" />
+        </linearGradient>
+        <filter id="sahiShadow" x="-40%" y="-40%" width="180%" height="180%">
+          <feDropShadow dx="0" dy="10" stdDeviation="14" floodColor="#0b3d2e" floodOpacity="0.18" />
+        </filter>
+        <filter id="sahiShadowSm" x="-60%" y="-60%" width="220%" height="220%">
+          <feDropShadow dx="0" dy="6" stdDeviation="8" floodColor="#0b3d2e" floodOpacity="0.16" />
+        </filter>
+      </defs>
 
-      {/* window */}
-      <rect x="40" y="30" width="150" height="190" rx="8" fill="#14a673" fillOpacity="0.1" />
-      <line x1="115" y1="30" x2="115" y2="220" stroke="#0b3d2e" strokeOpacity="0.12" strokeWidth="3" />
-      <line x1="40" y1="125" x2="190" y2="125" stroke="#0b3d2e" strokeOpacity="0.12" strokeWidth="3" />
+      {/* ambient background blobs */}
+      <circle cx="470" cy="70" r="140" fill="#14a673" fillOpacity="0.07" />
+      <circle cx="70" cy="380" r="110" fill="#e3a13c" fillOpacity="0.08" />
+      <g opacity="0.5">
+        {[0, 1, 2, 3, 4].map((row) =>
+          [0, 1, 2, 3].map((col) => (
+            <circle key={`${row}-${col}`} cx={30 + col * 14} cy={20 + row * 14} r="1.6" fill="#0b3d2e" fillOpacity="0.25" />
+          ))
+        )}
+      </g>
 
-      {/* shelf, right */}
-      <rect x="520" y="120" width="56" height="230" rx="6" fill="#14a673" fillOpacity="0.1" />
-      <line x1="520" y1="210" x2="576" y2="210" stroke="#0b3d2e" strokeOpacity="0.15" strokeWidth="3" />
-      <line x1="520" y1="280" x2="576" y2="280" stroke="#0b3d2e" strokeOpacity="0.15" strokeWidth="3" />
-      <rect x="528" y="182" width="10" height="26" rx="1.5" fill="#e3a13c" />
-      <rect x="541" y="178" width="10" height="30" rx="1.5" fill="#0b3d2e" />
-      <rect x="554" y="185" width="10" height="23" rx="1.5" fill="#14a673" />
-      <rect x="528" y="252" width="10" height="26" rx="1.5" fill="#0b3d2e" />
-      <rect x="541" y="248" width="10" height="30" rx="1.5" fill="#e3a13c" />
-      <rect x="554" y="255" width="10" height="23" rx="1.5" fill="#14a673" />
+      {/* main app window mockup */}
+      <g filter="url(#sahiShadow)">
+        <rect x="90" y="50" width="420" height="300" rx="18" fill="#ffffff" stroke="#e6ebe8" />
+      </g>
+      <g clipPath="url(#sahiCard)">
+        {/* title bar */}
+        <rect x="90" y="50" width="420" height="32" fill="#f6f8f7" />
+        <circle cx="108" cy="66" r="4" fill="#f87171" />
+        <circle cx="122" cy="66" r="4" fill="#e3a13c" />
+        <circle cx="136" cy="66" r="4" fill="#14a673" />
+        <rect x="158" y="61" width="160" height="10" rx="5" fill="#e2e8e5" />
 
-      {/* desk */}
-      <rect x="55" y="352" width="470" height="16" rx="6" fill="#0b3d2e" />
-      <rect x="70" y="368" width="14" height="46" fill="#0b3d2e" fillOpacity="0.5" />
-      <rect x="490" y="368" width="14" height="46" fill="#0b3d2e" fillOpacity="0.5" />
+        {/* sidebar */}
+        <rect x="90" y="82" width="62" height="268" fill="#0b3d2e" />
+        <rect x="102" y="98" width="38" height="9" rx="4.5" fill="#ffffff" fillOpacity="0.95" />
+        <rect x="102" y="120" width="38" height="9" rx="4.5" fill="#ffffff" fillOpacity="0.2" />
+        <rect x="102" y="142" width="38" height="9" rx="4.5" fill="#ffffff" fillOpacity="0.2" />
+        <rect x="102" y="164" width="38" height="9" rx="4.5" fill="#ffffff" fillOpacity="0.2" />
+        <rect x="102" y="186" width="38" height="9" rx="4.5" fill="#ffffff" fillOpacity="0.2" />
 
-      {/* plant */}
-      <path d="M150 352 L190 352 L184 320 L156 320 Z" fill="#0b3d2e" />
-      <ellipse cx="170" cy="300" rx="9" ry="24" fill="#14a673" transform="rotate(-18 170 300)" />
-      <ellipse cx="170" cy="300" rx="9" ry="24" fill="#14a673" transform="rotate(18 170 300)" />
-      <ellipse cx="170" cy="292" rx="9" ry="26" fill="#0b3d2e" fillOpacity="0.8" />
+        {/* header row */}
+        <rect x="170" y="97" width="130" height="10" rx="5" fill="#0b3d2e" fillOpacity="0.14" />
+        <rect x="170" y="113" width="80" height="7" rx="3.5" fill="#0b3d2e" fillOpacity="0.08" />
+        <circle cx="484" cy="104" r="13" fill="#14a673" />
 
-      {/* monitor stand */}
-      <ellipse cx="330" cy="352" rx="46" ry="7" fill="#0b3d2e" fillOpacity="0.15" />
-      <rect x="322" y="330" width="16" height="24" fill="#0b3d2e" />
+        {/* KPI cards */}
+        {[
+          { x: 170, bg: '#ecfdf5', dot: '#10b981' },
+          { x: 258, bg: '#eff6ff', dot: '#3b82f6' },
+          { x: 346, bg: '#fdf6e9', dot: '#e3a13c' },
+          { x: 434, bg: '#f5f0fb', dot: '#a855f7' },
+        ].map((card) => (
+          <g key={card.x}>
+            <rect x={card.x} y="140" width="68" height="58" rx="10" fill={card.bg} />
+            <circle cx={card.x + 16} cy="156" r="8" fill={card.dot} />
+            <rect x={card.x + 12} y="174" width="40" height="8" rx="4" fill="#0b3d2e" fillOpacity="0.35" />
+            <rect x={card.x + 12} y="186" width="26" height="6" rx="3" fill="#0b3d2e" fillOpacity="0.15" />
+          </g>
+        ))}
 
-      {/* monitor */}
-      <rect x="222" y="150" width="216" height="150" rx="12" fill="#0b3d2e" />
-      <rect x="234" y="162" width="192" height="126" rx="4" fill="#ffffff" />
+        {/* chart card */}
+        <rect x="170" y="212" width="180" height="122" rx="10" fill="#f8faf9" />
+        <rect x="184" y="224" width="70" height="8" rx="4" fill="#0b3d2e" fillOpacity="0.18" />
+        <path
+          d="M188 306 L214 288 L240 296 L266 270 L292 278 L318 254 L334 262"
+          fill="none"
+          stroke="#14a673"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M188 306 L214 288 L240 296 L266 270 L292 278 L318 254 L334 262 L334 322 L188 322 Z"
+          fill="url(#sahiChartFill)"
+        />
+        {[
+          [188, 306],
+          [240, 296],
+          [292, 278],
+          [334, 262],
+        ].map(([cx, cy]) => (
+          <circle key={cx} cx={cx} cy={cy} r="3.5" fill="#0b3d2e" />
+        ))}
 
-      {/* sidebar inside screen */}
-      <rect x="234" y="162" width="36" height="126" rx="4" fill="#14a673" />
-      <circle cx="252" cy="180" r="5" fill="#ffffff" fillOpacity="0.9" />
-      <circle cx="252" cy="198" r="5" fill="#ffffff" fillOpacity="0.5" />
-      <circle cx="252" cy="216" r="5" fill="#ffffff" fillOpacity="0.5" />
-      <circle cx="252" cy="234" r="5" fill="#ffffff" fillOpacity="0.5" />
+        {/* donut card */}
+        <rect x="362" y="212" width="140" height="122" rx="10" fill="#f8faf9" />
+        <rect x="376" y="224" width="60" height="8" rx="4" fill="#0b3d2e" fillOpacity="0.18" />
+        <g transform="translate(432,278)">
+          <circle r="34" fill="none" stroke="#e2e8e5" strokeWidth="14" />
+          <circle
+            r="34"
+            fill="none"
+            stroke="#14a673"
+            strokeWidth="14"
+            strokeDasharray="95 118"
+            strokeLinecap="round"
+            transform="rotate(-90)"
+          />
+          <circle
+            r="34"
+            fill="none"
+            stroke="#e3a13c"
+            strokeWidth="14"
+            strokeDasharray="45 168"
+            strokeDashoffset="-95"
+            strokeLinecap="round"
+            transform="rotate(-90)"
+          />
+          <circle
+            r="34"
+            fill="none"
+            stroke="#3b82f6"
+            strokeWidth="14"
+            strokeDasharray="30 183"
+            strokeDashoffset="-140"
+            strokeLinecap="round"
+            transform="rotate(-90)"
+          />
+        </g>
+      </g>
 
-      {/* header bar */}
-      <rect x="282" y="172" width="132" height="10" rx="3" fill="#0b3d2e" fillOpacity="0.15" />
+      {/* floating notification card */}
+      <g filter="url(#sahiShadowSm)" transform="rotate(-4 470 96)">
+        <rect x="420" y="66" width="120" height="58" rx="14" fill="#ffffff" />
+      </g>
+      <g transform="rotate(-4 470 96)">
+        <circle cx="440" cy="95" r="12" fill="#ecfdf5" />
+        <path d="m435 95 3.5 3.5L446 90" stroke="#14a673" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        <rect x="460" y="86" width="64" height="8" rx="4" fill="#0b3d2e" fillOpacity="0.4" />
+        <rect x="460" y="100" width="44" height="6" rx="3" fill="#0b3d2e" fillOpacity="0.18" />
+      </g>
 
-      {/* stat cards */}
-      <rect x="282" y="192" width="60" height="42" rx="6" fill="#14a673" fillOpacity="0.12" />
-      <circle cx="296" cy="206" r="7" fill="#0b3d2e" fillOpacity="0.5" />
-      <rect x="288" y="218" width="36" height="6" rx="2" fill="#0b3d2e" fillOpacity="0.25" />
-
-      <rect x="350" y="192" width="64" height="42" rx="6" fill="#e3a13c" fillOpacity="0.18" />
-      <circle cx="364" cy="206" r="7" fill="#0b3d2e" fillOpacity="0.5" />
-      <rect x="356" y="218" width="40" height="6" rx="2" fill="#0b3d2e" fillOpacity="0.25" />
-
-      {/* bar chart card */}
-      <rect x="282" y="242" width="132" height="38" rx="6" fill="#0b3d2e" fillOpacity="0.06" />
-      <rect x="294" y="258" width="10" height="14" rx="2" fill="#14a673" />
-      <rect x="310" y="250" width="10" height="22" rx="2" fill="#0b3d2e" />
-      <rect x="326" y="254" width="10" height="18" rx="2" fill="#14a673" />
-      <rect x="342" y="246" width="10" height="26" rx="2" fill="#e3a13c" />
-      <rect x="358" y="252" width="10" height="20" rx="2" fill="#14a673" />
-      <rect x="374" y="258" width="10" height="14" rx="2" fill="#0b3d2e" />
-
-      {/* chair */}
-      <rect x="418" y="196" width="96" height="148" rx="34" fill="#0b3d2e" />
-
-      {/* person body (from behind) */}
-      <path d="M432 340 C432 288 452 262 466 262 C480 262 500 288 500 340 Z" fill="#14a673" />
-
-      {/* arm to keyboard */}
-      <path d="M438 300 C420 310 400 314 388 312" stroke="#14a673" strokeWidth="16" strokeLinecap="round" fill="none" />
-
-      {/* head + hair */}
-      <circle cx="466" cy="238" r="26" fill="#caa07a" />
+      {/* floating security badge */}
+      <g filter="url(#sahiShadowSm)">
+        <circle cx="112" cy="368" r="30" fill="#0b3d2e" />
+      </g>
       <path
-        d="M440 236 C438 210 452 196 466 196 C482 196 496 212 492 236 C486 226 476 220 466 220 C456 220 444 228 440 236 Z"
-        fill="#0b3d2e"
+        d="M112 355c-7 0-13 3-13 3v9c0 8 5.5 14 13 16.5 7.5-2.5 13-8.5 13-16.5v-9s-6-3-13-3Z"
+        fill="none"
+        stroke="#ffffff"
+        strokeWidth="2"
+        strokeLinejoin="round"
+        transform="translate(0,-4)"
       />
-
-      {/* keyboard on desk */}
-      <rect x="270" y="332" width="70" height="14" rx="3" fill="#0b3d2e" fillOpacity="0.2" />
+      <path d="m106 369 4 4 8-8" stroke="#f0c078" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" transform="translate(0,-4)" />
     </svg>
   )
 }

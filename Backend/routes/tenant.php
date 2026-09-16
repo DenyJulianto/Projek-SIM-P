@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\KelasController;
 use App\Http\Controllers\Api\KonselingController;
 use App\Http\Controllers\Api\LaporanKeuanganController;
 use App\Http\Controllers\Api\MataPelajaranController;
+use App\Http\Controllers\Api\MateriController;
 use App\Http\Controllers\Api\NilaiController;
 use App\Http\Controllers\Api\NilaiSikapController;
 use App\Http\Controllers\Api\PelanggaranController;
@@ -49,6 +50,8 @@ use App\Http\Controllers\Api\SuratController;
 use App\Http\Controllers\Api\SystemSettingsController;
 use App\Http\Controllers\Api\TagihanController;
 use App\Http\Controllers\Api\TahunAjaranController;
+use App\Http\Controllers\Api\TugasController;
+use App\Http\Controllers\Api\UjianController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\WaliKelasSelfController;
 use Illuminate\Support\Facades\Route;
@@ -82,6 +85,9 @@ Route::middleware([
     Route::get('avatar/{path}', [AvatarController::class, 'show'])->where('path', '.*');
     Route::get('surat-file/{path}', [SuratController::class, 'showFile'])->where('path', '.*');
     Route::get('arsip-file/{path}', [ArsipDokumenController::class, 'showFile'])->where('path', '.*');
+    Route::get('materi-file/{path}', [MateriController::class, 'showFile'])->where('path', '.*');
+    Route::get('tugas-file/{path}', [TugasController::class, 'showFile'])->where('path', '.*');
+    Route::get('tugas-jawaban-file/{path}', [TugasController::class, 'showJawabanFile'])->where('path', '.*');
 
     // Landing page publik sekolah — tidak butuh login.
     Route::prefix('public')->group(function () {
@@ -100,8 +106,18 @@ Route::middleware([
         Route::get('/me/siswa/jadwal', [StudentSelfController::class, 'jadwal']);
         Route::get('/me/siswa/nilai', [StudentSelfController::class, 'nilai']);
         Route::get('/me/siswa/absensi', [StudentSelfController::class, 'absensi']);
+        Route::post('/me/siswa/absensi/ajukan', [StudentSelfController::class, 'ajukanAbsensi']);
+        Route::put('/me/siswa/absensi/{absensi}/keterangan', [StudentSelfController::class, 'updateKeteranganAbsensi']);
         Route::get('/me/siswa/tagihan', [StudentSelfController::class, 'tagihan']);
         Route::get('/me/siswa/prestasi', [StudentSelfController::class, 'prestasi']);
+        Route::get('/me/siswa/materi', [StudentSelfController::class, 'materi']);
+        Route::get('/me/siswa/tugas', [StudentSelfController::class, 'tugas']);
+        Route::post('/me/siswa/tugas/{tugas}/jawaban', [StudentSelfController::class, 'submitTugas']);
+        Route::get('/me/siswa/ujian', [StudentSelfController::class, 'ujianList']);
+        Route::post('/me/siswa/ujian/{ujian}/mulai', [StudentSelfController::class, 'ujianMulai']);
+        Route::post('/me/siswa/ujian/{ujian}/jawab', [StudentSelfController::class, 'ujianJawab']);
+        Route::post('/me/siswa/ujian/{ujian}/selesai', [StudentSelfController::class, 'ujianSelesai']);
+        Route::get('/me/siswa/ujian/{ujian}/hasil', [StudentSelfController::class, 'ujianHasil']);
 
         Route::get('/me/anak', [ParentSelfController::class, 'index']);
         Route::get('/me/anak/{siswa}/jadwal', [ParentSelfController::class, 'jadwal']);
@@ -171,7 +187,7 @@ Route::middleware([
 
         Route::apiResource('jadwal-pelajaran', JadwalPelajaranController::class)
             ->only(['index', 'show'])
-            ->middleware('permission:jadwal.manage|kurikulum.jadwal-pelajaran|monitoring-guru.jadwal-mengajar');
+            ->middleware('permission:jadwal.manage|kurikulum.jadwal-pelajaran|monitoring-guru.jadwal-mengajar|dashboard.view-all');
 
         Route::apiResource('jadwal-pelajaran', JadwalPelajaranController::class)
             ->only(['store', 'update', 'destroy'])
@@ -266,6 +282,11 @@ Route::middleware([
 
         Route::middleware('module.enabled:persuratan')->group(function () {
             Route::apiResource('surat', SuratController::class)
+                ->only(['index', 'show'])
+                ->middleware('permission:persuratan.manage|dashboard.view-all');
+
+            Route::apiResource('surat', SuratController::class)
+                ->only(['store', 'update', 'destroy'])
                 ->middleware('permission:persuratan.manage');
 
             Route::apiResource('arsip-dokumen', ArsipDokumenController::class)
@@ -275,6 +296,28 @@ Route::middleware([
         Route::apiResource('jam-belajar', JamBelajarController::class)
             ->only(['index', 'store', 'update', 'destroy'])
             ->middleware('permission:pengguna.manage|kurikulum.manage');
+
+        // Materi, Tugas & Ujian — dikelola guru mata pelajaran/wali kelas,
+        // dikonsumsi siswa lewat endpoint self-service /me/siswa/* di atas.
+        Route::middleware('permission:materi.manage')->group(function () {
+            Route::apiResource('materi', MateriController::class);
+        });
+
+        Route::middleware('permission:tugas.manage')->group(function () {
+            Route::apiResource('tugas', TugasController::class)
+                ->parameters(['tugas' => 'tugas']);
+            Route::get('tugas/{tugas}/jawaban', [TugasController::class, 'jawaban']);
+            Route::post('tugas-jawaban/{tugasJawaban}/nilai', [TugasController::class, 'nilai']);
+        });
+
+        Route::middleware('permission:ujian.manage')->group(function () {
+            Route::apiResource('ujian', UjianController::class);
+            Route::get('ujian/{ujian}/soal', [UjianController::class, 'soal']);
+            Route::post('ujian/{ujian}/soal', [UjianController::class, 'storeSoal']);
+            Route::put('ujian-soal/{soal}', [UjianController::class, 'updateSoal']);
+            Route::delete('ujian-soal/{soal}', [UjianController::class, 'destroySoal']);
+            Route::get('ujian/{ujian}/attempts', [UjianController::class, 'attempts']);
+        });
 
         Route::middleware('permission:pengguna.manage')->group(function () {
             Route::apiResource('tahun-ajaran', TahunAjaranController::class)
@@ -309,11 +352,19 @@ Route::middleware([
         });
 
         Route::apiResource('prestasi', PrestasiController::class)
-            ->only(['index', 'store', 'update', 'destroy'])
+            ->only(['index'])
+            ->middleware('permission:prestasi.manage|kesiswaan.prestasi|dashboard.view-all');
+
+        Route::apiResource('prestasi', PrestasiController::class)
+            ->only(['store', 'update', 'destroy'])
             ->middleware('permission:prestasi.manage|kesiswaan.prestasi');
 
         Route::apiResource('pelanggaran', PelanggaranController::class)
-            ->only(['index', 'store', 'update', 'destroy'])
+            ->only(['index'])
+            ->middleware('permission:pelanggaran.manage|kesiswaan.pelanggaran|dashboard.view-all');
+
+        Route::apiResource('pelanggaran', PelanggaranController::class)
+            ->only(['store', 'update', 'destroy'])
             ->middleware('permission:pelanggaran.manage|kesiswaan.pelanggaran');
 
         Route::middleware('module.enabled:bk')->group(function () {
@@ -351,6 +402,7 @@ Route::middleware([
             Route::get('kepegawaian', [PrincipalController::class, 'kepegawaian']);
             Route::get('sarpras', [PrincipalController::class, 'sarpras']);
             Route::get('keuangan', [PrincipalController::class, 'keuangan']);
+            Route::get('insights', [PrincipalController::class, 'insights']);
         });
 
         // Keuangan / SPP — Bendahara kelola penuh.

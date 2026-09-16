@@ -8,6 +8,32 @@ const TITLES = {
   keuangan: 'Pemantauan Keuangan',
   kepegawaian: 'Pemantauan Kepegawaian',
   sarpras: 'Pemantauan Sarana & Prasarana',
+  jadwal: 'Pemantauan Jadwal Pelajaran',
+  surat: 'Pemantauan Persuratan',
+  'prestasi-pelanggaran': 'Pemantauan Prestasi & Pelanggaran',
+}
+
+const HARI_ORDER = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
+
+const SURAT_STATUS_STYLE = {
+  baru: 'bg-navy/10 text-navy/60',
+  diproses: 'bg-amber-100 text-amber-700',
+  selesai: 'bg-emerald-100 text-emerald-700',
+}
+
+const TINGKAT_PELANGGARAN_TONE = {
+  ringan: 'bg-navy/10 text-navy/60',
+  sedang: 'bg-amber-100 text-amber-700',
+  berat: 'bg-red-100 text-red-600',
+}
+
+const TINGKAT_PRESTASI_LABEL = {
+  sekolah: 'Sekolah',
+  kecamatan: 'Kecamatan',
+  kabupaten_kota: 'Kab/Kota',
+  provinsi: 'Provinsi',
+  nasional: 'Nasional',
+  internasional: 'Internasional',
 }
 
 export default function PemantauanView({ section }) {
@@ -22,6 +48,9 @@ export default function PemantauanView({ section }) {
       {section === 'keuangan' && <KeuanganSection />}
       {section === 'kepegawaian' && <KepegawaianSection />}
       {section === 'sarpras' && <SarprasSection />}
+      {section === 'jadwal' && <JadwalSection />}
+      {section === 'surat' && <SuratSection />}
+      {section === 'prestasi-pelanggaran' && <PrestasiPelanggaranSection />}
     </div>
   )
 }
@@ -61,7 +90,7 @@ function AkademikSection() {
         <Table
           columns={['Kelas', 'Jumlah Siswa', 'Rata-rata Nilai']}
           rows={data.per_kelas}
-          render={(r) => [r.kelas, r.jumlah_siswa, r.rata_rata_nilai ?? '-']}
+          render={(r) => [r.kelas, r.jumlah_siswa, <ScoreBadge value={r.rata_rata_nilai} />]}
           emptyText="Belum ada kelas."
         />
       </div>
@@ -71,7 +100,7 @@ function AkademikSection() {
         <Table
           columns={['Mata Pelajaran', 'Jumlah Nilai', 'Rata-rata']}
           rows={data.per_mata_pelajaran}
-          render={(r) => [r.mata_pelajaran, r.jumlah_nilai, r.rata_rata_nilai ?? '-']}
+          render={(r) => [r.mata_pelajaran, r.jumlah_nilai, <ScoreBadge value={r.rata_rata_nilai} />]}
           emptyText="Belum ada mata pelajaran."
         />
       </div>
@@ -187,7 +216,7 @@ function KepegawaianSection() {
       <Table
         columns={['Nama', 'NIP', 'Jabatan', 'Status']}
         rows={data.daftar}
-        render={(g) => [g.nama, g.nip || '-', g.jabatan || '-', g.status]}
+        render={(g) => [g.nama, g.nip || '-', g.jabatan || '-', <StatusBadge status={g.status} />]}
         emptyText="Belum ada data guru."
       />
     </div>
@@ -218,9 +247,139 @@ function SarprasSection() {
   )
 }
 
+function JadwalSection() {
+  const { data, error } = useFetch(() => api.listJadwal({ per_page: 500 }))
+  if (!data) return <Loading error={error} />
+
+  const items = data.data || []
+  const grouped = HARI_ORDER.map((hari) => ({
+    hari,
+    items: items.filter((j) => j.hari === hari).sort((a, b) => a.jam_mulai.localeCompare(b.jam_mulai)),
+  }))
+
+  return (
+    <div className="space-y-6">
+      {grouped.map(({ hari, items: hariItems }) => (
+        <div key={hari}>
+          <h2 className="text-sm font-bold text-navy/60 uppercase tracking-wide mb-2">{hari}</h2>
+          <Table
+            columns={['Jam', 'Kelas', 'Mata Pelajaran', 'Guru']}
+            rows={hariItems}
+            render={(item) => [
+              `${item.jam_mulai?.slice(0, 5)} - ${item.jam_selesai?.slice(0, 5)}`,
+              item.kelas?.nama_kelas || '-',
+              item.mata_pelajaran?.nama_mapel || '-',
+              item.guru?.nama || '-',
+            ]}
+            emptyText="Belum ada jadwal."
+          />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function SuratSection() {
+  const { data, error } = useFetch(() => api.listSurat({ per_page: 200 }))
+  if (!data) return <Loading error={error} />
+
+  const items = data.data || []
+
+  return (
+    <Table
+      columns={['Perihal', 'Jenis', 'Pengirim/Tujuan', 'Tgl. Agenda', 'Status']}
+      rows={items}
+      render={(item) => [
+        item.perihal,
+        <span className="capitalize">{item.jenis}</span>,
+        item.jenis === 'masuk' ? item.pengirim || '-' : item.tujuan || '-',
+        item.tanggal_agenda?.slice(0, 10) || '-',
+        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${SURAT_STATUS_STYLE[item.status] || 'bg-navy/10 text-navy/60'}`}>
+          {item.status}
+        </span>,
+      ]}
+      emptyText="Belum ada surat tercatat."
+    />
+  )
+}
+
+function PrestasiPelanggaranSection() {
+  const { data: prestasiData, error: prestasiError } = useFetch(() => api.listPrestasi({ per_page: 300 }))
+  const { data: pelanggaranData, error: pelanggaranError } = useFetch(() => api.listPelanggaran({ per_page: 300 }))
+
+  const prestasi = prestasiData?.data || []
+  const pelanggaran = pelanggaranData?.data || []
+
+  const prestasiCounts = {}
+  prestasi.forEach((p) => { prestasiCounts[p.tingkat] = (prestasiCounts[p.tingkat] || 0) + 1 })
+
+  const pelanggaranCounts = { ringan: 0, sedang: 0, berat: 0 }
+  pelanggaran.forEach((p) => { pelanggaranCounts[p.tingkat] = (pelanggaranCounts[p.tingkat] || 0) + 1 })
+
+  return (
+    <div className="space-y-10">
+      <div>
+        <h2 className="text-sm font-bold text-navy/60 uppercase tracking-wide mb-3">Prestasi Siswa</h2>
+        {!prestasiData ? (
+          <Loading error={prestasiError} />
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
+              <StatBox label="Total" value={prestasi.length} />
+              {Object.entries(TINGKAT_PRESTASI_LABEL).map(([key, label]) => (
+                <StatBox key={key} label={label} value={prestasiCounts[key] || 0} />
+              ))}
+            </div>
+            <Table
+              columns={['Siswa', 'Judul', 'Tingkat', 'Tanggal']}
+              rows={prestasi}
+              render={(item) => [
+                item.siswa?.nama || '-',
+                item.judul,
+                TINGKAT_PRESTASI_LABEL[item.tingkat] || item.tingkat,
+                item.tanggal?.slice(0, 10) || '-',
+              ]}
+              emptyText="Belum ada prestasi tercatat."
+            />
+          </div>
+        )}
+      </div>
+
+      <div>
+        <h2 className="text-sm font-bold text-navy/60 uppercase tracking-wide mb-3">Pelanggaran Siswa</h2>
+        {!pelanggaranData ? (
+          <Loading error={pelanggaranError} />
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <StatBox label="Total Kasus" value={pelanggaran.length} />
+              <StatBox label="Ringan" value={pelanggaranCounts.ringan} />
+              <StatBox label="Sedang" value={pelanggaranCounts.sedang} />
+              <StatBox label="Berat" value={pelanggaranCounts.berat} />
+            </div>
+            <Table
+              columns={['Siswa', 'Jenis', 'Tingkat', 'Tanggal']}
+              rows={pelanggaran}
+              render={(item) => [
+                item.siswa?.nama || '-',
+                item.jenis,
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full capitalize ${TINGKAT_PELANGGARAN_TONE[item.tingkat] || 'bg-navy/10 text-navy/60'}`}>
+                  {item.tingkat}
+                </span>,
+                item.tanggal?.slice(0, 10) || '-',
+              ]}
+              emptyText="Belum ada pelanggaran tercatat."
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function StatBox({ label, value }) {
   return (
-    <div className="bg-white rounded-2xl border border-navy/10 p-5">
+    <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/60 shadow-sm p-5">
       <p className="text-2xl font-extrabold text-navy">{value}</p>
       <p className="text-xs text-navy/50 uppercase tracking-wide mt-1">{label}</p>
     </div>
@@ -229,25 +388,40 @@ function StatBox({ label, value }) {
 
 function Table({ columns, rows, render, emptyText }) {
   return (
-    <div className="bg-white rounded-2xl border border-navy/10 overflow-hidden">
-      <table className="w-full text-sm">
+    <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-navy/15 shadow-sm overflow-hidden">
+      <table className="w-full text-sm border-collapse">
         <thead>
-          <tr className="bg-navy/5 text-navy/60 text-xs uppercase text-left">
-            {columns.map((c) => (
-              <th key={c} className="px-4 py-3">{c}</th>
+          <tr className="bg-gradient-to-r from-navy-light/10 via-emerald-50/60 to-navy-light/10 text-navy/70 text-[11px] font-bold uppercase tracking-wider text-left">
+            {columns.map((c, i) => (
+              <th
+                key={c}
+                className={`px-5 py-3.5 border-b-2 border-navy/15 ${i > 0 ? 'border-l border-navy/10' : ''}`}
+              >
+                {c}
+              </th>
             ))}
           </tr>
         </thead>
         <tbody>
           {!rows || rows.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="px-4 py-6 text-center text-navy/40">{emptyText}</td>
+              <td colSpan={columns.length} className="px-4 py-8 text-center text-navy/40">{emptyText}</td>
             </tr>
           ) : (
             rows.map((r, i) => (
-              <tr key={i} className="border-t border-navy/5">
+              <tr
+                key={i}
+                className={`border-t border-navy/10 hover:bg-emerald-50/50 transition-colors ${
+                  i % 2 === 1 ? 'bg-navy/[0.015]' : ''
+                }`}
+              >
                 {render(r).map((cell, j) => (
-                  <td key={j} className="px-4 py-3 text-navy/70">{cell}</td>
+                  <td
+                    key={j}
+                    className={`px-5 py-3.5 text-navy/70 ${j > 0 ? 'border-l border-navy/10' : ''}`}
+                  >
+                    {cell}
+                  </td>
                 ))}
               </tr>
             ))
@@ -255,6 +429,28 @@ function Table({ columns, rows, render, emptyText }) {
         </tbody>
       </table>
     </div>
+  )
+}
+
+function ScoreBadge({ value }) {
+  if (value === null || value === undefined) return <span className="text-navy/30">-</span>
+
+  const tone = value >= 85 ? 'bg-emerald-100 text-emerald-700' : value >= 75 ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+
+  return <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ${tone}`}>{value}</span>
+}
+
+function StatusBadge({ status }) {
+  const isAktif = status === 'aktif'
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${
+        isAktif ? 'bg-emerald-100 text-emerald-700' : 'bg-navy/10 text-navy/50'
+      }`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${isAktif ? 'bg-emerald-500' : 'bg-navy/30'}`} />
+      {isAktif ? 'Aktif' : 'Nonaktif'}
+    </span>
   )
 }
 

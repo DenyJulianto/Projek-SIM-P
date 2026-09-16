@@ -12,5 +12,8 @@ export default defineConfig({
     // tidak bisa diakses meski http://localhost:5173 kelihatan jalan.
     // "127.0.0.1" memaksa bind IPv4 supaya konsisten di semua environment.
     host: '127.0.0.1',
+    // Setiap sekolah diakses lewat subdomain (mis. test-sekolah.localhost),
+    // jadi Vite harus menerima Host header selain 127.0.0.1/localhost.
+    allowedHosts: true,
   },
 })

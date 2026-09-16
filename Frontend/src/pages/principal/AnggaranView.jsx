@@ -1,17 +1,11 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../lib/api'
 
-const TITLES = {
-  rkas: 'RKAS / RAPBS',
-  pengajuan: 'Pengajuan Anggaran',
-  realisasi: 'Realisasi & Saldo',
-  persetujuan: 'Persetujuan Anggaran',
-}
-
 const DESC = {
   rkas: 'Rencana Kerja & Anggaran Sekolah / Rencana Anggaran Pendapatan dan Belanja Sekolah.',
   pengajuan: 'Daftar pengajuan anggaran dari tiap bidang.',
   realisasi: 'Realisasi belanja dibandingkan anggaran yang disetujui, beserta sisa saldo.',
+  sumberdana: 'Daftar sumber dana sekolah yang dicatat Bendahara.',
   persetujuan: 'Pengajuan anggaran yang menunggu persetujuan Anda.',
 }
 
@@ -24,12 +18,12 @@ const STATUS_STYLE = {
 export default function AnggaranView({ tab }) {
   return (
     <div>
-      <h1 className="text-2xl font-extrabold text-navy mb-1">{TITLES[tab]}</h1>
       <p className="text-sm text-navy/50 mb-6">{DESC[tab]}</p>
 
       {tab === 'rkas' && <RkasTab />}
       {tab === 'pengajuan' && <PengajuanTab />}
       {tab === 'realisasi' && <RealisasiTab />}
+      {tab === 'sumberdana' && <SumberDanaTab />}
       {tab === 'persetujuan' && <PersetujuanTab />}
     </div>
   )
@@ -229,6 +223,56 @@ function RealisasiTab() {
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function SumberDanaTab() {
+  const [data, setData] = useState(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    api.listSumberDana().then(setData).catch((err) => setError(err.message))
+  }, [])
+
+  if (error) return <p className="text-red-600 text-sm">{error}</p>
+  if (!data) return <p className="text-navy/40 text-center py-10">Memuat...</p>
+
+  const total = data.reduce((sum, s) => sum + Number(s.jumlah), 0)
+
+  return (
+    <div className="space-y-4">
+      <StatBox label="Total Sumber Dana" value={formatRupiah(total)} />
+      <div className="bg-white rounded-2xl border border-navy/10 overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-navy/5 text-navy/60 text-xs uppercase text-left">
+              <th className="px-4 py-3">Tahun Ajaran</th>
+              <th className="px-4 py-3">Nama Sumber Dana</th>
+              <th className="px-4 py-3">Keterangan</th>
+              <th className="px-4 py-3 text-right">Jumlah</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="px-4 py-6 text-center text-navy/40">
+                  Belum ada sumber dana tercatat.
+                </td>
+              </tr>
+            ) : (
+              data.map((item) => (
+                <tr key={item.id} className="border-t border-navy/5">
+                  <td className="px-4 py-3 text-navy/70">{item.tahun_ajaran}</td>
+                  <td className="px-4 py-3 font-medium text-navy">{item.nama}</td>
+                  <td className="px-4 py-3 text-navy/70">{item.keterangan || '-'}</td>
+                  <td className="px-4 py-3 text-right text-navy/70">{formatRupiah(item.jumlah)}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   )

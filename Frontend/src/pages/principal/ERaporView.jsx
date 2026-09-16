@@ -1,12 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../lib/api'
 
-const TITLES = {
-  menunggu: 'Rapor Menunggu Pengesahan',
-  review: 'Review Rapor',
-  riwayat: 'Riwayat Pengesahan',
-}
-
 const DESC = {
   menunggu: 'Daftar rapor siswa yang sudah diajukan dan menunggu disahkan.',
   review: 'Tinjau detail nilai & unduh PDF sebelum memutuskan.',
@@ -74,7 +68,6 @@ export default function ERaporView({ tab }) {
 
   return (
     <div>
-      <h1 className="text-2xl font-extrabold text-navy mb-1">{TITLES[tab]}</h1>
       <p className="text-sm text-navy/50 mb-6">{DESC[tab]}</p>
 
       {error && <p className="text-red-600 text-sm mb-3">{error}</p>}

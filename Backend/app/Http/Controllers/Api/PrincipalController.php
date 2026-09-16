@@ -16,8 +16,10 @@ use App\Models\Pelanggaran;
 use App\Models\PengajuanAnggaran;
 use App\Models\Prestasi;
 use App\Models\RealisasiAnggaran;
+use App\Models\Semester;
 use App\Models\Siswa;
 use App\Models\Tagihan;
+use App\Models\TahunAjaran;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
@@ -30,19 +32,40 @@ class PrincipalController extends Controller
 {
     public function dashboard(): JsonResponse
     {
+        $awalBulan = now()->startOfMonth();
+        $totalSiswa = Siswa::where('status', 'aktif')->count();
+        $totalGuru = Guru::where('status', 'aktif')->count();
+        $siswaAwalBulan = Siswa::where('status', 'aktif')->where('created_at', '<', $awalBulan)->count();
+        $guruAwalBulan = Guru::where('status', 'aktif')->where('created_at', '<', $awalBulan)->count();
+
+        $kehadiranBulanIni = $this->kehadiranPersenBulan(Absensi::query(), now());
+        $kehadiranBulanLalu = $this->kehadiranPersenBulan(Absensi::query(), now()->subMonthNoOverflow());
+
+        $trendNilai = $this->trendNilai();
+        $nilaiTrend = null;
+        if (count($trendNilai) >= 2) {
+            $nilaiTrend = round($trendNilai->last()['rata_rata'] - $trendNilai->slice(-2, 1)->first()['rata_rata'], 2);
+        }
+
         return response()->json([
-            'total_siswa' => Siswa::where('status', 'aktif')->count(),
-            'total_guru' => Guru::where('status', 'aktif')->count(),
+            'total_siswa' => $totalSiswa,
+            'total_siswa_trend' => $totalSiswa - $siswaAwalBulan,
+            'total_guru' => $totalGuru,
+            'total_guru_trend' => $totalGuru - $guruAwalBulan,
             'total_kelas' => Kelas::count(),
-            'kehadiran_siswa_persen' => $this->kehadiranPersen(Absensi::query(), 'bulan ini'),
+            'kehadiran_siswa_persen' => $kehadiranBulanIni,
+            'kehadiran_siswa_trend' => round($kehadiranBulanIni - $kehadiranBulanLalu, 1),
             'rata_rata_nilai' => round((float) Nilai::avg('nilai'), 2),
+            'rata_rata_nilai_trend' => $nilaiTrend,
             'prestasi_bulan_ini' => Prestasi::whereMonth('tanggal', now()->month)->whereYear('tanggal', now()->year)->count(),
             'prestasi_total' => Prestasi::count(),
             'kasus_pembinaan_bulan_ini' => Pelanggaran::whereMonth('tanggal', now()->month)->whereYear('tanggal', now()->year)->count(),
             'kasus_pembinaan_total' => Pelanggaran::count(),
             'anggaran' => $this->serapanAnggaran(),
             'spp' => $this->persentaseSpp(),
-            'grafik_akademik' => $this->trendNilai(),
+            'grafik_akademik' => $trendNilai,
+            'tahun_ajaran_aktif' => TahunAjaran::where('is_active', true)->value('nama'),
+            'semester_aktif' => Semester::where('is_active', true)->value('nama'),
         ]);
     }
 
@@ -98,18 +121,7 @@ class PrincipalController extends Controller
 
     public function akademik(): JsonResponse
     {
-        $perKelas = Kelas::query()
-            ->withCount('siswa')
-            ->get()
-            ->map(function (Kelas $kelas) {
-                $rata = Nilai::whereHas('siswa', fn ($q) => $q->where('kelas_id', $kelas->id))->avg('nilai');
-
-                return [
-                    'kelas' => $kelas->nama_kelas,
-                    'jumlah_siswa' => $kelas->siswa_count,
-                    'rata_rata_nilai' => $rata ? round((float) $rata, 2) : null,
-                ];
-            });
+        $perKelas = $this->perKelasAkademik();
 
         // KKM per mata pelajaran belum dikonfigurasi di sistem (lihat menu
         // KKM/KKTP di Kurikulum), jadi persentase tuntas di sini dihitung
@@ -180,6 +192,22 @@ class PrincipalController extends Controller
             'aktif' => Guru::where('status', 'aktif')->count(),
             'nonaktif' => Guru::where('status', 'nonaktif')->count(),
             'daftar' => Guru::orderBy('nama')->get(['id', 'nama', 'nip', 'jabatan', 'status']),
+        ]);
+    }
+
+    /**
+     * Ringkasan & rekomendasi berbasis aturan (ambang batas atas data asli),
+     * BUKAN AI/prediksi — dashboard menyebutnya "Ringkasan & Rekomendasi",
+     * bukan "AI Insights", supaya tidak mengklaim kapabilitas yang tidak
+     * benar-benar ada di sistem ini.
+     */
+    public function insights(): JsonResponse
+    {
+        return response()->json([
+            'ringkasan' => $this->ringkasanRekomendasi(),
+            'siswa_berprestasi' => $this->siswaBerprestasiList(),
+            'siswa_perlu_perhatian' => $this->siswaPerluPerhatianList(),
+            'performa_guru' => $this->performaGuruList(),
         ]);
     }
 
@@ -270,5 +298,194 @@ class PrincipalController extends Controller
                 'periode' => "{$row->semester} {$row->tahun_ajaran}",
                 'rata_rata' => round((float) $row->rata_rata, 2),
             ]);
+    }
+
+    private function perKelasAkademik()
+    {
+        return Kelas::query()
+            ->withCount('siswa')
+            ->get()
+            ->map(function (Kelas $kelas) {
+                $rata = Nilai::whereHas('siswa', fn ($q) => $q->where('kelas_id', $kelas->id))->avg('nilai');
+
+                return [
+                    'kelas' => $kelas->nama_kelas,
+                    'jumlah_siswa' => $kelas->siswa_count,
+                    'rata_rata_nilai' => $rata ? round((float) $rata, 2) : null,
+                ];
+            });
+    }
+
+    private function kehadiranPersenBulan($query, \Illuminate\Support\Carbon $bulan): float
+    {
+        $total = (clone $query)->whereMonth('tanggal', $bulan->month)->whereYear('tanggal', $bulan->year)->count();
+
+        if ($total === 0) {
+            return 0;
+        }
+
+        $hadir = (clone $query)
+            ->whereMonth('tanggal', $bulan->month)
+            ->whereYear('tanggal', $bulan->year)
+            ->where('status', 'hadir')
+            ->count();
+
+        return round(($hadir / $total) * 100, 1);
+    }
+
+    /**
+     * Ambang batas sederhana (bukan KKM resmi/model prediktif) dipakai
+     * konsisten untuk menandai siswa/kelas "perlu perhatian" di seluruh
+     * dashboard Kepala Sekolah.
+     */
+    private const AMBANG_KEHADIRAN = 80.0;
+
+    private const AMBANG_NILAI = 70.0;
+
+    private function siswaBerprestasiList(): array
+    {
+        return Siswa::where('status', 'aktif')
+            ->whereHas('nilai')
+            ->withAvg('nilai as rata_nilai', 'nilai')
+            ->with('kelas:id,nama_kelas')
+            ->orderByDesc('rata_nilai')
+            ->limit(5)
+            ->get(['id', 'nama', 'kelas_id'])
+            ->map(fn (Siswa $s) => [
+                'nama' => $s->nama,
+                'kelas' => $s->kelas?->nama_kelas,
+                'rata_nilai' => round((float) $s->rata_nilai, 2),
+            ])
+            ->all();
+    }
+
+    private function siswaPerluPerhatianList(): array
+    {
+        $bulanIni = now();
+
+        $kehadiranBermasalah = Siswa::where('status', 'aktif')
+            ->whereHas('absensi', fn ($q) => $q->whereMonth('tanggal', $bulanIni->month)->whereYear('tanggal', $bulanIni->year))
+            ->with('kelas:id,nama_kelas')
+            ->get(['id', 'nama', 'kelas_id'])
+            ->map(function (Siswa $s) use ($bulanIni) {
+                $total = $s->absensi()->whereMonth('tanggal', $bulanIni->month)->whereYear('tanggal', $bulanIni->year)->count();
+                $hadir = $s->absensi()->whereMonth('tanggal', $bulanIni->month)->whereYear('tanggal', $bulanIni->year)->where('status', 'hadir')->count();
+                $persen = $total > 0 ? round(($hadir / $total) * 100, 1) : null;
+
+                if ($persen === null || $persen >= self::AMBANG_KEHADIRAN) {
+                    return null;
+                }
+
+                return [
+                    'siswa' => $s,
+                    'alasan' => "Kehadiran {$persen}% bulan ini",
+                    'skor' => $persen,
+                ];
+            })
+            ->filter()
+            ->values();
+
+        $nilaiBermasalah = Siswa::where('status', 'aktif')
+            ->whereHas('nilai')
+            ->withAvg('nilai as rata_nilai', 'nilai')
+            ->with('kelas:id,nama_kelas')
+            ->get(['id', 'nama', 'kelas_id'])
+            ->filter(fn (Siswa $s) => $s->rata_nilai !== null && (float) $s->rata_nilai < self::AMBANG_NILAI)
+            ->map(fn (Siswa $s) => [
+                'siswa' => $s,
+                'alasan' => 'Rata-rata nilai ' . round((float) $s->rata_nilai, 1),
+                'skor' => (float) $s->rata_nilai,
+            ])
+            ->values();
+
+        return $kehadiranBermasalah->concat($nilaiBermasalah)
+            ->unique(fn ($item) => $item['siswa']->id)
+            ->sortBy('skor')
+            ->take(5)
+            ->values()
+            ->map(fn ($item) => [
+                'nama' => $item['siswa']->nama,
+                'kelas' => $item['siswa']->kelas?->nama_kelas,
+                'alasan' => $item['alasan'],
+            ])
+            ->all();
+    }
+
+    private function performaGuruList(): array
+    {
+        $bulanIni = now();
+
+        return Guru::where('status', 'aktif')
+            ->orderBy('nama')
+            ->get(['id', 'nama'])
+            ->map(function (Guru $g) use ($bulanIni) {
+                $totalAbsen = AbsensiGuru::where('guru_id', $g->id)
+                    ->whereMonth('tanggal', $bulanIni->month)->whereYear('tanggal', $bulanIni->year)->count();
+                $hadirAbsen = AbsensiGuru::where('guru_id', $g->id)
+                    ->whereMonth('tanggal', $bulanIni->month)->whereYear('tanggal', $bulanIni->year)
+                    ->where('status', 'hadir')->count();
+
+                $kelasIds = Kelas::where('wali_kelas_id', $g->id)->pluck('id');
+                $rataNilai = $kelasIds->isNotEmpty()
+                    ? Nilai::whereHas('siswa', fn ($q) => $q->whereIn('kelas_id', $kelasIds))->avg('nilai')
+                    : null;
+
+                return [
+                    'nama' => $g->nama,
+                    'jumlah_kelas_diampu' => $kelasIds->count(),
+                    'persen_kehadiran' => $totalAbsen > 0 ? round(($hadirAbsen / $totalAbsen) * 100, 1) : null,
+                    'rata_rata_nilai_kelas' => $rataNilai ? round((float) $rataNilai, 2) : null,
+                ];
+            })
+            ->take(8)
+            ->values()
+            ->all();
+    }
+
+    private function ringkasanRekomendasi(): array
+    {
+        $items = [];
+
+        $kehadiranBulanIni = $this->kehadiranPersenBulan(Absensi::query(), now());
+        $kehadiranBulanLalu = $this->kehadiranPersenBulan(Absensi::query(), now()->subMonthNoOverflow());
+
+        if ($kehadiranBulanIni > 0 || $kehadiranBulanLalu > 0) {
+            $selisih = round($kehadiranBulanIni - $kehadiranBulanLalu, 1);
+            $items[] = [
+                'tipe' => $selisih >= 0 ? 'positif' : 'perhatian',
+                'judul' => $selisih >= 0 ? 'Kehadiran siswa meningkat' : 'Kehadiran siswa menurun',
+                'deskripsi' => 'Kehadiran siswa ' . ($selisih >= 0 ? 'naik' : 'turun') . ' ' . abs($selisih) . '% dibanding bulan lalu.',
+            ];
+        }
+
+        $siswaPerlu = $this->siswaPerluPerhatianList();
+        if (count($siswaPerlu) > 0) {
+            $items[] = [
+                'tipe' => 'perhatian',
+                'judul' => count($siswaPerlu) . ' siswa perlu perhatian',
+                'deskripsi' => 'Kehadiran atau nilai berada di bawah ambang batas bulan ini.',
+            ];
+        }
+
+        $kelasBermasalah = $this->perKelasAkademik()
+            ->filter(fn ($k) => $k['rata_rata_nilai'] !== null && $k['rata_rata_nilai'] < self::AMBANG_NILAI);
+
+        if ($kelasBermasalah->count() > 0) {
+            $items[] = [
+                'tipe' => 'perhatian',
+                'judul' => $kelasBermasalah->count() . ' kelas di bawah rata-rata',
+                'deskripsi' => $kelasBermasalah->pluck('kelas')->implode(', ') . ' perlu perhatian tambahan.',
+            ];
+        }
+
+        if (empty($items)) {
+            $items[] = [
+                'tipe' => 'info',
+                'judul' => 'Belum cukup data',
+                'deskripsi' => 'Ringkasan akan muncul otomatis setelah data kehadiran dan nilai mulai tercatat.',
+            ];
+        }
+
+        return $items;
     }
 }

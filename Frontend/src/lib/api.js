@@ -581,9 +581,34 @@ export const api = {
   getMySiswaProfil: () => request('/me/siswa'),
   getMySiswaJadwal: () => request('/me/siswa/jadwal'),
   getMySiswaNilai: () => request('/me/siswa/nilai'),
-  getMySiswaAbsensi: () => request('/me/siswa/absensi'),
+  getMySiswaAbsensi: (params = {}) => {
+    const query = new URLSearchParams({ per_page: 500, ...params }).toString()
+    return request(`/me/siswa/absensi?${query}`)
+  },
+  ajukanAbsensiSaya: (data) =>
+    request('/me/siswa/absensi/ajukan', { method: 'POST', body: JSON.stringify(data) }),
+  updateKeteranganAbsensiSaya: (absensiId, keterangan) =>
+    request(`/me/siswa/absensi/${absensiId}/keterangan`, { method: 'PUT', body: JSON.stringify({ keterangan }) }),
   getMySiswaTagihan: () => request('/me/siswa/tagihan'),
   getMySiswaPrestasi: () => request('/me/siswa/prestasi'),
+
+  getMySiswaMateri: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/me/siswa/materi${query ? `?${query}` : ''}`)
+  },
+  getMySiswaTugas: () => request('/me/siswa/tugas'),
+  submitMySiswaTugas: (tugasId, { jawaban_text, file } = {}) => {
+    const formData = new FormData()
+    if (jawaban_text) formData.append('jawaban_text', jawaban_text)
+    if (file) formData.append('file', file)
+    return requestForm(`/me/siswa/tugas/${tugasId}/jawaban`, formData)
+  },
+  getMySiswaUjianList: () => request('/me/siswa/ujian'),
+  mulaiMySiswaUjian: (ujianId) => request(`/me/siswa/ujian/${ujianId}/mulai`, { method: 'POST' }),
+  jawabMySiswaUjian: (ujianId, data) =>
+    request(`/me/siswa/ujian/${ujianId}/jawab`, { method: 'POST', body: JSON.stringify(data) }),
+  selesaiMySiswaUjian: (ujianId) => request(`/me/siswa/ujian/${ujianId}/selesai`, { method: 'POST' }),
+  getMySiswaUjianHasil: (ujianId) => request(`/me/siswa/ujian/${ujianId}/hasil`),
 
   getMyAnak: () => request('/me/anak'),
   getAnakJadwal: (siswaId) => request(`/me/anak/${siswaId}/jadwal`),
@@ -817,6 +842,7 @@ export const api = {
   getPrincipalKepegawaian: () => request('/principal/kepegawaian'),
   getPrincipalSarpras: () => request('/principal/sarpras'),
   getPrincipalKeuangan: () => request('/principal/keuangan'),
+  getPrincipalInsights: () => request('/principal/insights'),
 
   // Tagihan & Pembayaran (Keuangan/SPP)
   listTagihan: (params = {}) => {
@@ -898,4 +924,54 @@ export const api = {
       `/siswa/${siswaId}/rapor?semester=${encodeURIComponent(semester)}&tahun_ajaran=${encodeURIComponent(tahunAjaran)}`,
       `rapor-${siswaId}-${semester}-${tahunAjaran}.pdf`
     ),
+
+  // Pembelajaran (Materi / Tugas / Ujian) — sisi guru mata pelajaran
+  listMateri: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/materi${query ? `?${query}` : ''}`)
+  },
+  createMateri: (data) => {
+    const formData = new FormData()
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== '') formData.append(key, value)
+    })
+    return requestForm('/materi', formData)
+  },
+  updateMateri: (id, data) =>
+    request(`/materi/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteMateri: (id) => request(`/materi/${id}`, { method: 'DELETE' }),
+
+  listTugas: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/tugas${query ? `?${query}` : ''}`)
+  },
+  createTugas: (data) => {
+    const formData = new FormData()
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== '') formData.append(key, value)
+    })
+    return requestForm('/tugas', formData)
+  },
+  updateTugas: (id, data) =>
+    request(`/tugas/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteTugas: (id) => request(`/tugas/${id}`, { method: 'DELETE' }),
+  listTugasJawaban: (tugasId) => request(`/tugas/${tugasId}/jawaban`),
+  nilaiTugasJawaban: (id, data) =>
+    request(`/tugas-jawaban/${id}/nilai`, { method: 'POST', body: JSON.stringify(data) }),
+
+  listUjian: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/ujian${query ? `?${query}` : ''}`)
+  },
+  getUjian: (id) => request(`/ujian/${id}`),
+  createUjian: (data) => request('/ujian', { method: 'POST', body: JSON.stringify(data) }),
+  updateUjian: (id, data) => request(`/ujian/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteUjian: (id) => request(`/ujian/${id}`, { method: 'DELETE' }),
+  listUjianSoal: (ujianId) => request(`/ujian/${ujianId}/soal`),
+  createUjianSoal: (ujianId, data) =>
+    request(`/ujian/${ujianId}/soal`, { method: 'POST', body: JSON.stringify(data) }),
+  updateUjianSoal: (soalId, data) =>
+    request(`/ujian-soal/${soalId}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteUjianSoal: (soalId) => request(`/ujian-soal/${soalId}`, { method: 'DELETE' }),
+  listUjianAttempts: (ujianId) => request(`/ujian/${ujianId}/attempts`),
 }

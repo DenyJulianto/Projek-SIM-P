@@ -4,12 +4,20 @@ import { api } from '../../lib/api'
 
 const HARI_LABEL = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
 
-export default function PrincipalHome() {
+const ATTENDANCE_TONES = {
+  hadir: { fill: '#14a673', label: 'Hadir' },
+  izin: { fill: '#3b82f6', label: 'Izin' },
+  sakit: { fill: '#e3a13c', label: 'Sakit' },
+  alpha: { fill: '#f43f5e', label: 'Alpa' },
+}
+
+export default function PrincipalHome({ onNavigate }) {
   const [data, setData] = useState(null)
   const [akademik, setAkademik] = useState(null)
   const [keuangan, setKeuangan] = useState(null)
   const [kehadiran, setKehadiran] = useState(null)
   const [kegiatan, setKegiatan] = useState(null)
+  const [insights, setInsights] = useState(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -17,11 +25,17 @@ export default function PrincipalHome() {
     api.getPrincipalAkademik().then(setAkademik).catch(() => {})
     api.getPrincipalKeuangan().then(setKeuangan).catch(() => {})
     api.getPrincipalKehadiran().then(setKehadiran).catch(() => {})
+    api.getPrincipalInsights().then(setInsights).catch(() => {})
     api.getKegiatan().then(setKegiatan).catch(() => {})
   }, [])
 
   if (error) return <p className="text-red-600 text-sm">{error}</p>
   if (!data) return <p className="text-navy/40 text-center py-10">Memuat...</p>
+
+  const goTo = (key) => onNavigate && onNavigate(key)
+
+  const today = new Date()
+  const todayLabel = today.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
   const eventDays = (kegiatan?.data || [])
     .map((k) => k.tanggal_mulai && new Date(k.tanggal_mulai))
@@ -30,60 +44,175 @@ export default function PrincipalHome() {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <KpiCard label="Siswa" value={data.total_siswa} icon={StudentIcon} from="from-navy" to="to-navy-light" />
-          <KpiCard label="Guru" value={data.total_guru} icon={StaffIcon} from="from-navy-light" to="to-navy" />
-          <KpiCard label="Kegiatan" value={kegiatan?.total ?? '-'} icon={CalendarStarIcon} from="from-gold" to="to-gold-light" />
-          <KpiCard
-            label="Pendapatan"
-            value={keuangan ? formatRupiah(keuangan.total_terbayar) : '-'}
-            icon={MoneyIcon}
-            from="from-emerald-600"
-            to="to-emerald-500"
-            small
-          />
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="inline-flex items-center gap-1.5 bg-white border border-navy/10 rounded-full px-3.5 py-1.5 text-xs font-semibold text-navy/60">
+          <CalendarIcon className="h-3.5 w-3.5" />
+          {todayLabel}
+        </span>
+        {data.tahun_ajaran_aktif && (
+          <span className="bg-emerald-50 text-emerald-700 rounded-full px-3.5 py-1.5 text-xs font-semibold">
+            Tahun Ajaran {data.tahun_ajaran_aktif}
+          </span>
+        )}
+        {data.semester_aktif && (
+          <span className="bg-blue-50 text-blue-700 rounded-full px-3.5 py-1.5 text-xs font-semibold">
+            Semester {data.semester_aktif}
+          </span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard
+          label="Total Siswa"
+          value={data.total_siswa}
+          trend={data.total_siswa_trend}
+          hint="dibanding bulan lalu"
+          icon={StudentIcon}
+          tone="bg-blue-100 text-blue-600"
+          onClick={() => goTo('pemantauan-kesiswaan')}
+        />
+        <KpiCard
+          label="Total Guru & Staf"
+          value={data.total_guru}
+          trend={data.total_guru_trend}
+          hint="dibanding bulan lalu"
+          icon={StaffIcon}
+          tone="bg-purple-100 text-purple-600"
+          onClick={() => goTo('pemantauan-kepegawaian')}
+        />
+        <KpiCard
+          label="Kehadiran Bulan Ini"
+          value={`${data.kehadiran_siswa_persen}%`}
+          trend={data.kehadiran_siswa_trend}
+          hint="dibanding bulan lalu"
+          icon={AttendanceIcon}
+          tone="bg-emerald-100 text-emerald-700"
+          onClick={() => goTo('pemantauan-kehadiran')}
+        />
+        <KpiCard
+          label="Rata-rata Nilai Sekolah"
+          value={data.rata_rata_nilai}
+          trend={data.rata_rata_nilai_trend}
+          hint="dibanding periode lalu"
+          icon={ChartIcon}
+          tone="bg-gold-light/35 text-gold"
+          onClick={() => goTo('pemantauan-akademik')}
+        />
+      </div>
+
+      <RingkasanPanel items={insights?.ringkasan} />
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/60 shadow-sm p-5">
+          <h2 className="text-sm font-bold text-navy mb-4">Tren Performa Akademik</h2>
+          <AcademicTrendChart data={data.grafik_akademik} />
         </div>
 
-        <div className="bg-white rounded-2xl border border-navy/10 p-5">
-          <h2 className="text-sm font-bold text-navy mb-3">Kalender Kegiatan</h2>
-          {!kegiatan ? (
-            <p className="text-sm text-navy/40 text-center py-6">Memuat...</p>
-          ) : (kegiatan.data || []).length === 0 ? (
-            <p className="text-sm text-navy/40 text-center py-6">Belum ada kegiatan terjadwal.</p>
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/60 shadow-sm p-5">
+          <h2 className="text-sm font-bold text-navy mb-4">Distribusi Kehadiran</h2>
+          {!kehadiran ? (
+            <p className="text-sm text-navy/40 text-center py-10">Memuat...</p>
           ) : (
-            <div className="space-y-3">
-              {kegiatan.data.slice(0, 3).map((k) => (
-                <div key={k.id} className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[11px] text-navy/40">
-                      {k.tanggal_mulai
-                        ? new Date(k.tanggal_mulai).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
-                        : '-'}
-                    </p>
-                    <p className="text-sm font-semibold text-navy truncate">{k.judul}</p>
-                  </div>
-                  <ArrowIcon className="h-4 w-4 text-navy/30 shrink-0" />
-                </div>
-              ))}
-            </div>
+            <AttendanceBreakdownDonut rekap={kehadiran.siswa.rekap} />
+          )}
+        </div>
+
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/60 shadow-sm p-5">
+          <h2 className="text-sm font-bold text-navy mb-4">Perbandingan Kelas</h2>
+          {!akademik ? (
+            <p className="text-sm text-navy/40 text-center py-10">Memuat...</p>
+          ) : (
+            <ClassComparisonChart data={akademik.per_kelas} />
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
-        <div className="bg-white rounded-2xl border border-navy/10 p-5">
-          <h2 className="text-sm font-bold text-navy mb-4">Tren Rata-rata Nilai Sekolah</h2>
-          <AcademicTrendChart data={data.grafik_akademik} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/60 shadow-sm p-5">
+          <h2 className="text-sm font-bold text-navy mb-3">Performa Guru</h2>
+          {!insights ? (
+            <p className="text-sm text-navy/40 text-center py-10">Memuat...</p>
+          ) : insights.performa_guru.length === 0 ? (
+            <p className="text-sm text-navy/40 text-center py-10">Belum ada data guru aktif.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-[11px] uppercase text-navy/40">
+                    <th className="pb-2 font-semibold">Nama</th>
+                    <th className="pb-2 font-semibold text-center">Kelas Diampu</th>
+                    <th className="pb-2 font-semibold text-center">Kehadiran</th>
+                    <th className="pb-2 font-semibold text-right">Rata Nilai Kelas</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-navy/5">
+                  {insights.performa_guru.map((g) => (
+                    <tr key={g.nama}>
+                      <td className="py-2.5 font-medium text-navy">{g.nama}</td>
+                      <td className="py-2.5 text-center text-navy/60">{g.jumlah_kelas_diampu}</td>
+                      <td className="py-2.5 text-center text-navy/60">{g.persen_kehadiran !== null ? `${g.persen_kehadiran}%` : '-'}</td>
+                      <td className="py-2.5 text-right text-navy/70">{g.rata_rata_nilai_kelas ?? '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
-        <div className="bg-white rounded-2xl border border-navy/10 p-5">
-          <MiniCalendar title="Kalender Sekolah" highlightDays={eventDays} />
+        <div className="space-y-4">
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/60 shadow-sm p-5">
+            <h2 className="text-sm font-bold text-navy mb-3 flex items-center gap-1.5">
+              <TrophyIcon className="h-4 w-4 text-emerald-600" />
+              Siswa Berprestasi
+            </h2>
+            {!insights ? (
+              <p className="text-sm text-navy/40 text-center py-6">Memuat...</p>
+            ) : insights.siswa_berprestasi.length === 0 ? (
+              <p className="text-sm text-navy/40 text-center py-6">Belum ada nilai yang cukup untuk ditampilkan.</p>
+            ) : (
+              <div className="divide-y divide-navy/5">
+                {insights.siswa_berprestasi.map((s) => (
+                  <div key={s.nama} className="py-2 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-navy truncate">{s.nama}</p>
+                      <p className="text-[11px] text-navy/40">{s.kelas || '-'}</p>
+                    </div>
+                    <span className="text-sm font-bold text-emerald-600 shrink-0">{s.rata_nilai}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/60 shadow-sm p-5">
+            <h2 className="text-sm font-bold text-navy mb-3 flex items-center gap-1.5">
+              <AlertIcon className="h-4 w-4 text-amber-600" />
+              Siswa Perlu Perhatian
+            </h2>
+            {!insights ? (
+              <p className="text-sm text-navy/40 text-center py-6">Memuat...</p>
+            ) : insights.siswa_perlu_perhatian.length === 0 ? (
+              <p className="text-sm text-navy/40 text-center py-6">Tidak ada siswa yang perlu perhatian khusus saat ini.</p>
+            ) : (
+              <div className="divide-y divide-navy/5">
+                {insights.siswa_perlu_perhatian.map((s) => (
+                  <div key={s.nama} className="py-2 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-navy truncate">{s.nama}</p>
+                      <p className="text-[11px] text-navy/40">{s.kelas || '-'}</p>
+                    </div>
+                    <span className="text-xs font-semibold text-amber-600 shrink-0">{s.alasan}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white rounded-2xl border border-navy/10 p-5">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/60 shadow-sm p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-bold text-navy">Keuangan Sekolah</h2>
             {keuangan && (
@@ -100,7 +229,13 @@ export default function PrincipalHome() {
           )}
         </div>
 
-        <div className="bg-white rounded-2xl border border-navy/10 p-5">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/60 shadow-sm p-5">
+          <MiniCalendar title="Kalender Sekolah" highlightDays={eventDays} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/60 shadow-sm p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-bold text-navy">Ketuntasan Nilai per Mata Pelajaran</h2>
             <div className="flex items-center gap-4 text-xs">
@@ -115,10 +250,8 @@ export default function PrincipalHome() {
             <SubjectMasteryChart data={akademik.per_mata_pelajaran} />
           )}
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
-        <div className="bg-white rounded-2xl border border-navy/10 p-5">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/60 shadow-sm p-5">
           <h2 className="text-sm font-bold text-navy mb-4">Tagihan Belum Lunas</h2>
           {!keuangan ? (
             <p className="text-sm text-navy/40 text-center py-10">Memuat...</p>
@@ -131,7 +264,6 @@ export default function PrincipalHome() {
                   <tr className="text-left text-[11px] uppercase text-navy/40">
                     <th className="pb-2 font-semibold">Siswa</th>
                     <th className="pb-2 font-semibold">Judul</th>
-                    <th className="pb-2 font-semibold">Jatuh Tempo</th>
                     <th className="pb-2 font-semibold text-right">Jumlah</th>
                   </tr>
                 </thead>
@@ -140,7 +272,6 @@ export default function PrincipalHome() {
                     <tr key={t.id}>
                       <td className="py-2.5 font-medium text-navy">{t.siswa?.nama || '-'}</td>
                       <td className="py-2.5 text-navy/60">{t.judul}</td>
-                      <td className="py-2.5 text-navy/60">{t.jatuh_tempo?.slice(0, 10) || '-'}</td>
                       <td className="py-2.5 text-right text-navy/70">{formatRupiah(t.jumlah)}</td>
                     </tr>
                   ))}
@@ -149,16 +280,56 @@ export default function PrincipalHome() {
             </div>
           )}
         </div>
+      </div>
 
-        <div className="bg-white rounded-2xl border border-navy/10 p-5">
-          <h2 className="text-sm font-bold text-navy mb-4">Kehadiran Bulan Ini</h2>
-          {!kehadiran ? (
-            <p className="text-sm text-navy/40 text-center py-10">Memuat...</p>
-          ) : (
-            <AttendanceDonut siswaPersen={kehadiran.siswa.persen_hadir} guruPersen={kehadiran.guru.persen_hadir} />
-          )}
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/60 shadow-sm p-5">
+        <h2 className="text-sm font-bold text-navy mb-4">Akses Cepat Laporan</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <QuickLink label="Laporan Akademik" icon={BookIcon} tone="bg-blue-50 text-blue-600" onClick={() => goTo('pemantauan-akademik')} />
+          <QuickLink label="Laporan Kehadiran" icon={AttendanceIcon} tone="bg-emerald-50 text-emerald-700" onClick={() => goTo('pemantauan-kehadiran')} />
+          <QuickLink label="Data Guru & Staf" icon={StaffIcon} tone="bg-purple-50 text-purple-600" onClick={() => goTo('pemantauan-kepegawaian')} />
+          <QuickLink label="Laporan Keuangan" icon={MoneyIcon} tone="bg-gold-light/30 text-gold" onClick={() => goTo('pemantauan-keuangan')} />
         </div>
       </div>
+    </div>
+  )
+}
+
+const RINGKASAN_TONE = {
+  positif: { icon: TrendUpIcon, badge: 'bg-emerald-100 text-emerald-700', bar: 'bg-emerald-500' },
+  perhatian: { icon: AlertIcon, badge: 'bg-amber-100 text-amber-700', bar: 'bg-amber-500' },
+  info: { icon: InfoIcon, badge: 'bg-navy/10 text-navy/60', bar: 'bg-navy/20' },
+}
+
+function RingkasanPanel({ items }) {
+  return (
+    <div className="relative overflow-hidden bg-gradient-to-br from-navy to-emerald-900 rounded-2xl p-5">
+      <div className="absolute -right-10 -bottom-10 h-40 w-40 rounded-full bg-gold-light/10 blur-3xl" />
+      <h2 className="relative text-sm font-bold text-white flex items-center gap-1.5 mb-4">
+        <SparkleIcon className="h-4 w-4 text-gold-light" />
+        Ringkasan &amp; Rekomendasi
+      </h2>
+      {!items ? (
+        <p className="relative text-sm text-white/50 py-4">Memuat...</p>
+      ) : (
+        <div className="relative grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {items.map((item, i) => {
+            const tone = RINGKASAN_TONE[item.tipe] || RINGKASAN_TONE.info
+            const Icon = tone.icon
+            return (
+              <div key={i} className="bg-white/[0.06] border border-white/10 rounded-xl p-3.5 flex items-start gap-2.5">
+                <div className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 ${tone.badge}`}>
+                  <Icon className="h-3.5 w-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-white leading-snug">{item.judul}</p>
+                  <p className="text-[11px] text-white/55 leading-snug mt-0.5">{item.deskripsi}</p>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
@@ -201,6 +372,78 @@ function AcademicTrendChart({ data }) {
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+function AttendanceBreakdownDonut({ rekap }) {
+  const entries = Object.entries(ATTENDANCE_TONES)
+    .map(([key, tone]) => ({ key, tone, total: Number(rekap?.[key] || 0) }))
+    .filter((e) => e.total > 0)
+
+  const grandTotal = entries.reduce((a, e) => a + e.total, 0)
+
+  if (grandTotal === 0) {
+    return <p className="text-sm text-navy/40 text-center py-10">Belum ada data kehadiran bulan ini.</p>
+  }
+
+  let cumulative = 0
+  const stops = entries
+    .map((e) => {
+      const start = (cumulative / grandTotal) * 100
+      cumulative += e.total
+      const end = (cumulative / grandTotal) * 100
+      return `${e.tone.fill} ${start}% ${end}%`
+    })
+    .join(', ')
+
+  return (
+    <div className="flex items-center gap-5">
+      <div
+        className="h-28 w-28 rounded-full shrink-0 flex items-center justify-center"
+        style={{ background: `conic-gradient(${stops})` }}
+      >
+        <div className="h-16 w-16 rounded-full bg-white flex flex-col items-center justify-center">
+          <span className="text-lg font-extrabold text-navy leading-none">{grandTotal}</span>
+          <span className="text-[9px] text-navy/40">Catatan</span>
+        </div>
+      </div>
+      <div className="space-y-1.5 min-w-0">
+        {entries.map((e) => (
+          <div key={e.key} className="flex items-center gap-2 text-xs">
+            <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: e.tone.fill }} />
+            <span className="text-navy/70">{e.tone.label}</span>
+            <span className="text-navy/40 ml-auto shrink-0">
+              {e.total} ({Math.round((e.total / grandTotal) * 100)}%)
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function ClassComparisonChart({ data }) {
+  const rows = (data || []).filter((d) => d.rata_rata_nilai !== null)
+
+  if (rows.length === 0) {
+    return <p className="text-sm text-navy/40 text-center py-10">Belum ada nilai yang cukup untuk dibandingkan.</p>
+  }
+
+  const max = Math.max(...rows.map((d) => d.rata_rata_nilai), 1)
+
+  return (
+    <div className="flex items-end gap-2 h-40">
+      {rows.map((d) => (
+        <div key={d.kelas} className="flex-1 flex flex-col items-center justify-end h-full gap-1">
+          <span className="text-[10px] font-bold text-navy">{d.rata_rata_nilai}</span>
+          <div
+            className="w-full max-w-8 bg-navy-light rounded-t-md"
+            style={{ height: `${Math.max((d.rata_rata_nilai / max) * 100, 4)}%` }}
+          />
+          <span className="text-[10px] text-navy/50 truncate max-w-full">{d.kelas}</span>
+        </div>
+      ))}
     </div>
   )
 }
@@ -257,52 +500,6 @@ function SubjectMasteryChart({ data }) {
   )
 }
 
-function AttendanceDonut({ siswaPersen, guruPersen }) {
-  const r1 = 15.5
-  const r2 = 11
-  const c1 = 2 * Math.PI * r1
-  const c2 = 2 * Math.PI * r2
-
-  return (
-    <div className="flex flex-col items-center">
-      <svg viewBox="0 0 36 36" className="w-40 h-40 -rotate-90">
-        <circle cx="18" cy="18" r={r1} fill="none" className="stroke-navy/10" strokeWidth="3" />
-        <circle
-          cx="18"
-          cy="18"
-          r={r1}
-          fill="none"
-          className="stroke-navy"
-          strokeWidth="3"
-          strokeDasharray={`${(siswaPersen / 100) * c1} ${c1}`}
-          strokeLinecap="round"
-        />
-        <circle cx="18" cy="18" r={r2} fill="none" className="stroke-gold-light/40" strokeWidth="3" />
-        <circle
-          cx="18"
-          cy="18"
-          r={r2}
-          fill="none"
-          className="stroke-gold"
-          strokeWidth="3"
-          strokeDasharray={`${(guruPersen / 100) * c2} ${c2}`}
-          strokeLinecap="round"
-        />
-      </svg>
-      <div className="flex items-center gap-6 mt-2">
-        <div className="text-center">
-          <p className="text-lg font-extrabold text-navy">{siswaPersen}%</p>
-          <p className="text-[11px] text-navy/50 uppercase tracking-wide">Siswa</p>
-        </div>
-        <div className="text-center">
-          <p className="text-lg font-extrabold text-gold">{guruPersen}%</p>
-          <p className="text-[11px] text-navy/50 uppercase tracking-wide">Guru</p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 function Legend({ swatch, label }) {
   return (
     <span className="flex items-center gap-1.5 text-navy/50">
@@ -318,16 +515,30 @@ function formatRupiah(value) {
   )
 }
 
-function KpiCard({ label, value, icon: Icon, from, to, hint, small }) {
+function KpiCard({ label, value, trend, hint, icon: Icon, tone, onClick }) {
+  const hasTrend = typeof trend === 'number'
   return (
-    <div className={`bg-gradient-to-br ${from} ${to} rounded-2xl p-5 text-white`}>
-      <div className="h-11 w-11 rounded-xl bg-white/15 flex items-center justify-center mb-3">
-        <Icon className="h-5.5 w-5.5 text-white" />
+    <button onClick={onClick} className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/60 shadow-sm p-5 text-left hover:border-navy/20 transition-colors">
+      <div className={`h-11 w-11 rounded-full flex items-center justify-center mb-3 ${tone}`}>
+        <Icon className="h-5.5 w-5.5" />
       </div>
-      <p className={`${small ? 'text-base' : 'text-2xl'} font-extrabold leading-none`}>{value}</p>
-      <p className="text-xs text-white/70 mt-1.5 uppercase tracking-wide leading-snug">{label}</p>
-      {hint && <p className="text-[11px] text-white/50 mt-1">{hint}</p>}
-    </div>
+      <p className="text-xs font-semibold text-navy/50 mb-1">{label}</p>
+      <p className="text-2xl font-extrabold text-navy leading-none">{value}</p>
+      {hasTrend && (
+        <p className={`text-xs font-semibold mt-2 flex items-center gap-1 ${trend >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+          {trend >= 0 ? '↑' : '↓'} {Math.abs(trend)} {hint}
+        </p>
+      )}
+    </button>
+  )
+}
+
+function QuickLink({ label, icon: Icon, tone, onClick }) {
+  return (
+    <button onClick={onClick} className={`rounded-xl p-3.5 text-left transition-colors hover:brightness-95 ${tone}`}>
+      <Icon className="h-5 w-5 mb-2" />
+      <p className="text-xs font-semibold leading-snug">{label}</p>
+    </button>
   )
 }
 
@@ -349,12 +560,21 @@ function StaffIcon(props) {
   )
 }
 
-function CalendarStarIcon(props) {
+function AttendanceIcon(props) {
   return (
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="3" y="4" width="18" height="17" rx="2" />
-      <path d="M3 9h18M8 2v4M16 2v4" />
-      <path d="m12 12.5 1 2 2.2.3-1.6 1.5.4 2.2-2-1-2 1 .4-2.2-1.6-1.5 2.2-.3Z" />
+      <circle cx="10" cy="8" r="3.5" />
+      <path d="M3 20c0-3.9 3.1-6.5 7-6.5" />
+      <path d="m14 18 3 3 5-5" />
+    </svg>
+  )
+}
+
+function ChartIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M3 20V10M10 20V4M17 20v-7" />
+      <path d="M3 20h18" />
     </svg>
   )
 }
@@ -369,10 +589,64 @@ function MoneyIcon(props) {
   )
 }
 
-function ArrowIcon(props) {
+function BookIcon(props) {
   return (
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M5 12h14M13 6l6 6-6 6" />
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" />
+    </svg>
+  )
+}
+
+function TrophyIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4Z" />
+      <path d="M17 5h3a2 2 0 0 1-2 4M7 5H4a2 2 0 0 0 2 4" />
+    </svg>
+  )
+}
+
+function AlertIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 9v4M12 17h.01" />
+      <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+    </svg>
+  )
+}
+
+function TrendUpIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="m3 17 6-6 4 4 8-8" />
+      <path d="M15 7h6v6" />
+    </svg>
+  )
+}
+
+function InfoIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 16v-4M12 8h.01" />
+    </svg>
+  )
+}
+
+function SparkleIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <path d="M12 2 14 9l7 2-7 2-2 7-2-7-7-2 7-2 2-7Z" />
+    </svg>
+  )
+}
+
+function CalendarIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
     </svg>
   )
 }
