@@ -591,6 +591,16 @@ export const api = {
     request(`/me/siswa/absensi/${absensiId}/keterangan`, { method: 'PUT', body: JSON.stringify({ keterangan }) }),
   getMySiswaTagihan: () => request('/me/siswa/tagihan'),
   getMySiswaPrestasi: () => request('/me/siswa/prestasi'),
+  submitPrestasiSaya: ({ judul, tingkat, tanggal, keterangan, file }) => {
+    const formData = new FormData()
+    formData.append('judul', judul)
+    formData.append('tingkat', tingkat)
+    formData.append('tanggal', tanggal)
+    if (keterangan) formData.append('keterangan', keterangan)
+    if (file) formData.append('file', file)
+    return requestForm('/me/siswa/prestasi', formData)
+  },
+  deletePrestasiSaya: (prestasiId) => request(`/me/siswa/prestasi/${prestasiId}`, { method: 'DELETE' }),
 
   getMySiswaMateri: (params = {}) => {
     const query = new URLSearchParams(params).toString()

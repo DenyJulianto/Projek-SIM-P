@@ -8,6 +8,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Prestasi;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PrestasiController extends Controller
 {
@@ -64,5 +67,16 @@ class PrestasiController extends Controller
         activity()->causedBy($request->user())->log("Menghapus prestasi \"{$judul}\".");
 
         return response()->json(['message' => 'Prestasi berhasil dihapus.']);
+    }
+
+    public function showBuktiFile(string $path): StreamedResponse|Response
+    {
+        $path = 'prestasi-bukti/' . $path;
+
+        if (! Storage::disk('public')->exists($path)) {
+            abort(404);
+        }
+
+        return Storage::disk('public')->response($path);
     }
 }

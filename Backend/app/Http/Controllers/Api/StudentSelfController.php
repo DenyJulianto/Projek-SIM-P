@@ -18,6 +18,7 @@ use App\Models\UjianAttempt;
 use App\Models\UjianJawaban;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Endpoint self-service untuk siswa — semua method di sini SELALU
@@ -132,6 +133,47 @@ class StudentSelfController extends Controller
             ->get();
 
         return response()->json($prestasi);
+    }
+
+    public function submitPrestasi(Request $request): JsonResponse
+    {
+        $siswa = $this->siswaFor($request);
+
+        $data = $request->validate([
+            'judul' => ['required', 'string', 'max:255'],
+            'tingkat' => ['required', 'in:sekolah,kecamatan,kabupaten_kota,provinsi,nasional,internasional'],
+            'tanggal' => ['required', 'date', 'before_or_equal:today'],
+            'keterangan' => ['nullable', 'string'],
+            'file' => ['nullable', 'file', 'max:10240'],
+        ]);
+
+        if ($request->hasFile('file')) {
+            $data['file'] = $request->file('file')->store('prestasi-bukti', 'public');
+        }
+
+        $data['siswa_id'] = $siswa->id;
+        $data['sumber'] = 'siswa';
+        $data['status'] = 'menunggu';
+
+        $prestasi = Prestasi::create($data);
+
+        return response()->json($prestasi, 201);
+    }
+
+    public function destroyPrestasi(Request $request, Prestasi $prestasi): JsonResponse
+    {
+        $siswa = $this->siswaFor($request);
+
+        abort_unless((int) $prestasi->siswa_id === (int) $siswa->id, 403, 'Prestasi ini bukan milik Anda.');
+        abort_unless($prestasi->sumber === 'siswa', 403, 'Prestasi yang dicatat sekolah tidak bisa dihapus dari sini.');
+
+        if ($prestasi->file) {
+            Storage::disk('public')->delete($prestasi->file);
+        }
+
+        $prestasi->delete();
+
+        return response()->json(['message' => 'Pengajuan prestasi berhasil dihapus.']);
     }
 
     public function materi(Request $request): JsonResponse

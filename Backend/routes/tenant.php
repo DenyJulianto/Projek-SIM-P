@@ -88,6 +88,7 @@ Route::middleware([
     Route::get('materi-file/{path}', [MateriController::class, 'showFile'])->where('path', '.*');
     Route::get('tugas-file/{path}', [TugasController::class, 'showFile'])->where('path', '.*');
     Route::get('tugas-jawaban-file/{path}', [TugasController::class, 'showJawabanFile'])->where('path', '.*');
+    Route::get('prestasi-bukti-file/{path}', [PrestasiController::class, 'showBuktiFile'])->where('path', '.*');
 
     // Landing page publik sekolah — tidak butuh login.
     Route::prefix('public')->group(function () {
@@ -110,6 +111,8 @@ Route::middleware([
         Route::put('/me/siswa/absensi/{absensi}/keterangan', [StudentSelfController::class, 'updateKeteranganAbsensi']);
         Route::get('/me/siswa/tagihan', [StudentSelfController::class, 'tagihan']);
         Route::get('/me/siswa/prestasi', [StudentSelfController::class, 'prestasi']);
+        Route::post('/me/siswa/prestasi', [StudentSelfController::class, 'submitPrestasi']);
+        Route::delete('/me/siswa/prestasi/{prestasi}', [StudentSelfController::class, 'destroyPrestasi']);
         Route::get('/me/siswa/materi', [StudentSelfController::class, 'materi']);
         Route::get('/me/siswa/tugas', [StudentSelfController::class, 'tugas']);
         Route::post('/me/siswa/tugas/{tugas}/jawaban', [StudentSelfController::class, 'submitTugas']);

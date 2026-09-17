@@ -57,6 +57,8 @@ export default function MyProfile({ onBack }) {
   )
 }
 
+const MAX_AVATAR_SIZE = 2 * 1024 * 1024
+
 function AvatarUploader({ avatarSrc, name, onUploaded }) {
   const fileInputRef = useRef(null)
   const [uploading, setUploading] = useState(false)
@@ -65,6 +67,11 @@ function AvatarUploader({ avatarSrc, name, onUploaded }) {
   async function handleChange(e) {
     const file = e.target.files?.[0]
     if (!file) return
+    if (file.size > MAX_AVATAR_SIZE) {
+      setError('Ukuran file maksimal 2MB.')
+      e.target.value = ''
+      return
+    }
     setUploading(true)
     setError('')
     try {
@@ -79,32 +86,39 @@ function AvatarUploader({ avatarSrc, name, onUploaded }) {
   }
 
   return (
-    <div className="flex flex-col items-center">
-      <div className="relative">
-        <div className="h-20 w-20 rounded-full bg-gradient-to-br from-navy to-navy-light text-white flex items-center justify-center font-bold text-xl overflow-hidden">
+    <div className="flex flex-col items-center text-center">
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        disabled={uploading}
+        className="group relative h-24 w-24 rounded-full overflow-hidden shrink-0 disabled:opacity-70"
+        aria-label="Ganti foto profil"
+      >
+        <div className="h-full w-full bg-gradient-to-br from-navy to-navy-light text-white flex items-center justify-center font-bold text-2xl">
           {avatarSrc ? (
             <img src={avatarSrc} alt="Avatar" className="h-full w-full object-cover" />
           ) : (
             name?.[0]?.toUpperCase() || '?'
           )}
         </div>
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
-          className="absolute bottom-0 right-0 h-7 w-7 rounded-full bg-navy hover:bg-navy-light text-white flex items-center justify-center ring-2 ring-white disabled:opacity-50"
-          aria-label="Ganti foto profil"
-        >
-          <CameraIcon className="h-3.5 w-3.5" />
-        </button>
+        <div className="absolute inset-0 bg-navy/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-1 transition-opacity">
+          <CameraIcon className="h-5 w-5 text-white" />
+          <span className="text-[10px] font-semibold text-white">Update Photo</span>
+        </div>
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/jpg,image/png"
           onChange={handleChange}
           className="hidden"
         />
-      </div>
+      </button>
+
+      <p className="text-[11px] text-navy/40 mt-3">Allowed format</p>
+      <p className="text-xs font-semibold text-navy/60">JPG, JPEG, and PNG</p>
+      <p className="text-[11px] text-navy/40 mt-2">Max file size</p>
+      <p className="text-xs font-semibold text-navy/60">2MB</p>
+
       {uploading && <p className="text-xs text-navy/40 mt-2">Mengunggah...</p>}
       {error && <p className="text-xs text-red-600 mt-2">{error}</p>}
     </div>
@@ -132,6 +146,8 @@ function PersonalInformationForm({ user, onSaved }) {
   const [lastName, setLastName] = useState(initialLast)
   const [phone, setPhone] = useState(user?.phone || '')
   const [email, setEmail] = useState(user?.email || '')
+  const [alamat, setAlamat] = useState(user?.alamat || '')
+  const [jenisKelamin, setJenisKelamin] = useState(user?.jenis_kelamin || '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -141,6 +157,8 @@ function PersonalInformationForm({ user, onSaved }) {
     setLastName(initialLast)
     setPhone(user?.phone || '')
     setEmail(user?.email || '')
+    setAlamat(user?.alamat || '')
+    setJenisKelamin(user?.jenis_kelamin || '')
     setError('')
     setSuccess('')
   }
@@ -155,6 +173,8 @@ function PersonalInformationForm({ user, onSaved }) {
         name: [firstName, lastName].filter(Boolean).join(' '),
         email,
         phone,
+        alamat,
+        jenis_kelamin: jenisKelamin || null,
       })
       onSaved(updated)
       setSuccess('Profil berhasil diperbarui.')
@@ -174,7 +194,7 @@ function PersonalInformationForm({ user, onSaved }) {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid sm:grid-cols-2 gap-4">
-          <Field label="First Name">
+          <Field label="First Name" icon={UserIcon}>
             <input
               type="text"
               required
@@ -183,7 +203,7 @@ function PersonalInformationForm({ user, onSaved }) {
               className="input"
             />
           </Field>
-          <Field label="Last Name">
+          <Field label="Last Name" icon={UserIcon}>
             <input
               type="text"
               value={lastName}
@@ -195,6 +215,7 @@ function PersonalInformationForm({ user, onSaved }) {
 
         <Field
           label="Email"
+          icon={MailIcon}
           extra={
             user?.email_verified_at && (
               <span className="text-emerald-600 text-xs font-semibold flex items-center gap-1">
@@ -212,13 +233,32 @@ function PersonalInformationForm({ user, onSaved }) {
           />
         </Field>
 
-        <Field label="Phone Number">
-          <input
-            type="text"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="input"
-            placeholder="+62..."
+        <div className="grid sm:grid-cols-2 gap-4">
+          <Field label="Phone Number" icon={PhoneIcon}>
+            <input
+              type="text"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="input"
+              placeholder="+62..."
+            />
+          </Field>
+          <Field label="Gender" icon={GenderIcon}>
+            <select value={jenisKelamin} onChange={(e) => setJenisKelamin(e.target.value)} className="input">
+              <option value="">Pilih jenis kelamin</option>
+              <option value="P">Perempuan</option>
+              <option value="L">Laki-laki</option>
+            </select>
+          </Field>
+        </div>
+
+        <Field label="Alamat" icon={MapPinIcon}>
+          <textarea
+            value={alamat}
+            onChange={(e) => setAlamat(e.target.value)}
+            rows={3}
+            placeholder="Alamat lengkap"
+            className="input resize-none"
           />
         </Field>
 
@@ -282,7 +322,7 @@ function LoginPasswordForm({ user, onSaved }) {
       {success && <p className="text-emerald-600 text-sm mb-4">{success}</p>}
 
       <form onSubmit={handleSubmit} className="space-y-4 max-w-sm">
-        <Field label="Password Saat Ini">
+        <Field label="Password Saat Ini" icon={LockIcon}>
           <input
             type="password"
             required
@@ -291,7 +331,7 @@ function LoginPasswordForm({ user, onSaved }) {
             className="input"
           />
         </Field>
-        <Field label="Password Baru">
+        <Field label="Password Baru" icon={LockIcon}>
           <input
             type="password"
             required
@@ -317,15 +357,53 @@ function LoginPasswordForm({ user, onSaved }) {
   )
 }
 
-function Field({ label, extra, children }) {
+function Field({ label, icon: Icon, extra, children }) {
   return (
     <label className="block">
       <span className="flex items-center justify-between mb-1">
-        <span className="text-xs font-semibold text-navy/70">{label}</span>
+        <span className="flex items-center gap-1.5 text-xs font-semibold text-navy/70">
+          {Icon && <Icon className="h-3.5 w-3.5 text-navy/40" />}
+          {label}
+        </span>
         {extra}
       </span>
       {children}
     </label>
+  )
+}
+
+function MailIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="2" y="5" width="20" height="14" rx="2" />
+      <path d="m3 6 9 7 9-7" />
+    </svg>
+  )
+}
+
+function PhoneIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L14 13l5 2v4a2 2 0 0 1-2 2A15 15 0 0 1 4 6a2 2 0 0 1 2-2Z" />
+    </svg>
+  )
+}
+
+function GenderIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="10" cy="14" r="5" />
+      <path d="M19 5l-5.4 5.4M14 5h5v5" />
+    </svg>
+  )
+}
+
+function MapPinIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+      <circle cx="12" cy="10" r="2.5" />
+    </svg>
   )
 }
 

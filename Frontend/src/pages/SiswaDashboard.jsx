@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import ComingSoon from '../components/ComingSoon'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import { useAuth } from '../lib/AuthContext'
@@ -7,7 +7,7 @@ import MyProfile from './MyProfile'
 import LogoHorizontal from '../components/LogoHorizontal'
 
 const MENU_GROUPS = [
-  { section: null, items: [{ key: 'home', label: 'Dashboard', icon: GridIcon }] },
+  { section: null, items: [{ key: 'home', label: 'Dashboard', icon: HomeIcon }] },
   {
     section: 'Akademik',
     items: [
@@ -33,12 +33,8 @@ const MENU_GROUPS = [
     section: 'Kesiswaan',
     items: [
       { key: 'prestasi', label: 'Prestasi Saya', icon: TrophyIcon },
-      { key: 'ekstrakurikuler', label: 'Ekstrakurikuler', icon: FlagIcon },
+      { key: 'ekstrakurikuler', label: 'Ekstrakurikuler', icon: StarIcon },
     ],
-  },
-  {
-    section: 'Profil',
-    items: [{ key: 'profile', label: 'Data Saya', icon: ProfileIcon }],
   },
   {
     section: null,
@@ -50,7 +46,6 @@ const MENU_GROUPS = [
 ]
 
 const COMING_SOON_LABEL = {
-  ekstrakurikuler: ['Ekstrakurikuler', 'Pendaftaran & informasi ekstrakurikuler sedang disiapkan.'],
   notifikasi: ['Notifikasi', 'Notifikasi aktivitas akun akan tersedia di sini.'],
 }
 
@@ -93,6 +88,12 @@ export default function SiswaDashboard() {
   }
 
   function goTo(key) {
+    if (view === 'profile' && key !== 'profile') {
+      // nama/alamat/gender siswa bisa berubah lewat form Personal
+      // Information, jadi ambil ulang datanya supaya header & kartu profil
+      // di dashboard tidak menampilkan nama lama.
+      api.getMySiswaProfil().then(setSiswa).catch(() => {})
+    }
     setView(key)
     setOpenDropdown(null)
   }
@@ -103,13 +104,21 @@ export default function SiswaDashboard() {
       <div className="pointer-events-none absolute left-[40%] bottom-0 h-64 w-64 rounded-full bg-gold-light/20 blur-3xl" />
 
       <header className="relative z-30 shrink-0 bg-gradient-to-r from-navy via-navy to-navy-light shadow-lg flex items-center justify-between gap-4 px-6 h-16">
-        <div className="flex items-center gap-6 min-w-0">
-          <LogoHorizontal badgeClassName="h-8 w-8" iconClassName="h-4.5 w-4.5" textClassName="text-sm" />
+        <div className="flex items-center gap-6 min-w-0 flex-1">
+          <div className="flex items-center gap-3 shrink-0">
+            <LogoHorizontal
+              badgeClassName="h-11 w-11"
+              iconClassName="h-6 w-6"
+              textClassName="text-base"
+              subtitle="Teman Digital untuk Perjalanan Belajarmu"
+              className="shrink-0"
+            />
+          </div>
 
           <nav className="hidden lg:flex items-center gap-1">
             <button
               onClick={() => goTo('home')}
-              className={`px-3.5 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+              className={`shrink-0 px-3.5 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
                 view === 'home' ? 'bg-gold text-navy shadow-sm' : 'text-white/70 hover:bg-white/10 hover:text-white'
               }`}
             >
@@ -120,7 +129,7 @@ export default function SiswaDashboard() {
               const isOpen = openDropdown === group.section
               const hasActiveItem = group.items.some((item) => item.key === view)
               return (
-                <div key={group.section} className="relative">
+                <div key={group.section} className="relative shrink-0">
                   <button
                     onClick={() => toggleDropdown(group.section)}
                     className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
@@ -159,7 +168,7 @@ export default function SiswaDashboard() {
 
             <button
               onClick={() => goTo('pengumuman')}
-              className={`px-3.5 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+              className={`shrink-0 px-3.5 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
                 view === 'pengumuman' ? 'bg-gold text-navy shadow-sm' : 'text-white/70 hover:bg-white/10 hover:text-white'
               }`}
             >
@@ -235,8 +244,9 @@ export default function SiswaDashboard() {
         {view === 'materi' && <MateriSayaView onBack={() => setView('home')} />}
         {view === 'tugas' && <TugasSayaView onBack={() => setView('home')} />}
         {view === 'ujian' && <UjianSayaView onBack={() => setView('home')} />}
+        {view === 'ekstrakurikuler' && <EkstrakurikulerView onBack={() => setView('home')} />}
         {view === 'pengumuman' && <PengumumanSayaView onBack={() => setView('home')} />}
-        {view === 'profile' && <MyProfile onBack={() => setView('home')} />}
+        {view === 'profile' && <MyProfile onBack={() => goTo('home')} />}
         {COMING_SOON_LABEL[view] && (
           <div>
             <button onClick={() => setView('home')} className="text-sm text-navy/50 hover:text-navy mb-1">
@@ -270,6 +280,13 @@ function SiswaHome({ user, siswa, onNavigate }) {
   const todayClasses = (jadwal || [])
     .filter((j) => j.hari === todayHari)
     .sort((a, b) => a.jam_mulai.localeCompare(b.jam_mulai))
+  const todayDateLabel = today.toLocaleDateString('id-ID', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+  const todayTimeLabel = today.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
 
   const monthAbsensi = (absensi || []).filter((a) => {
     const d = new Date(a.tanggal)
@@ -326,7 +343,9 @@ function SiswaHome({ user, siswa, onNavigate }) {
               </div>
               <div>
                 <h2 className="text-sm font-bold text-navy">Jadwal Hari Ini</h2>
-                <p className="text-xs text-navy/50">{todayClasses.length} kelas terjadwal</p>
+                <p className="text-xs text-navy/50">
+                  {todayDateLabel}, {todayTimeLabel} · {todayClasses.length} kelas terjadwal
+                </p>
               </div>
             </div>
             {jadwal === null ? (
@@ -1329,31 +1348,384 @@ function TagihanSayaView({ onBack }) {
   )
 }
 
+const PRESTASI_TINGKAT_OPTIONS = [
+  { value: 'sekolah', label: 'Sekolah' },
+  { value: 'kecamatan', label: 'Kecamatan' },
+  { value: 'kabupaten_kota', label: 'Kabupaten/Kota' },
+  { value: 'provinsi', label: 'Provinsi' },
+  { value: 'nasional', label: 'Nasional' },
+  { value: 'internasional', label: 'Internasional' },
+]
+
+const PRESTASI_TINGKAT_LABEL = Object.fromEntries(PRESTASI_TINGKAT_OPTIONS.map((t) => [t.value, t.label]))
+
+const PRESTASI_STATUS_CONFIG = {
+  menunggu: { label: 'Menunggu Verifikasi', badge: 'bg-amber-50 text-amber-700', dot: 'bg-amber-500' },
+  ditolak: { label: 'Ditolak', badge: 'bg-red-50 text-red-600', dot: 'bg-red-500' },
+}
+
 function PrestasiSayaView({ onBack }) {
   const [prestasi, setPrestasi] = useState(null)
+  const [showForm, setShowForm] = useState(false)
 
-  useEffect(() => {
+  function load() {
     api.getMySiswaPrestasi().then(setPrestasi).catch(() => setPrestasi([]))
-  }, [])
+  }
+
+  useEffect(load, [])
 
   return (
-    <PageShell title="Prestasi Saya" onBack={onBack}>
-      <div className="grid sm:grid-cols-2 gap-4">
-        {(prestasi || []).map((p) => (
-          <div key={p.id} className="bg-white rounded-2xl border border-navy/10 p-5">
-            <div className="flex items-start justify-between mb-2">
-              <TrophyIcon className="h-5 w-5 text-gold" />
-              <span className="text-xs text-navy/40">{p.tanggal}</span>
-            </div>
-            <p className="font-bold text-navy mb-1">{p.judul}</p>
-            <p className="text-xs text-navy/50 mb-2 uppercase tracking-wide">{p.tingkat}</p>
-            {p.keterangan && <p className="text-sm text-navy/60">{p.keterangan}</p>}
-          </div>
-        ))}
+    <div>
+      <LearningHeaderCard
+        onBack={onBack}
+        icon={TrophyIcon}
+        title="Prestasi Saya"
+        subtitle="Lihat dan kelola semua prestasi yang telah kamu raih selama di sekolah."
+        tagline={
+          <>
+            Setiap Prestasi
+            <br />
+            Adalah Langkah Menuju
+            <br />
+            Masa Depan yang Lebih Baik
+          </>
+        }
+      />
+
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <p className="text-sm font-bold text-navy">Daftar Prestasi</p>
+        <button
+          onClick={() => setShowForm((v) => !v)}
+          className="inline-flex items-center gap-1.5 bg-gradient-to-r from-gold to-gold-light text-navy text-sm font-bold px-4 py-2.5 rounded-full hover:shadow-md transition-shadow"
+        >
+          + Ajukan Prestasi
+        </button>
       </div>
-      {prestasi && prestasi.length === 0 && <EmptyState text="Belum ada prestasi yang tercatat." />}
+
+      {showForm && <AjukanPrestasiForm onClose={() => setShowForm(false)} onSubmitted={load} />}
+
+      {prestasi && prestasi.length > 0 && (
+        <div className="grid sm:grid-cols-2 gap-4 mb-2">
+          {prestasi.map((p) => {
+            const statusCfg = PRESTASI_STATUS_CONFIG[p.status]
+            return (
+              <div key={p.id} className="bg-white rounded-2xl border border-navy/10 p-5">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="h-10 w-10 rounded-xl bg-gold-light/30 flex items-center justify-center">
+                    <TrophyIcon className="h-5 w-5 text-gold" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-navy/40">
+                      {new Date(p.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </span>
+                    {p.sumber === 'siswa' && <DeletePrestasiButton prestasi={p} onDeleted={load} />}
+                  </div>
+                </div>
+                <p className="font-bold text-navy mb-1">{p.judul}</p>
+                <p className="text-xs text-navy/50 mb-2 uppercase tracking-wide">{PRESTASI_TINGKAT_LABEL[p.tingkat] || p.tingkat}</p>
+                {p.keterangan && <p className="text-sm text-navy/60 mb-2">{p.keterangan}</p>}
+                {(statusCfg || p.file) && (
+                  <div className="flex items-center gap-2 flex-wrap mt-2">
+                    {statusCfg && (
+                      <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full ${statusCfg.badge}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${statusCfg.dot}`} />
+                        {statusCfg.label}
+                      </span>
+                    )}
+                    {p.file && (
+                      <a
+                        href={`${BASE_URL}/prestasi-bukti-file/${p.file.replace('prestasi-bukti/', '')}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-navy/5 text-navy/60 hover:bg-navy/10"
+                      >
+                        <DocIcon className="h-3 w-3" />
+                        Lihat Bukti
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {prestasi && prestasi.length === 0 && (
+        <div className="bg-white rounded-2xl border border-navy/10 text-center py-16">
+          <div className="mx-auto h-20 w-20 rounded-2xl bg-emerald-50 flex items-center justify-center relative mb-4">
+            <DocIcon className="h-8 w-8 text-emerald-500" />
+            <div className="absolute -right-1.5 -bottom-1.5 h-7 w-7 rounded-full bg-emerald-500 flex items-center justify-center">
+              <StarIcon className="h-4 w-4 text-white" />
+            </div>
+          </div>
+          <p className="text-sm font-bold text-navy">Belum ada prestasi yang tercatat.</p>
+          <p className="text-xs text-navy/40 mt-1">Prestasi yang kamu raih akan ditampilkan di sini setelah data tersedia.</p>
+        </div>
+      )}
       {prestasi === null && <EmptyState text="Memuat..." />}
-    </PageShell>
+    </div>
+  )
+}
+
+function DeletePrestasiButton({ prestasi, onDeleted }) {
+  const [busy, setBusy] = useState(false)
+
+  async function handleDelete() {
+    if (!window.confirm(`Hapus pengajuan prestasi "${prestasi.judul}"?`)) return
+    setBusy(true)
+    try {
+      await api.deletePrestasiSaya(prestasi.id)
+      onDeleted()
+    } catch (err) {
+      window.alert(err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <button
+      onClick={handleDelete}
+      disabled={busy}
+      className="h-6 w-6 rounded-full text-navy/30 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition-colors disabled:opacity-50"
+      title="Hapus pengajuan"
+    >
+      <TrashIcon className="h-3.5 w-3.5" />
+    </button>
+  )
+}
+
+function AjukanPrestasiForm({ onClose, onSubmitted }) {
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const MAX_FILE_SIZE = 10 * 1024 * 1024
+  const fileInputRef = useRef(null)
+
+  const [judul, setJudul] = useState('')
+  const [tingkat, setTingkat] = useState('sekolah')
+  const [tanggal, setTanggal] = useState(todayStr)
+  const [keterangan, setKeterangan] = useState('')
+  const [file, setFile] = useState(null)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [uploading, setUploading] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  function pickFile(f) {
+    if (!f) return
+    if (f.size > MAX_FILE_SIZE) {
+      setError('Ukuran file maksimal 10 MB.')
+      return
+    }
+    setError('')
+    setFile(f)
+    setUploading(true)
+    setUploadProgress(0)
+    const interval = setInterval(() => {
+      setUploadProgress((p) => {
+        if (p >= 100) {
+          clearInterval(interval)
+          setUploading(false)
+          return 100
+        }
+        return p + 20
+      })
+    }, 100)
+  }
+
+  function handleDrop(e) {
+    e.preventDefault()
+    pickFile(e.dataTransfer.files?.[0])
+  }
+
+  function removeFile() {
+    setFile(null)
+    setUploadProgress(0)
+    setUploading(false)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setBusy(true)
+    setError('')
+    try {
+      await api.submitPrestasiSaya({ judul, tingkat, tanggal, keterangan, file })
+      onSubmitted()
+      onClose()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="relative mb-5 bg-white rounded-2xl border border-navy/10 p-5 space-y-4">
+      <div className="flex items-start gap-3">
+        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-gold to-gold-light flex items-center justify-center shrink-0">
+          <UploadIcon className="h-5 w-5 text-white" />
+        </div>
+        <div>
+          <p className="font-bold text-navy">Ajukan Prestasi Baru</p>
+          <p className="text-xs text-navy/50">Lengkapi data prestasi dan unggah bukti/sertifikat (opsional). Prestasi yang kamu ajukan akan diverifikasi terlebih dahulu.</p>
+        </div>
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-semibold text-navy/60 mb-1">Judul Prestasi</label>
+          <input
+            type="text"
+            value={judul}
+            onChange={(e) => setJudul(e.target.value)}
+            placeholder="contoh: Juara 1 Lomba Debat"
+            required
+            className="input"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-navy/60 mb-1">Tingkat</label>
+          <select value={tingkat} onChange={(e) => setTingkat(e.target.value)} className="input">
+            {PRESTASI_TINGKAT_OPTIONS.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-semibold text-navy/60 mb-1">Tanggal</label>
+          <input
+            type="date"
+            value={tanggal}
+            max={todayStr}
+            onChange={(e) => setTanggal(e.target.value)}
+            required
+            className="input"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-navy/60 mb-1">Keterangan (opsional)</label>
+          <input
+            type="text"
+            value={keterangan}
+            onChange={(e) => setKeterangan(e.target.value)}
+            placeholder="contoh: Diselenggarakan oleh Dinas Pendidikan"
+            className="input"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-semibold text-navy/60 mb-2">Upload files</label>
+        <div
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={handleDrop}
+          className="border-2 border-dashed border-navy/15 rounded-2xl py-8 px-4 flex flex-col items-center justify-center gap-2.5 text-center"
+        >
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="inline-flex items-center gap-1.5 border border-navy/15 text-navy text-sm font-semibold px-4 py-2 rounded-xl hover:bg-navy/5 transition-colors"
+          >
+            <UploadIcon className="h-4 w-4" />
+            Upload
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png"
+            className="hidden"
+            onChange={(e) => pickFile(e.target.files?.[0])}
+          />
+          <p className="text-sm font-semibold text-navy">Choose a file or drag & drop it here</p>
+          <p className="text-xs text-navy/40">Maksimal 10 MB (PDF, JPG, PNG)</p>
+        </div>
+
+        {file && (
+          <div className="mt-3 flex items-center gap-3 bg-navy/[0.03] border border-navy/10 rounded-xl p-3">
+            <div className="h-9 w-9 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
+              <DocIcon className="h-4.5 w-4.5 text-red-500" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-navy truncate">{file.name}</p>
+              {uploading ? (
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="h-1.5 flex-1 rounded-full bg-navy/10 overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-gold to-gold-light rounded-full transition-all"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-navy/40 shrink-0">{uploadProgress}%</span>
+                </div>
+              ) : (
+                <p className="text-xs text-emerald-600 font-medium flex items-center gap-1 mt-0.5">
+                  <CheckIcon className="h-3 w-3" /> Selesai
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={removeFile}
+              className="h-7 w-7 shrink-0 rounded-full text-navy/30 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition-colors"
+              title="Hapus file"
+            >
+              <TrashIcon className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {error && <p className="text-xs text-red-500">{error}</p>}
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={busy || uploading}
+          className="text-sm font-bold text-navy bg-gradient-to-r from-gold to-gold-light rounded-full px-5 py-2 disabled:opacity-50"
+        >
+          {busy ? 'Mengirim...' : 'Kirim Pengajuan'}
+        </button>
+        <button type="button" onClick={onClose} className="text-sm font-semibold text-navy/50 px-5 py-2">
+          Batal
+        </button>
+      </div>
+    </form>
+  )
+}
+
+function EkstrakurikulerView({ onBack }) {
+  return (
+    <div>
+      <LearningHeaderCard
+        onBack={onBack}
+        icon={StarIcon}
+        title="Ekstrakurikuler"
+        subtitle="Pendaftaran & informasi ekstrakurikuler sedang disiapkan."
+        tagline={
+          <>
+            Kembangkan Bakatmu
+            <br />
+            di Luar Kelas
+          </>
+        }
+      />
+
+      <div className="bg-white rounded-2xl border border-navy/10 text-center py-16">
+        <div className="mx-auto h-20 w-20 rounded-2xl bg-emerald-50 flex items-center justify-center relative mb-4">
+          <DocIcon className="h-8 w-8 text-emerald-500" />
+          <div className="absolute -right-1.5 -bottom-1.5 h-7 w-7 rounded-full bg-emerald-500 flex items-center justify-center">
+            <StarIcon className="h-4 w-4 text-white" />
+          </div>
+        </div>
+        <p className="text-sm font-bold text-navy">Belum ada ekstrakurikuler.</p>
+        <p className="text-xs text-navy/40 mt-1">Saat ini belum ada data ekstrakurikuler yang tersedia.</p>
+      </div>
+    </div>
   )
 }
 
@@ -1993,41 +2365,126 @@ function UjianSayaView({ onBack }) {
   )
 }
 
+const PENGUMUMAN_TONES = {
+  emerald: {
+    border: 'border-l-emerald-500',
+    badge: 'bg-emerald-50 text-emerald-700',
+    iconBg: 'bg-gradient-to-br from-emerald-100 to-emerald-200',
+    iconColor: 'text-emerald-600',
+    badgeBg: 'bg-emerald-500',
+    arrowBg: 'bg-emerald-500 hover:bg-emerald-600 text-white',
+  },
+  blue: {
+    border: 'border-l-blue-500',
+    badge: 'bg-blue-50 text-blue-700',
+    iconBg: 'bg-gradient-to-br from-blue-100 to-blue-200',
+    iconColor: 'text-blue-600',
+    badgeBg: 'bg-blue-500',
+    arrowBg: 'bg-blue-500 hover:bg-blue-600 text-white',
+  },
+  navy: {
+    border: 'border-l-navy',
+    badge: 'bg-navy/5 text-navy/70',
+    iconBg: 'bg-navy/10',
+    iconColor: 'text-navy',
+    badgeBg: 'bg-navy',
+    arrowBg: 'bg-navy hover:bg-navy-light text-white',
+  },
+}
+
+function detectPengumumanCategory(judul = '', konten = '') {
+  const text = `${judul} ${konten}`.toLowerCase()
+  if (/pendaftaran|ppdb|peserta didik baru/.test(text)) {
+    return { label: 'Pendaftaran', tone: 'emerald', Icon: DocIcon, badgeIcon: MegaphoneIcon }
+  }
+  if (/libur|semester|akademik|ujian|rapor|jadwal|kalender/.test(text)) {
+    return { label: 'Informasi Akademik', tone: 'blue', Icon: CalendarIcon, badgeIcon: ClockIcon }
+  }
+  return { label: 'Umum', tone: 'navy', Icon: MegaphoneIcon, badgeIcon: null }
+}
+
 function PengumumanSayaView({ onBack }) {
   const [pengumuman, setPengumuman] = useState(null)
+  const [expandedId, setExpandedId] = useState(null)
 
   useEffect(() => {
     api.getPengumuman().then((r) => setPengumuman(r.data ?? r)).catch(() => setPengumuman([]))
   }, [])
 
   return (
-    <PageShell title="Pengumuman" onBack={onBack}>
+    <div>
+      <button onClick={onBack} className="text-sm text-navy/50 hover:text-navy mb-3">
+        ← Kembali ke Dashboard
+      </button>
+
+      <div className="flex items-center gap-3 mb-5">
+        <div className="h-10 w-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+          <MegaphoneIcon className="h-5 w-5 text-emerald-600" />
+        </div>
+        <div>
+          <h1 className="text-xl font-extrabold text-navy leading-tight">Pengumuman</h1>
+          <div className="h-1 w-9 bg-emerald-500 rounded-full mt-1" />
+        </div>
+      </div>
+
       <div className="space-y-4">
-        {(pengumuman || []).map((p) => (
-          <div key={p.id} className="bg-white rounded-2xl border border-navy/10 p-5">
-            <div className="flex items-center justify-between mb-1.5">
-              <p className="font-bold text-navy">{p.judul}</p>
-              <span className="text-xs text-navy/40">
-                {p.tanggal_publish ? new Date(p.tanggal_publish).toLocaleDateString('id-ID') : ''}
-              </span>
+        {(pengumuman || []).map((p) => {
+          const cat = detectPengumumanCategory(p.judul, p.konten)
+          const tone = PENGUMUMAN_TONES[cat.tone]
+          const Icon = cat.Icon
+          const Badge = cat.badgeIcon
+          const expanded = expandedId === p.id
+          const dateLabel = p.tanggal_publish
+            ? new Date(p.tanggal_publish).toLocaleDateString('id-ID', { day: 'numeric', month: 'numeric', year: 'numeric' })
+            : ''
+          return (
+            <div
+              key={p.id}
+              className={`bg-white rounded-2xl border border-navy/10 border-l-4 ${tone.border} p-4 sm:p-5 flex items-start gap-4`}
+            >
+              <div className={`relative h-14 w-14 shrink-0 rounded-2xl ${tone.iconBg} flex items-center justify-center`}>
+                <Icon className={`h-6 w-6 ${tone.iconColor}`} />
+                {Badge && (
+                  <div className={`absolute -right-1.5 -bottom-1.5 h-6 w-6 rounded-full ${tone.badgeBg} flex items-center justify-center`}>
+                    <Badge className="h-3.5 w-3.5 text-white" />
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full mb-1.5 ${tone.badge}`}>
+                  {cat.label}
+                </span>
+                <p className="font-bold text-navy mb-1">{p.judul}</p>
+                <p className={`text-sm text-navy/60 ${expanded ? 'whitespace-pre-line' : 'line-clamp-1'}`}>{p.konten}</p>
+              </div>
+              <div className="flex flex-col items-end justify-between gap-3 shrink-0 self-stretch">
+                <span className="text-xs text-navy/40 flex items-center gap-1 whitespace-nowrap">
+                  <CalendarIcon className="h-3.5 w-3.5" />
+                  {dateLabel}
+                </span>
+                <button
+                  onClick={() => setExpandedId(expanded ? null : p.id)}
+                  className={`h-8 w-8 rounded-full flex items-center justify-center transition-colors ${tone.arrowBg}`}
+                  title={expanded ? 'Sembunyikan' : 'Lihat selengkapnya'}
+                >
+                  <ChevronDownIcon className={`h-4 w-4 transition-transform ${expanded ? 'rotate-180' : '-rotate-90'}`} />
+                </button>
+              </div>
             </div>
-            <p className="text-sm text-navy/60 whitespace-pre-line">{p.konten}</p>
-          </div>
-        ))}
+          )
+        })}
       </div>
       {pengumuman && pengumuman.length === 0 && <EmptyState text="Belum ada pengumuman." />}
       {pengumuman === null && <EmptyState text="Memuat..." />}
-    </PageShell>
+    </div>
   )
 }
 
-function GridIcon(props) {
+function HomeIcon(props) {
   return (
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="3" y="3" width="7" height="7" rx="1.5" />
-      <rect x="14" y="3" width="7" height="7" rx="1.5" />
-      <rect x="3" y="14" width="7" height="7" rx="1.5" />
-      <rect x="14" y="14" width="7" height="7" rx="1.5" />
+      <path d="M4 11.5 12 4l8 7.5" />
+      <path d="M6 10v9a1 1 0 0 0 1 1h4v-6h2v6h4a1 1 0 0 0 1-1v-9" />
     </svg>
   )
 }
@@ -2135,14 +2592,6 @@ function TrophyIcon(props) {
   )
 }
 
-function FlagIcon(props) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M4 3v18" />
-      <path d="M4 4h13l-2.5 4L17 12H4" />
-    </svg>
-  )
-}
 
 function ProfileIcon(props) {
   return (
@@ -2223,10 +2672,36 @@ function HashIcon(props) {
   )
 }
 
+function UploadIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 16V4M7 9l5-5 5 5" />
+      <path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" />
+    </svg>
+  )
+}
+
+function TrashIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m-8 0 1 13a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2l1-13" />
+      <path d="M10 11v6M14 11v6" />
+    </svg>
+  )
+}
+
 function PlusIcon(props) {
   return (
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
       <path d="M12 5v14M5 12h14" />
+    </svg>
+  )
+}
+
+function StarIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2Z" />
     </svg>
   )
 }

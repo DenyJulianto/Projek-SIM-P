@@ -1,16 +1,16 @@
 import { useId } from 'react'
 
 // Ikon lambang SIM Pendidikan: buku terbuka + topi wisuda + siluet orang
-// yang tumbuh dari buku, plus klaster aksen kotak ala data/teknologi di
-// kanan atas — meniru logo resmi SIM Pendidikan. useId() dipakai supaya id
-// gradient tidak bentrok kalau komponen ini dirender lebih dari sekali di
-// halaman yang sama.
+// yang tumbuh dari buku, plus aksen swirl/daun kecil di kiri — meniru logo
+// resmi SIM Pendidikan. useId() dipakai supaya id gradient tidak bentrok
+// kalau komponen ini dirender lebih dari sekali di halaman yang sama.
 export default function Logo({ className = 'h-8 w-8' }) {
   const uid = useId()
   const gBook1 = `logo-book1-${uid}`
   const gBook2 = `logo-book2-${uid}`
   const gLeaf1 = `logo-leaf1-${uid}`
   const gLeaf2 = `logo-leaf2-${uid}`
+  const gSwirl = `logo-swirl-${uid}`
 
   return (
     <svg viewBox="0 0 100 100" className={className} aria-hidden="true">
@@ -31,13 +31,15 @@ export default function Logo({ className = 'h-8 w-8' }) {
           <stop offset="0" stopColor="#0e7a52" />
           <stop offset="1" stopColor="#3fbf8f" />
         </linearGradient>
+        <linearGradient id={gSwirl} x1="26" y1="62" x2="4" y2="36" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#3fbf8f" />
+          <stop offset="1" stopColor="#8be8bd" />
+        </linearGradient>
       </defs>
 
-      {/* klaster aksen kotak kanan atas */}
-      <rect x="72" y="7" width="16" height="16" rx="3" fill="#1f9d63" />
-      <rect x="70" y="26" width="10" height="10" rx="2" fill="#0e7a52" />
-      <rect x="85" y="27" width="9" height="9" rx="2" fill="#e3a13c" />
-      <rect x="81" y="19" width="6" height="6" rx="1.3" fill="#0b3d2e" />
+      {/* aksen swirl/daun kiri */}
+      <path d="M27 63Q13 61 9 50Q6 42 12 37Q9 46 14 53Q18 59 27 63Z" fill={`url(#${gSwirl})`} />
+      <circle cx="9" cy="33" r="3.4" fill="#8be8bd" />
 
       {/* buku terbuka */}
       <path d="M50 47 L15 57 Q11 59 15 63 L48 73 L50 73 Z" fill={`url(#${gBook1})`} />
