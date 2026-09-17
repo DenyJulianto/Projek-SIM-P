@@ -60,4 +60,9 @@ class Siswa extends Model
     {
         return $this->hasMany(Nilai::class);
     }
+
+    public function tagihan(): HasMany
+    {
+        return $this->hasMany(Tagihan::class);
+    }
 }

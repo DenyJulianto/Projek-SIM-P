@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
+import QRCode from 'qrcode'
 import ComingSoon from '../components/ComingSoon'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import { useAuth } from '../lib/AuthContext'
-import { api } from '../lib/api'
+import { api, BASE_URL } from '../lib/api'
 import MyProfile from './MyProfile'
 import LogoHorizontal from '../components/LogoHorizontal'
 
@@ -41,13 +42,23 @@ const MENU_GROUPS = [
       { key: 'prestasi', label: 'Prestasi', icon: TrophyIcon },
     ],
   },
-  { section: null, items: [{ key: 'profile', label: 'Profil Saya', icon: UserIcon }] },
 ]
 
 const COMING_SOON_LABEL = {
-  pembayaran: ['Pembayaran', 'Pembayaran tagihan secara online belum tersedia. Silakan lakukan pembayaran melalui tata usaha/bendahara sekolah untuk saat ini.'],
   pesan: ['Pesan', 'Fitur pesan langsung dengan sekolah sedang disiapkan.'],
   tugas: ['Tugas', 'Pemantauan tugas anak akan tersedia di sini setelah modul Tugas dibangun.'],
+}
+
+const KONFIRMASI_STATUS_TONE = {
+  menunggu: 'bg-amber-100 text-amber-700',
+  diverifikasi: 'bg-emerald-100 text-emerald-700',
+  ditolak: 'bg-red-100 text-red-600',
+}
+
+const KONFIRMASI_STATUS_LABEL = {
+  menunggu: 'Menunggu Verifikasi',
+  diverifikasi: 'Terverifikasi',
+  ditolak: 'Ditolak',
 }
 
 const HARI_ORDER = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']
@@ -58,6 +69,18 @@ export default function OrangTuaDashboard() {
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const [anakList, setAnakList] = useState(null)
   const [selectedAnakId, setSelectedAnakId] = useState(null)
+  const [openSection, setOpenSection] = useState(null)
+
+  useEffect(() => {
+    const activeGroup = MENU_GROUPS.find(
+      (group) => group.section && group.items.some((item) => item.key === view)
+    )
+    if (activeGroup) setOpenSection(activeGroup.section)
+  }, [view])
+
+  function toggleSection(section) {
+    setOpenSection((prev) => (prev === section ? null : section))
+  }
 
   useEffect(() => {
     api
@@ -72,94 +95,168 @@ export default function OrangTuaDashboard() {
   const anak = (anakList || []).find((a) => a.id === selectedAnakId) || null
 
   return (
-    <div className="h-screen bg-white flex overflow-hidden">
-      <aside className="w-64 shrink-0 bg-navy text-white flex flex-col py-6 px-4 h-screen">
+    <div className="h-screen w-screen bg-navy-light/10 flex overflow-hidden">
+      <aside className="w-64 shrink-0 h-full bg-gradient-to-b from-navy/95 via-navy/90 to-navy-light/80 backdrop-blur-xl border-r border-white/10 shadow-xl shadow-navy/20 text-white flex flex-col py-6 px-4 overflow-hidden">
         <div className="flex items-center gap-2 px-2 mb-6">
-          <LogoHorizontal />
+          <LogoHorizontal subtitle="Bersama Membangun Pendidikan yang Lebih Baik" />
         </div>
 
-        <nav className="flex-1 space-y-4 overflow-y-auto">
-          {MENU_GROUPS.map((group, gi) => (
-            <div key={gi} className="space-y-1">
-              {group.section && (
-                <p className="px-4 text-[10px] font-bold text-white/40 uppercase tracking-wider">
-                  {group.section}
-                </p>
-              )}
-              {group.items.map((item) => {
-                const Icon = item.icon
-                const active = view === item.key
-                return (
-                  <button
-                    key={item.key}
-                    onClick={() => setView(item.key)}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors text-left ${
-                      active
-                        ? 'bg-white text-navy shadow-sm'
-                        : 'text-white/75 hover:bg-white/10 hover:text-white'
-                    }`}
-                  >
-                    <Icon className="h-4.5 w-4.5 shrink-0" />
-                    <span className="truncate min-w-0">{item.label}</span>
-                  </button>
-                )
-              })}
-            </div>
-          ))}
+        <p className="px-4 text-[10px] font-bold text-white/40 uppercase tracking-wider mb-2">Menu</p>
+
+        <nav className="flex-1 space-y-1.5 overflow-y-auto">
+          {MENU_GROUPS.map((group, gi) => {
+            if (!group.section) {
+              return (
+                <div key={gi} className="space-y-1.5 pb-1.5">
+                  {group.items.map((item) => {
+                    const Icon = item.icon
+                    const active = view === item.key
+                    return (
+                      <button
+                        key={item.key}
+                        onClick={() => setView(item.key)}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors text-left ${
+                          active
+                            ? 'bg-white text-navy shadow-sm'
+                            : 'text-white/75 hover:bg-white/10 hover:text-white'
+                        }`}
+                      >
+                        <Icon className="h-4.5 w-4.5 shrink-0" />
+                        <span className="truncate min-w-0">{item.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )
+            }
+
+            const isOpen = openSection === group.section
+            const hasActiveItem = group.items.some((item) => item.key === view)
+
+            return (
+              <div key={gi} className="pb-1">
+                <button
+                  onClick={() => toggleSection(group.section)}
+                  className={`w-full flex items-center justify-between gap-2 px-4 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider transition-colors ${
+                    hasActiveItem ? 'text-white' : 'text-white/40 hover:text-white/70'
+                  }`}
+                >
+                  <span className="truncate min-w-0">{group.section}</span>
+                  <ChevronIcon className={`h-3.5 w-3.5 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {isOpen && (
+                  <div className="space-y-1.5 mt-1">
+                    {group.items.map((item) => {
+                      const Icon = item.icon
+                      const active = view === item.key
+                      return (
+                        <button
+                          key={item.key}
+                          onClick={() => setView(item.key)}
+                          className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors text-left ${
+                            active
+                              ? 'bg-white text-navy shadow-sm'
+                              : 'text-white/75 hover:bg-white/10 hover:text-white'
+                          }`}
+                        >
+                          <Icon className="h-4.5 w-4.5 shrink-0" />
+                          <span className="truncate min-w-0">{item.label}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </nav>
 
+        <div className="border-t border-white/10 pt-2 mt-2 space-y-1">
+          <button
+            onClick={() => setView('profile')}
+            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors text-left ${
+              view === 'profile' ? 'bg-white text-navy shadow-sm' : 'text-white/70 hover:bg-white/10 hover:text-white'
+            }`}
+          >
+            <UserIcon className="h-4.5 w-4.5 shrink-0" />
+            Profil Saya
+          </button>
+          <button
+            onClick={() => setConfirmingLogout(true)}
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium text-white/60 hover:bg-white/10 hover:text-white transition-colors"
+          >
+            <LogoutIcon className="h-4.5 w-4.5 shrink-0" />
+            Keluar
+          </button>
+        </div>
+
         <button
-          onClick={() => setConfirmingLogout(true)}
-          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium text-white/60 hover:bg-white/10 hover:text-white transition-colors mt-2"
+          onClick={() => setView('profile')}
+          className="mt-4 flex items-center gap-2.5 bg-white/10 hover:bg-white/15 rounded-2xl p-3 transition-colors text-left"
         >
-          <LogoutIcon className="h-4.5 w-4.5 shrink-0" />
-          Keluar
+          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-gold to-gold-light text-navy flex items-center justify-center font-bold text-sm shrink-0 overflow-hidden">
+            {user?.avatar_url ? (
+              <img src={`${BASE_URL}${user.avatar_url}`} alt={user.name} className="h-full w-full object-cover" />
+            ) : (
+              user?.name?.[0]?.toUpperCase() || '?'
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-white truncate">{user?.name}</p>
+            <p className="text-[11px] text-white/50 truncate">Orang Tua/Wali</p>
+          </div>
+          <ChevronIcon className="h-3.5 w-3.5 text-white/40 shrink-0 -rotate-90" />
         </button>
       </aside>
 
-      <main className="flex-1 p-6 sm:p-8 overflow-y-auto">
-        {anakList === null && <EmptyState text="Memuat data anak..." />}
+      <main className="flex-1 flex flex-col overflow-hidden bg-white">
+        <TopHeader user={user} onNavigateProfile={() => setView('profile')} onSearch={() => setView('pengumuman')} />
 
-        {anakList !== null && anakList.length === 0 && (
-          <div>
-            <h1 className="text-xl font-extrabold text-navy mb-2">Belum Ada Anak Tertaut</h1>
-            <p className="text-sm text-navy/50 max-w-md">
-              Akun Anda belum tertaut ke data siswa mana pun. Hubungi tata usaha sekolah untuk menautkan akun Anda
-              sebagai wali dari siswa yang bersangkutan.
-            </p>
-          </div>
-        )}
+        <div className="flex-1 p-6 sm:p-8 overflow-y-auto">
+          {anakList === null && <EmptyState text="Memuat data anak..." />}
 
-        {anakList !== null && anakList.length > 0 && (
-          <>
-            {view !== 'home' && view !== 'profile' && view !== 'pengumuman' && anakList.length > 1 && (
-              <AnakSelector anakList={anakList} selectedAnakId={selectedAnakId} onChange={setSelectedAnakId} />
-            )}
+          {anakList !== null && anakList.length === 0 && (
+            <div>
+              <h1 className="text-xl font-extrabold text-navy mb-2">Belum Ada Anak Tertaut</h1>
+              <p className="text-sm text-navy/50 max-w-md">
+                Akun Anda belum tertaut ke data siswa mana pun. Hubungi tata usaha sekolah untuk menautkan akun Anda
+                sebagai wali dari siswa yang bersangkutan.
+              </p>
+            </div>
+          )}
 
-            {view === 'home' && (
-              <OrangTuaHome user={user} anak={anak} anakList={anakList} onNavigate={setView} />
-            )}
-            {view === 'profil-anak' && <ProfilAnakView onBack={() => setView('home')} anak={anak} />}
-            {view === 'jadwal' && <JadwalAnakView onBack={() => setView('home')} anak={anak} />}
-            {view === 'absensi' && <AbsensiAnakView onBack={() => setView('home')} anak={anak} />}
-            {view === 'nilai' && <NilaiAnakView onBack={() => setView('home')} anak={anak} />}
-            {view === 'erapor' && <ERaporAnakView onBack={() => setView('home')} anak={anak} />}
-            {view === 'tagihan' && <TagihanAnakView onBack={() => setView('home')} anak={anak} />}
-            {view === 'riwayat-pembayaran' && <RiwayatPembayaranView onBack={() => setView('home')} anak={anak} />}
-            {view === 'wali-kelas' && <WaliKelasView onBack={() => setView('home')} anak={anak} />}
-            {view === 'prestasi' && <PrestasiAnakView onBack={() => setView('home')} anak={anak} />}
-            {view === 'pengumuman' && <PengumumanView onBack={() => setView('home')} />}
-            {view === 'profile' && <MyProfile onBack={() => setView('home')} />}
-            {COMING_SOON_LABEL[view] && (
-              <div>
-                <button onClick={() => setView('home')} className="text-sm text-navy/50 hover:text-navy mb-1">
-                  ← Kembali ke Dashboard
-                </button>
-                <ComingSoon title={COMING_SOON_LABEL[view][0]} description={COMING_SOON_LABEL[view][1]} />
-              </div>
-            )}
-          </>
-        )}
+          {anakList !== null && anakList.length > 0 && (
+            <>
+              {view !== 'home' && view !== 'profile' && view !== 'pengumuman' && anakList.length > 1 && (
+                <AnakSelector anakList={anakList} selectedAnakId={selectedAnakId} onChange={setSelectedAnakId} />
+              )}
+
+              {view === 'home' && (
+                <OrangTuaHome user={user} anak={anak} anakList={anakList} onNavigate={setView} />
+              )}
+              {view === 'profil-anak' && <ProfilAnakView onBack={() => setView('home')} anak={anak} />}
+              {view === 'jadwal' && <JadwalAnakView onBack={() => setView('home')} anak={anak} />}
+              {view === 'absensi' && <AbsensiAnakView onBack={() => setView('home')} anak={anak} />}
+              {view === 'nilai' && <NilaiAnakView onBack={() => setView('home')} anak={anak} />}
+              {view === 'erapor' && <ERaporAnakView onBack={() => setView('home')} anak={anak} />}
+              {view === 'tagihan' && <TagihanAnakView onBack={() => setView('home')} anak={anak} />}
+              {view === 'pembayaran' && <PembayaranView onBack={() => setView('home')} anak={anak} />}
+              {view === 'riwayat-pembayaran' && <RiwayatPembayaranView onBack={() => setView('home')} anak={anak} />}
+              {view === 'wali-kelas' && <WaliKelasView onBack={() => setView('home')} anak={anak} />}
+              {view === 'prestasi' && <PrestasiAnakView onBack={() => setView('home')} anak={anak} />}
+              {view === 'pengumuman' && <PengumumanView onBack={() => setView('home')} />}
+              {view === 'profile' && <MyProfile onBack={() => setView('home')} />}
+              {COMING_SOON_LABEL[view] && (
+                <div>
+                  <button onClick={() => setView('home')} className="text-sm text-navy/50 hover:text-navy mb-1">
+                    ← Kembali ke Dashboard
+                  </button>
+                  <ComingSoon title={COMING_SOON_LABEL[view][0]} description={COMING_SOON_LABEL[view][1]} />
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </main>
 
       {confirmingLogout && (
@@ -188,6 +285,120 @@ function AnakSelector({ anakList, selectedAnakId, onChange }) {
   )
 }
 
+function TopHeader({ user, onNavigateProfile, onSearch }) {
+  const [search, setSearch] = useState('')
+  const [showNotif, setShowNotif] = useState(false)
+  const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [pengumuman, setPengumuman] = useState(null)
+  const [adaBaru, setAdaBaru] = useState(false)
+
+  useEffect(() => {
+    api
+      .getPengumuman()
+      .then((r) => {
+        const data = r.data ?? r
+        setPengumuman(data)
+        const now = Date.now()
+        setAdaBaru(
+          data.some((p) => {
+            if (!p.tanggal_publish) return false
+            const hari = (now - new Date(p.tanggal_publish).getTime()) / (1000 * 60 * 60 * 24)
+            return hari <= 7
+          })
+        )
+      })
+      .catch(() => setPengumuman([]))
+  }, [])
+
+  function handleSearchSubmit(e) {
+    e.preventDefault()
+    onSearch?.(search)
+  }
+
+  return (
+    <div className="shrink-0 bg-white border-b border-navy/10 px-6 sm:px-8 py-4 flex items-center gap-4">
+      <form onSubmit={handleSearchSubmit} className="flex-1 max-w-md">
+        <div className="relative">
+          <SearchIcon className="h-4 w-4 text-navy/30 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari informasi..."
+            className="w-full bg-navy/5 rounded-full pl-10 pr-4 py-2.5 text-sm placeholder:text-navy/30 focus:outline-none focus:ring-2 focus:ring-navy-light/40"
+          />
+        </div>
+      </form>
+
+      <div className="flex items-center gap-3 ml-auto shrink-0 relative">
+        <button
+          onClick={() => setShowNotif((v) => !v)}
+          className="relative h-10 w-10 rounded-full flex items-center justify-center hover:bg-navy/5 transition-colors"
+        >
+          <BellIcon className="h-5 w-5 text-navy/60" />
+          {adaBaru && <span className="absolute top-2 right-2.5 h-2 w-2 rounded-full bg-red-500" />}
+        </button>
+
+        {showNotif && (
+          <div className="absolute right-0 top-12 w-72 bg-white rounded-xl border border-navy/10 shadow-lg p-3 z-20">
+            <p className="text-xs font-bold text-navy/60 uppercase tracking-wide mb-2 px-1">Pengumuman Terbaru</p>
+            {(pengumuman || []).length === 0 ? (
+              <p className="text-xs text-navy/40 px-1 py-2">Belum ada pengumuman.</p>
+            ) : (
+              <div className="space-y-1">
+                {pengumuman.slice(0, 4).map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      setShowNotif(false)
+                      onSearch?.('')
+                    }}
+                    className="w-full text-left px-2 py-2 rounded-lg hover:bg-navy/5 transition-colors"
+                  >
+                    <p className="text-xs font-semibold text-navy truncate">{p.judul}</p>
+                    <p className="text-[11px] text-navy/40">
+                      {p.tanggal_publish ? new Date(p.tanggal_publish).toLocaleDateString('id-ID') : ''}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        <button onClick={() => setShowProfileMenu((v) => !v)} className="flex items-center gap-2.5 pl-2">
+          <div className="h-9 w-9 rounded-full bg-gradient-to-br from-navy to-navy-light text-white flex items-center justify-center font-bold text-sm shrink-0 overflow-hidden">
+            {user?.avatar_url ? (
+              <img src={`${BASE_URL}${user.avatar_url}`} alt={user.name} className="h-full w-full object-cover" />
+            ) : (
+              user?.name?.[0]?.toUpperCase() || '?'
+            )}
+          </div>
+          <div className="text-left hidden sm:block">
+            <p className="text-sm font-bold text-navy leading-tight">{user?.name}</p>
+            <p className="text-[11px] text-navy/50 leading-tight">Orang Tua/Wali</p>
+          </div>
+          <ChevronIcon className="h-3.5 w-3.5 text-navy/40 hidden sm:block" />
+        </button>
+
+        {showProfileMenu && (
+          <div className="absolute right-0 top-12 w-44 bg-white rounded-xl border border-navy/10 shadow-lg py-1.5 z-20">
+            <button
+              onClick={() => {
+                setShowProfileMenu(false)
+                onNavigateProfile()
+              }}
+              className="w-full text-left px-3.5 py-2 text-sm text-navy/70 hover:bg-navy/5"
+            >
+              Profil Saya
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function OrangTuaHome({ user, anak, anakList, onNavigate }) {
   const [stats, setStats] = useState({ tagihan: null, prestasi: null, nilai: null })
 
@@ -199,32 +410,118 @@ function OrangTuaHome({ user, anak, anakList, onNavigate }) {
     api.getAnakNilai(anak.id).then((r) => setStats((s) => ({ ...s, nilai: (r || []).length }))).catch(() => {})
   }, [anak?.id])
 
+  const [sekolah, setSekolah] = useState(null)
+  const [pengumuman, setPengumuman] = useState(null)
+
+  useEffect(() => {
+    api.getProfil().then(setSekolah).catch(() => {})
+    api.getPengumuman().then((r) => setPengumuman(r.data ?? r)).catch(() => setPengumuman([]))
+  }, [])
+
   return (
     <div>
-      <div className="bg-gradient-to-r from-navy via-navy to-navy-light rounded-2xl p-6 mb-6">
-        <h1 className="text-xl font-extrabold text-white mb-1.5">Selamat datang, {user?.name}!</h1>
-        <p className="text-white/60 text-sm max-w-md">
-          {anakList.length > 1
-            ? `Anda memantau ${anakList.length} anak: ${anakList.map((a) => a.nama).join(', ')}.`
-            : anak
-            ? `${anak.nama} — Kelas ${anak.kelas?.nama_kelas ?? '-'}`
-            : 'Pantau perkembangan anak Anda dari sini.'}
+      <div className="relative overflow-hidden bg-gradient-to-r from-navy via-navy to-navy-light rounded-2xl p-6 sm:p-8 mb-6">
+        <LeafIcon className="absolute -top-8 -right-8 h-40 w-40 text-white/10 rotate-12" />
+        <SchoolIllustration className="absolute right-6 bottom-0 h-24 w-auto text-white/10 hidden sm:block" />
+
+        <div className="relative max-w-md">
+          <h1 className="text-xl sm:text-2xl font-extrabold text-white mb-1.5">Selamat datang, {user?.name}!</h1>
+          <p className="text-white/70 text-sm mb-4">
+            {anakList.length > 1
+              ? `Anda memantau ${anakList.length} anak: ${anakList.map((a) => a.nama).join(', ')}.`
+              : 'Semoga putra/putri Anda selalu berprestasi dan sehat.'}
+          </p>
+          {anak && (
+            <span className="inline-flex items-center gap-2 bg-white/15 text-white text-xs font-semibold px-3.5 py-1.5 rounded-full">
+              <UserIcon className="h-3.5 w-3.5" />
+              Anak: {anak.nama} — Kelas {anak.kelas?.nama_kelas ?? '-'}
+            </span>
+          )}
+        </div>
+
+        <p className="hidden lg:block absolute right-8 top-7 text-white/40 text-xs italic max-w-[150px] text-right leading-snug">
+          "Pendidikan adalah investasi masa depan"
         </p>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
-        <StatCard label="Nilai Tercatat" value={stats.nilai} icon={ChartIcon} onClick={() => onNavigate('nilai')} />
-        <StatCard label="Tagihan Belum Lunas" value={stats.tagihan} icon={BillIcon} onClick={() => onNavigate('tagihan')} />
-        <StatCard label="Prestasi Anak" value={stats.prestasi} icon={TrophyIcon} onClick={() => onNavigate('prestasi')} />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <FeatureCard
+          label="Nilai Tercatat"
+          description="Lihat perkembangan nilai putra/putri Anda"
+          value={stats.nilai}
+          icon={ChartIcon}
+          onClick={() => onNavigate('nilai')}
+        />
+        <FeatureCard
+          label="Tagihan Belum Lunas"
+          description="Periksa tagihan dan lakukan pembayaran"
+          value={stats.tagihan}
+          icon={BillIcon}
+          onClick={() => onNavigate('tagihan')}
+        />
+        <FeatureCard
+          label="Prestasi Anak"
+          description="Lihat pencapaian dan prestasi putra/putri Anda"
+          value={stats.prestasi}
+          icon={TrophyIcon}
+          onClick={() => onNavigate('prestasi')}
+        />
       </div>
 
-      <div className="bg-white rounded-2xl border border-navy/10 p-5">
-        <h2 className="text-sm font-bold text-navy mb-3">Pintasan Cepat</h2>
+      <div className="bg-white rounded-2xl border border-navy/10 p-5 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-sm font-bold text-navy">Pintasan Cepat</h2>
+            <p className="text-xs text-navy/40 mt-0.5">Akses fitur yang sering digunakan dengan mudah</p>
+          </div>
+        </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <ShortcutTile label="Jadwal" icon={CalendarIcon} onClick={() => onNavigate('jadwal')} />
-          <ShortcutTile label="Absensi" icon={AttendanceIcon} onClick={() => onNavigate('absensi')} />
-          <ShortcutTile label="E-Rapor" icon={DocIcon} onClick={() => onNavigate('erapor')} />
-          <ShortcutTile label="Hubungi Wali Kelas" icon={PhoneIcon} onClick={() => onNavigate('wali-kelas')} />
+          <ShortcutTile label="Jadwal Pelajaran" description="Lihat jadwal harian anak" icon={CalendarIcon} onClick={() => onNavigate('jadwal')} />
+          <ShortcutTile label="Absensi" description="Cek kehadiran anak" icon={AttendanceIcon} onClick={() => onNavigate('absensi')} />
+          <ShortcutTile label="E-Raport" description="Unduh rapor semester" icon={DocIcon} onClick={() => onNavigate('erapor')} />
+          <ShortcutTile label="Hubungi Wali Kelas" description="Kontak langsung wali kelas" icon={PhoneIcon} onClick={() => onNavigate('wali-kelas')} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-white rounded-2xl border border-navy/10 p-5">
+          <h2 className="text-sm font-bold text-navy mb-4">Informasi Singkat</h2>
+          <div className="grid grid-cols-3 gap-3">
+            <InfoTile icon={SchoolIcon} label="Sekolah" value={sekolah?.nama_sekolah || '-'} />
+            <InfoTile icon={UserIcon} label="Kelas" value={anak?.kelas?.nama_kelas || '-'} />
+            <InfoTile icon={CalendarIcon} label="Tahun Ajaran" value={anak?.kelas?.tahun_ajaran || '-'} />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-navy/10 p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-bold text-navy">Pengumuman Terbaru</h2>
+            <button onClick={() => onNavigate('pengumuman')} className="text-xs font-semibold text-navy-light hover:text-navy flex items-center gap-1">
+              Lihat Semua
+              <ArrowIcon className="h-3 w-3" />
+            </button>
+          </div>
+          <div className="space-y-3">
+            {(pengumuman || []).slice(0, 3).map((p) => (
+              <button
+                key={p.id}
+                onClick={() => onNavigate('pengumuman')}
+                className="w-full flex items-start gap-2.5 text-left hover:bg-navy/5 rounded-lg p-1.5 -m-1.5 transition-colors"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-navy-light mt-1.5 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] text-navy/40">
+                    {p.tanggal_publish ? new Date(p.tanggal_publish).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
+                  </p>
+                  <p className="text-sm font-semibold text-navy leading-snug">{p.judul}</p>
+                  {p.konten && <p className="text-xs text-navy/50 truncate">{p.konten}</p>}
+                </div>
+                <ArrowIcon className="h-3.5 w-3.5 text-navy/25 shrink-0 mt-1" />
+              </button>
+            ))}
+            {pengumuman && pengumuman.length === 0 && <p className="text-sm text-navy/40 text-center py-4">Belum ada pengumuman.</p>}
+            {pengumuman === null && <p className="text-sm text-navy/40 text-center py-4">Memuat...</p>}
+          </div>
         </div>
       </div>
     </div>
@@ -516,6 +813,308 @@ function TagihanAnakView({ onBack, anak }) {
   )
 }
 
+function PembayaranView({ onBack, anak }) {
+  const [tagihan, setTagihan] = useState(null)
+  const [konfirmasi, setKonfirmasi] = useState(null)
+  const [virtualAccount, setVirtualAccount] = useState(null)
+  const [showForm, setShowForm] = useState(false)
+  const [selectedTagihan, setSelectedTagihan] = useState(null)
+  const [qrisTagihan, setQrisTagihan] = useState(null)
+
+  function load() {
+    if (!anak) return
+    api.getAnakTagihan(anak.id).then(setTagihan).catch(() => setTagihan([]))
+    api.getMyKonfirmasiPembayaran().then(setKonfirmasi).catch(() => setKonfirmasi([]))
+    api.getAnakVirtualAccount(anak.id).then(setVirtualAccount).catch(() => setVirtualAccount(null))
+  }
+
+  useEffect(() => {
+    setTagihan(null)
+    setKonfirmasi(null)
+    setVirtualAccount(null)
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [anak?.id])
+
+  const belumLunas = (tagihan || []).filter((t) => t.status !== 'lunas')
+  const konfirmasiAnak = (konfirmasi || []).filter((k) => k.tagihan?.siswa_id === anak?.id)
+
+  function openForm(t) {
+    setSelectedTagihan(t)
+    setShowForm(true)
+  }
+
+  function handleSaved() {
+    setShowForm(false)
+    setSelectedTagihan(null)
+    load()
+  }
+
+  return (
+    <PageShell
+      title="Pembayaran"
+      onBack={onBack}
+      description="Ajukan konfirmasi pembayaran dengan mengunggah bukti transfer. Bendahara sekolah akan memverifikasi sebelum tagihan ditandai lunas."
+    >
+      {virtualAccount?.nomor_va && (
+        <div className="bg-navy/5 rounded-2xl px-5 py-4 mb-6 flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <p className="text-xs font-semibold text-navy/50 uppercase tracking-wide">Nomor Virtual Account {virtualAccount.bank_nama}</p>
+            <p className="text-lg font-extrabold text-navy font-mono">{virtualAccount.nomor_va}</p>
+          </div>
+          <p className="text-xs text-navy/50 max-w-xs">
+            Transfer ke nomor ini untuk tagihan {anak?.nama}. Pembayaran akan dicocokkan oleh Bendahara sekolah.
+          </p>
+        </div>
+      )}
+
+      <div className="mb-6">
+        <h2 className="text-sm font-bold text-navy mb-3">Tagihan Belum Lunas</h2>
+        <div className="bg-white rounded-2xl border border-navy/10 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-navy/5 text-navy/60 text-xs uppercase tracking-wide">
+              <tr>
+                <th className="text-left px-5 py-3">Judul</th>
+                <th className="text-left px-5 py-3">Jumlah</th>
+                <th className="text-left px-5 py-3">Jatuh Tempo</th>
+                <th className="text-right px-5 py-3">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-navy/5">
+              {belumLunas.map((t) => (
+                <tr key={t.id}>
+                  <td className="px-5 py-3 font-medium text-navy">{t.judul}</td>
+                  <td className="px-5 py-3 text-navy/70">Rp {Number(t.jumlah).toLocaleString('id-ID')}</td>
+                  <td className="px-5 py-3 text-navy/70">{t.jatuh_tempo || '-'}</td>
+                  <td className="px-5 py-3 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => setQrisTagihan(t)}
+                        className="text-xs font-semibold text-navy border border-navy/20 rounded-full px-3.5 py-1.5 hover:bg-navy hover:text-white transition-colors"
+                      >
+                        Bayar via QRIS
+                      </button>
+                      <button
+                        onClick={() => openForm(t)}
+                        className="text-xs font-semibold text-white bg-navy rounded-full px-4 py-1.5 hover:bg-navy/90"
+                      >
+                        Konfirmasi Bayar
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {tagihan && belumLunas.length === 0 && <EmptyState text="Tidak ada tagihan yang belum lunas." />}
+          {tagihan === null && <EmptyState text="Memuat..." />}
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-sm font-bold text-navy mb-3">Riwayat Konfirmasi Pembayaran</h2>
+        <div className="space-y-3">
+          {konfirmasiAnak.map((k) => (
+            <div key={k.id} className="bg-white rounded-2xl border border-navy/10 p-5">
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="font-bold text-navy">{k.tagihan?.judul}</p>
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${KONFIRMASI_STATUS_TONE[k.status]}`}>
+                  {KONFIRMASI_STATUS_LABEL[k.status]}
+                </span>
+              </div>
+              <p className="text-sm text-navy/60">
+                Rp {Number(k.jumlah).toLocaleString('id-ID')} — ditransfer {k.tanggal_transfer?.slice(0, 10)}
+              </p>
+              {k.status === 'ditolak' && k.catatan_verifikasi && (
+                <p className="text-xs text-red-600 mt-2">Alasan ditolak: {k.catatan_verifikasi}</p>
+              )}
+            </div>
+          ))}
+          {konfirmasi && konfirmasiAnak.length === 0 && <EmptyState text="Belum ada konfirmasi pembayaran yang diajukan." />}
+          {konfirmasi === null && <EmptyState text="Memuat..." />}
+        </div>
+      </div>
+
+      {showForm && (
+        <KonfirmasiPembayaranModal
+          tagihan={selectedTagihan}
+          onClose={() => setShowForm(false)}
+          onSaved={handleSaved}
+        />
+      )}
+
+      {qrisTagihan && (
+        <QrisPembayaranModal
+          anak={anak}
+          tagihan={qrisTagihan}
+          onClose={() => setQrisTagihan(null)}
+        />
+      )}
+    </PageShell>
+  )
+}
+
+function QrisPembayaranModal({ anak, tagihan, onClose }) {
+  const [qris, setQris] = useState(null)
+  const [qrImage, setQrImage] = useState('')
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    api
+      .getAnakQris(anak.id, tagihan.id)
+      .then((data) => {
+        setQris(data)
+        return QRCode.toDataURL(data.payload, { width: 260, margin: 1 })
+      })
+      .then((url) => url && setQrImage(url))
+      .catch((err) => setError(err.message))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [anak?.id, tagihan?.id])
+
+  return (
+    <div className="fixed inset-0 bg-navy/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
+        <div className="flex justify-end mb-1">
+          <button onClick={onClose} className="text-navy/40 hover:text-navy text-xl leading-none">
+            &times;
+          </button>
+        </div>
+        <h2 className="text-lg font-extrabold text-navy mb-3">Bayar via QRIS</h2>
+
+        {error && <p className="text-red-600 text-sm">{error}</p>}
+
+        {qris && qrImage ? (
+          <>
+            <img src={qrImage} alt="QRIS" className="mx-auto mb-4 rounded-lg" />
+            <p className="font-bold text-navy">{qris.judul}</p>
+            <p className="text-lg font-extrabold text-navy mt-1">Rp {Number(qris.jumlah).toLocaleString('id-ID')}</p>
+            {qris.merchant_nama && <p className="text-xs text-navy/40 mt-2">{qris.merchant_nama} — {qris.merchant_kota}</p>}
+            <p className="text-[11px] text-navy/40 mt-3">
+              Pindai dengan aplikasi mobile banking/e-wallet apa pun yang mendukung QRIS. Setelah dibayar, sekolah akan mencocokkan pembayaran ini secara manual.
+            </p>
+          </>
+        ) : (
+          !error && <p className="text-sm text-navy/40 py-8">Memuat QRIS...</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function KonfirmasiPembayaranModal({ tagihan, onClose, onSaved }) {
+  const [form, setForm] = useState({
+    jumlah: tagihan.jumlah,
+    tanggal_transfer: new Date().toISOString().slice(0, 10),
+    metode: 'transfer',
+    catatan: '',
+  })
+  const [bukti, setBukti] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  function update(field, value) {
+    setForm((f) => ({ ...f, [field]: value }))
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!bukti) {
+      setError('Unggah bukti transfer terlebih dahulu.')
+      return
+    }
+    setSaving(true)
+    setError('')
+    try {
+      await api.createKonfirmasiPembayaran({
+        tagihan_id: tagihan.id,
+        jumlah: Number(form.jumlah),
+        tanggal_transfer: form.tanggal_transfer,
+        metode: form.metode,
+        catatan: form.catatan,
+        bukti,
+      })
+      onSaved()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-navy/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-sm w-full p-6 max-h-[90vh] overflow-y-auto">
+        <h2 className="text-lg font-bold text-navy mb-1">Konfirmasi Pembayaran</h2>
+        <p className="text-xs text-navy/50 mb-4">{tagihan.judul}</p>
+
+        {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Field label="Jumlah Ditransfer (Rp)">
+            <input
+              type="number"
+              required
+              min="0"
+              value={form.jumlah}
+              onChange={(e) => update('jumlah', e.target.value)}
+              className="input"
+            />
+          </Field>
+          <Field label="Tanggal Transfer">
+            <input
+              type="date"
+              required
+              value={form.tanggal_transfer}
+              onChange={(e) => update('tanggal_transfer', e.target.value)}
+              className="input"
+            />
+          </Field>
+          <Field label="Metode">
+            <select value={form.metode} onChange={(e) => update('metode', e.target.value)} className="input">
+              <option value="transfer">Transfer Bank</option>
+              <option value="lainnya">Lainnya</option>
+            </select>
+          </Field>
+          <Field label="Bukti Transfer (JPG/PNG/PDF, maks 5MB)">
+            <input
+              type="file"
+              required
+              accept="image/jpeg,image/png,application/pdf"
+              onChange={(e) => setBukti(e.target.files?.[0] || null)}
+              className="input"
+            />
+          </Field>
+          <Field label="Catatan (opsional)">
+            <textarea rows={2} value={form.catatan} onChange={(e) => update('catatan', e.target.value)} className="input" />
+          </Field>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-navy/70 hover:text-navy">
+              Batal
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="bg-navy hover:bg-navy-light text-white text-sm font-semibold px-5 py-2 rounded-md disabled:opacity-50"
+            >
+              {saving ? 'Mengirim...' : 'Kirim Konfirmasi'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function Field({ label, children }) {
+  return (
+    <label className="block">
+      <span className="block text-xs font-semibold text-navy/70 mb-1">{label}</span>
+      {children}
+    </label>
+  )
+}
+
 function RiwayatPembayaranView({ onBack, anak }) {
   const [riwayat, setRiwayat] = useState(null)
 
@@ -648,27 +1247,116 @@ function PengumumanView({ onBack }) {
   )
 }
 
-function StatCard({ label, value, icon: Icon, onClick }) {
+function FeatureCard({ label, description, icon: Icon, onClick }) {
   return (
-    <button onClick={onClick} className="bg-white rounded-2xl border border-navy/10 p-5 text-left hover:border-navy/20 transition-colors">
-      <div className="h-11 w-11 rounded-xl bg-navy-light/15 flex items-center justify-center mb-3">
-        <Icon className="h-5.5 w-5.5 text-navy" />
+    <button
+      onClick={onClick}
+      className="bg-white rounded-2xl border border-navy/10 p-5 text-left hover:border-navy-light/40 hover:shadow-sm transition-all flex items-start gap-4"
+    >
+      <div className="h-11 w-11 rounded-xl bg-navy-light/15 flex items-center justify-center shrink-0">
+        <Icon className="h-5.5 w-5.5 text-navy-light" />
       </div>
-      <p className="text-2xl font-extrabold text-navy leading-none">{value ?? '-'}</p>
-      <p className="text-xs text-navy/50 mt-1.5 uppercase tracking-wide">{label}</p>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-bold text-navy mb-0.5">{label}</p>
+        <p className="text-xs text-navy/50 leading-snug">{description}</p>
+      </div>
+      <div className="h-7 w-7 rounded-full bg-navy/5 flex items-center justify-center shrink-0 mt-0.5">
+        <ArrowIcon className="h-3.5 w-3.5 text-navy/40" />
+      </div>
     </button>
   )
 }
 
-function ShortcutTile({ label, icon: Icon, onClick }) {
+function ShortcutTile({ label, description, icon: Icon, onClick }) {
   return (
-    <button onClick={onClick} className="bg-navy/5 hover:bg-navy/10 rounded-xl p-3.5 text-left transition-colors">
-      <Icon className="h-5 w-5 text-navy mb-2" />
-      <p className="text-xs font-semibold text-navy leading-snug">{label}</p>
+    <button onClick={onClick} className="relative bg-navy/5 hover:bg-navy/10 rounded-xl p-4 text-left transition-colors">
+      <div className="h-9 w-9 rounded-lg bg-navy-light flex items-center justify-center mb-3">
+        <Icon className="h-4.5 w-4.5 text-white" />
+      </div>
+      <p className="text-sm font-bold text-navy mb-0.5 pr-4">{label}</p>
+      {description && <p className="text-[11px] text-navy/50 leading-snug pr-4">{description}</p>}
+      <ArrowIcon className="h-3.5 w-3.5 text-navy/30 absolute bottom-4 right-4" />
     </button>
   )
 }
 
+function InfoTile({ icon: Icon, label, value }) {
+  return (
+    <div className="flex flex-col items-center text-center gap-1.5">
+      <div className="h-9 w-9 rounded-full bg-navy-light/15 flex items-center justify-center">
+        <Icon className="h-4.5 w-4.5 text-navy-light" />
+      </div>
+      <p className="text-xs font-bold text-navy leading-tight">{value}</p>
+      <p className="text-[10px] text-navy/40 uppercase tracking-wide">{label}</p>
+    </div>
+  )
+}
+
+
+function ChevronIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  )
+}
+
+function SearchIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </svg>
+  )
+}
+
+function BellIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M6 8a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z" />
+      <path d="M10 20a2 2 0 0 0 4 0" />
+    </svg>
+  )
+}
+
+function ArrowIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M5 12h14M13 6l6 6-6 6" />
+    </svg>
+  )
+}
+
+function SchoolIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M3 21h18M5 21V9l7-5 7 5v12" />
+      <path d="M9 21v-6h6v6M9 12h.01M15 12h.01M12 12h.01M9 9h.01M15 9h.01M12 9h.01" />
+    </svg>
+  )
+}
+
+function LeafIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 20c8 0 16-4 16-16C10 4 4 10 4 20Z" />
+      <path d="M5 19c3-5 7-8 12-10" />
+    </svg>
+  )
+}
+
+function SchoolIllustration(props) {
+  return (
+    <svg {...props} viewBox="0 0 120 90" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="20" y="30" width="80" height="55" rx="2" />
+      <path d="M20 30 60 10l40 20" />
+      <rect x="52" y="55" width="16" height="30" />
+      <path d="M32 45h10v10H32zM78 45h10v10H78z" />
+      <path d="M60 10V2" />
+      <circle cx="60" cy="2" r="2" fill="currentColor" />
+    </svg>
+  )
+}
 
 function GridIcon(props) {
   return (

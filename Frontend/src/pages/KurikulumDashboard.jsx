@@ -8,6 +8,7 @@ import KelasManagement from './KelasManagement'
 import MataPelajaranManagement from './MataPelajaranManagement'
 import MyProfile from './MyProfile'
 import ScheduleManagement from './ScheduleManagement'
+import StrukturKurikulumManagement from './StrukturKurikulumManagement'
 import LogoHorizontal from '../components/LogoHorizontal'
 
 const MENU_GROUPS = [
@@ -58,7 +59,6 @@ const MENU_GROUPS = [
 ]
 
 const COMING_SOON_LABEL = {
-  'struktur-kurikulum': ['Struktur Kurikulum', 'Penyusunan struktur kurikulum per jenjang/fase sedang disiapkan.'],
   'capaian-pembelajaran': ['Capaian Pembelajaran', 'Pengelolaan Capaian Pembelajaran (CP) per fase sedang disiapkan.'],
   'tujuan-pembelajaran': ['Tujuan Pembelajaran', 'Pengelolaan Tujuan Pembelajaran (TP) turunan dari CP sedang disiapkan.'],
   kompetensi: ['Kompetensi', 'Pemetaan kompetensi inti & dasar sedang disiapkan.'],
@@ -181,6 +181,7 @@ export default function KurikulumDashboard() {
 
       <main className="flex-1 p-6 sm:p-8 overflow-y-auto">
         {view === 'home' && <KurikulumHome user={user} onNavigate={setView} />}
+        {view === 'struktur-kurikulum' && <StrukturKurikulumManagement onBack={() => setView('home')} />}
         {view === 'mata-pelajaran' && <MataPelajaranManagement onBack={() => setView('home')} />}
         {view === 'kelas' && <KelasManagement onBack={() => setView('home')} />}
         {view === 'jadwal-pelajaran' && <ScheduleManagement onBack={() => setView('home')} />}
