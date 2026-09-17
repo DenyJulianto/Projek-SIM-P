@@ -9,8 +9,11 @@ use App\Models\JadwalPelajaran;
 use App\Models\Prestasi;
 use App\Models\Siswa;
 use App\Models\Tagihan;
+use App\Services\PembayaranOnlineService;
+use App\Services\QrisService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Endpoint self-service untuk orang tua/wali. Setiap method yang menerima
@@ -21,6 +24,10 @@ use Illuminate\Http\Request;
  */
 class ParentSelfController extends Controller
 {
+    public function __construct(private readonly PembayaranOnlineService $pembayaranOnline)
+    {
+    }
+
     private function authorizeAnak(Request $request, Siswa $siswa): void
     {
         $isAnak = $siswa->walis()->where('user_id', $request->user()->id)->exists();
@@ -121,5 +128,53 @@ class ParentSelfController extends Controller
         $siswa->loadMissing('kelas.waliKelas');
 
         return response()->json($siswa->kelas?->waliKelas);
+    }
+
+    /**
+     * Nomor Virtual Account anak untuk transfer tagihan sekolah — dihitung
+     * deterministik dari prefix yang diatur Bendahara, bukan disimpan
+     * terpisah, supaya selalu sinkron dengan pengaturan terbaru.
+     */
+    public function virtualAccount(Request $request, Siswa $siswa): JsonResponse
+    {
+        $this->authorizeAnak($request, $siswa);
+
+        $config = $this->pembayaranOnline->config();
+        $nomorVa = $this->pembayaranOnline->nomorVa($siswa, $config['va_prefix'] ?? null);
+
+        return response()->json([
+            'nomor_va' => $nomorVa,
+            'bank_nama' => $config['bank_nama'] ?? null,
+        ]);
+    }
+
+    /**
+     * QRIS dinamis untuk membayar satu tagihan anak — nominal sudah
+     * tertanam supaya orang tua tidak perlu mengetik manual saat memindai.
+     */
+    public function qris(Request $request, Siswa $siswa, Tagihan $tagihan): JsonResponse
+    {
+        $this->authorizeAnak($request, $siswa);
+        abort_unless($tagihan->siswa_id === $siswa->id, 403, 'Tagihan ini bukan milik anak yang tertaut ke akun Anda.');
+
+        $config = $this->pembayaranOnline->config();
+        abort_if(empty($config['qris_statis']), 422, 'Sekolah belum mengaktifkan pembayaran via QRIS.');
+
+        if ($tagihan->status === 'lunas') {
+            throw ValidationException::withMessages([
+                'tagihan_id' => ['Tagihan ini sudah lunas.'],
+            ]);
+        }
+
+        $sisa = (float) $tagihan->jumlah - (float) $tagihan->pembayaran()->sum('jumlah');
+
+        return response()->json([
+            'tagihan_id' => $tagihan->id,
+            'judul' => $tagihan->judul,
+            'jumlah' => $sisa,
+            'payload' => QrisService::withAmount($config['qris_statis'], (int) round($sisa)),
+            'merchant_nama' => $config['merchant_nama'] ?? null,
+            'merchant_kota' => $config['merchant_kota'] ?? null,
+        ]);
     }
 }

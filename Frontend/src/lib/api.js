@@ -18,6 +18,14 @@ export const BASE_URL =
 const CENTRAL_DOMAINS = ['127.0.0.1', 'localhost']
 export const IS_CENTRAL_DOMAIN = CENTRAL_DOMAINS.includes(new URL(BASE_URL).hostname)
 
+// Link keluar dari landing sekolah menuju landing/portal Super Admin. Cukup
+// ganti hostname halaman ke salah satu domain central (port frontend tetap
+// sama) — karena SPA ini satu build yang sama, cabang Platform vs Sekolah
+// ditentukan murni dari domain yang dibuka, bukan dari build yang berbeda.
+export const SUPER_ADMIN_URL = `${window.location.protocol}//${CENTRAL_DOMAINS[1]}${
+  window.location.port ? `:${window.location.port}` : ''
+}`
+
 function authHeaders() {
   const token = localStorage.getItem('token') || sessionStorage.getItem('token')
   return token ? { Authorization: `Bearer ${token}` } : {}
@@ -534,6 +542,31 @@ export const api = {
 
   deleteMataPelajaran: (id) => request(`/mata-pelajaran/${id}`, { method: 'DELETE' }),
 
+  // Struktur Kurikulum
+  listStrukturKurikulum: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/struktur-kurikulum${query ? `?${query}` : ''}`)
+  },
+  getStrukturKurikulum: (id) => request(`/struktur-kurikulum/${id}`),
+  createStrukturKurikulum: (data) => request('/struktur-kurikulum', { method: 'POST', body: JSON.stringify(data) }),
+  updateStrukturKurikulum: (id, data) => request(`/struktur-kurikulum/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteStrukturKurikulum: (id) => request(`/struktur-kurikulum/${id}`, { method: 'DELETE' }),
+  aktifkanStrukturKurikulum: (id) => request(`/struktur-kurikulum/${id}/aktifkan`, { method: 'POST' }),
+  nonaktifkanStrukturKurikulum: (id) => request(`/struktur-kurikulum/${id}/nonaktifkan`, { method: 'POST' }),
+  duplikasiStrukturKurikulum: (id, tahunAjaranId) =>
+    request(`/struktur-kurikulum/${id}/duplikasi`, { method: 'POST', body: JSON.stringify({ tahun_ajaran_id: tahunAjaranId }) }),
+  exportStrukturKurikulum: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return downloadFile(`/struktur-kurikulum/export${query ? `?${query}` : ''}`, 'struktur-kurikulum.xlsx')
+  },
+  downloadStrukturKurikulumTemplate: () =>
+    downloadFile('/struktur-kurikulum/import-template', 'template-import-struktur-kurikulum.xlsx'),
+  importStrukturKurikulum: (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return requestForm('/struktur-kurikulum/import', formData)
+  },
+
   listJadwal: (params = {}) => {
     const query = new URLSearchParams({ include: 'kelas,mataPelajaran,guru', ...params }).toString()
     return request(`/jadwal-pelajaran?${query}`)
@@ -628,6 +661,30 @@ export const api = {
   getAnakRiwayatPembayaran: (siswaId) => request(`/me/anak/${siswaId}/riwayat-pembayaran`),
   getAnakPrestasi: (siswaId) => request(`/me/anak/${siswaId}/prestasi`),
   getAnakWaliKelas: (siswaId) => request(`/me/anak/${siswaId}/wali-kelas`),
+  getAnakVirtualAccount: (siswaId) => request(`/me/anak/${siswaId}/virtual-account`),
+  getAnakQris: (siswaId, tagihanId) => request(`/me/anak/${siswaId}/tagihan/${tagihanId}/qris`),
+
+  // Konfirmasi pembayaran manual (orang tua unggah bukti transfer)
+  getMyKonfirmasiPembayaran: () => request('/me/konfirmasi-pembayaran'),
+  createKonfirmasiPembayaran: ({ tagihan_id, jumlah, tanggal_transfer, metode, catatan, bukti }) => {
+    const formData = new FormData()
+    formData.append('tagihan_id', tagihan_id)
+    formData.append('jumlah', jumlah)
+    formData.append('tanggal_transfer', tanggal_transfer)
+    if (metode) formData.append('metode', metode)
+    if (catatan) formData.append('catatan', catatan)
+    formData.append('bukti', bukti)
+    return requestForm('/me/konfirmasi-pembayaran', formData)
+  },
+  listKonfirmasiPembayaran: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/konfirmasi-pembayaran${query ? `?${query}` : ''}`)
+  },
+  verifikasiKonfirmasiPembayaran: (id) =>
+    request(`/konfirmasi-pembayaran/${id}/verifikasi`, { method: 'POST' }),
+  tolakKonfirmasiPembayaran: (id, data) =>
+    request(`/konfirmasi-pembayaran/${id}/tolak`, { method: 'POST', body: JSON.stringify(data) }),
+  buktiPembayaranUrl: (buktiPath) => `${BASE_URL}/bukti-pembayaran-file/${buktiPath.replace('bukti-pembayaran/', '')}`,
 
   listSiswa: (params = {}) => {
     const query = new URLSearchParams(params).toString()
@@ -906,6 +963,27 @@ export const api = {
   getLaporanTunggakan: () => request('/laporan-keuangan/tunggakan'),
   getLaporanAnggaran: () => request('/laporan-keuangan/anggaran'),
   getLaporanKeuanganRingkasan: () => request('/laporan-keuangan/ringkasan'),
+  getPenerimaanHarian: () => request('/laporan-keuangan/penerimaan-harian'),
+  getPenerimaanPerJenis: () => request('/laporan-keuangan/penerimaan-per-jenis'),
+
+  // Pembayaran Online (Virtual Account & QRIS tanpa payment gateway pihak ketiga)
+  getPembayaranOnlinePengaturan: () => request('/pembayaran-online/pengaturan'),
+  updatePembayaranOnlinePengaturan: (data) =>
+    request('/pembayaran-online/pengaturan', { method: 'PUT', body: JSON.stringify(data) }),
+  listVirtualAccount: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/pembayaran-online/virtual-account${query ? `?${query}` : ''}`)
+  },
+  getQrisTagihan: (tagihanId) => request(`/pembayaran-online/tagihan/${tagihanId}/qris`),
+  listMutasiBank: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/pembayaran-online/mutasi${query ? `?${query}` : ''}`)
+  },
+  createMutasiBank: (data) => request('/pembayaran-online/mutasi', { method: 'POST', body: JSON.stringify(data) }),
+  cocokkanMutasiBank: (id, tagihanId) =>
+    request(`/pembayaran-online/mutasi/${id}/cocokkan`, { method: 'POST', body: JSON.stringify({ tagihan_id: tagihanId }) }),
+  abaikanMutasiBank: (id) => request(`/pembayaran-online/mutasi/${id}/abaikan`, { method: 'POST' }),
+  deleteMutasiBank: (id) => request(`/pembayaran-online/mutasi/${id}`, { method: 'DELETE' }),
 
   // Kepegawaian — pengajuan & persetujuan
   listPengajuanKepegawaian: (params = {}) => {

@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\JamBelajarController;
 use App\Http\Controllers\Api\KasusController;
 use App\Http\Controllers\Api\KegiatanController;
 use App\Http\Controllers\Api\KelasController;
+use App\Http\Controllers\Api\KonfirmasiPembayaranController;
 use App\Http\Controllers\Api\KonselingController;
 use App\Http\Controllers\Api\LaporanKeuanganController;
 use App\Http\Controllers\Api\MataPelajaranController;
@@ -44,6 +45,8 @@ use App\Http\Controllers\Api\SemesterController;
 use App\Http\Controllers\Api\SinkronisasiController;
 use App\Http\Controllers\Api\SiswaController;
 use App\Http\Controllers\Api\ParentSelfController;
+use App\Http\Controllers\Api\PembayaranOnlineController;
+use App\Http\Controllers\Api\StrukturKurikulumController;
 use App\Http\Controllers\Api\StudentSelfController;
 use App\Http\Controllers\Api\SumberDanaController;
 use App\Http\Controllers\Api\SuratController;
@@ -88,7 +91,11 @@ Route::middleware([
     Route::get('materi-file/{path}', [MateriController::class, 'showFile'])->where('path', '.*');
     Route::get('tugas-file/{path}', [TugasController::class, 'showFile'])->where('path', '.*');
     Route::get('tugas-jawaban-file/{path}', [TugasController::class, 'showJawabanFile'])->where('path', '.*');
+<<<<<<< HEAD
     Route::get('prestasi-bukti-file/{path}', [PrestasiController::class, 'showBuktiFile'])->where('path', '.*');
+=======
+    Route::get('bukti-pembayaran-file/{path}', [KonfirmasiPembayaranController::class, 'bukti'])->where('path', '.*');
+>>>>>>> 639a5c7382dad255f33be6a534469c2ec2bbe17e
 
     // Landing page publik sekolah — tidak butuh login.
     Route::prefix('public')->group(function () {
@@ -131,6 +138,12 @@ Route::middleware([
         Route::get('/me/anak/{siswa}/prestasi', [ParentSelfController::class, 'prestasi']);
         Route::get('/me/anak/{siswa}/wali-kelas', [ParentSelfController::class, 'waliKelas']);
 
+        Route::post('/me/konfirmasi-pembayaran', [KonfirmasiPembayaranController::class, 'store']);
+        Route::get('/me/konfirmasi-pembayaran', [KonfirmasiPembayaranController::class, 'mine']);
+
+        Route::get('/me/anak/{siswa}/virtual-account', [ParentSelfController::class, 'virtualAccount']);
+        Route::get('/me/anak/{siswa}/tagihan/{tagihan}/qris', [ParentSelfController::class, 'qris']);
+
         Route::get('/me/guru', [GuruSelfController::class, 'profil']);
         Route::get('/me/guru/jadwal', [GuruSelfController::class, 'jadwal']);
         Route::get('/me/guru/kelas', [GuruSelfController::class, 'kelas']);
@@ -161,6 +174,20 @@ Route::middleware([
 
         Route::apiResource('mata-pelajaran', MataPelajaranController::class)
             ->middleware('permission:kurikulum.manage');
+
+        Route::middleware('permission:kurikulum.manage')->prefix('struktur-kurikulum')->group(function () {
+            Route::get('export', [StrukturKurikulumController::class, 'export']);
+            Route::get('import-template', [StrukturKurikulumController::class, 'importTemplate']);
+            Route::post('import', [StrukturKurikulumController::class, 'import']);
+            Route::get('/', [StrukturKurikulumController::class, 'index']);
+            Route::post('/', [StrukturKurikulumController::class, 'store']);
+            Route::get('{strukturKurikulum}', [StrukturKurikulumController::class, 'show']);
+            Route::put('{strukturKurikulum}', [StrukturKurikulumController::class, 'update']);
+            Route::delete('{strukturKurikulum}', [StrukturKurikulumController::class, 'destroy']);
+            Route::post('{strukturKurikulum}/aktifkan', [StrukturKurikulumController::class, 'aktifkan']);
+            Route::post('{strukturKurikulum}/nonaktifkan', [StrukturKurikulumController::class, 'nonaktifkan']);
+            Route::post('{strukturKurikulum}/duplikasi', [StrukturKurikulumController::class, 'duplikasi']);
+        });
 
         Route::get('guru/export', [GuruController::class, 'export'])
             ->middleware('permission:pegawai.manage');
@@ -418,6 +445,22 @@ Route::middleware([
                 Route::get('pembayaran', [PembayaranController::class, 'index']);
                 Route::post('tagihan/{tagihan}/pembayaran', [PembayaranController::class, 'store']);
                 Route::delete('tagihan/{tagihan}/pembayaran/{pembayaran}', [PembayaranController::class, 'destroy']);
+
+                Route::get('konfirmasi-pembayaran', [KonfirmasiPembayaranController::class, 'index']);
+                Route::post('konfirmasi-pembayaran/{konfirmasi}/verifikasi', [KonfirmasiPembayaranController::class, 'verifikasi']);
+                Route::post('konfirmasi-pembayaran/{konfirmasi}/tolak', [KonfirmasiPembayaranController::class, 'tolak']);
+
+                Route::prefix('pembayaran-online')->group(function () {
+                    Route::get('pengaturan', [PembayaranOnlineController::class, 'pengaturan']);
+                    Route::put('pengaturan', [PembayaranOnlineController::class, 'updatePengaturan']);
+                    Route::get('virtual-account', [PembayaranOnlineController::class, 'virtualAccount']);
+                    Route::get('tagihan/{tagihan}/qris', [PembayaranOnlineController::class, 'qrisTagihan']);
+                    Route::get('mutasi', [PembayaranOnlineController::class, 'mutasiIndex']);
+                    Route::post('mutasi', [PembayaranOnlineController::class, 'mutasiStore']);
+                    Route::post('mutasi/{mutasi}/cocokkan', [PembayaranOnlineController::class, 'mutasiCocokkan']);
+                    Route::post('mutasi/{mutasi}/abaikan', [PembayaranOnlineController::class, 'mutasiAbaikan']);
+                    Route::delete('mutasi/{mutasi}', [PembayaranOnlineController::class, 'mutasiDestroy']);
+                });
             });
 
             // Anggaran Sekolah / RKAS — Bendahara kelola (anggaran.manage),
@@ -449,6 +492,8 @@ Route::middleware([
                 Route::get('tunggakan', [LaporanKeuanganController::class, 'tunggakan']);
                 Route::get('anggaran', [LaporanKeuanganController::class, 'anggaran']);
                 Route::get('ringkasan', [LaporanKeuanganController::class, 'ringkasan']);
+                Route::get('penerimaan-harian', [LaporanKeuanganController::class, 'penerimaanHarian']);
+                Route::get('penerimaan-per-jenis', [LaporanKeuanganController::class, 'penerimaanPerJenis']);
             });
         });
 
