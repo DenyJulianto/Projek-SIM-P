@@ -653,6 +653,10 @@ export const api = {
   getAnakWaliKelas: (siswaId) => request(`/me/anak/${siswaId}/wali-kelas`),
   getAnakVirtualAccount: (siswaId) => request(`/me/anak/${siswaId}/virtual-account`),
   getAnakQris: (siswaId, tagihanId) => request(`/me/anak/${siswaId}/tagihan/${tagihanId}/qris`),
+  getAnakSaldo: (siswaId) => request(`/me/anak/${siswaId}/saldo`),
+  isiSaldoAnak: (siswaId, data) =>
+    request(`/me/anak/${siswaId}/saldo/isi`, { method: 'POST', body: JSON.stringify(data) }),
+  getAnakTugas: (siswaId) => request(`/me/anak/${siswaId}/tugas`),
 
   // Konfirmasi pembayaran manual (orang tua unggah bukti transfer)
   getMyKonfirmasiPembayaran: () => request('/me/konfirmasi-pembayaran'),

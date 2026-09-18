@@ -138,6 +138,10 @@ Route::middleware([
         Route::get('/me/anak/{siswa}/virtual-account', [ParentSelfController::class, 'virtualAccount']);
         Route::get('/me/anak/{siswa}/tagihan/{tagihan}/qris', [ParentSelfController::class, 'qris']);
 
+        Route::get('/me/anak/{siswa}/saldo', [ParentSelfController::class, 'saldo']);
+        Route::post('/me/anak/{siswa}/saldo/isi', [ParentSelfController::class, 'isiSaldo']);
+        Route::get('/me/anak/{siswa}/tugas', [ParentSelfController::class, 'tugas']);
+
         Route::get('/me/guru', [GuruSelfController::class, 'profil']);
         Route::get('/me/guru/jadwal', [GuruSelfController::class, 'jadwal']);
         Route::get('/me/guru/kelas', [GuruSelfController::class, 'kelas']);
