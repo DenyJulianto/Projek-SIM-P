@@ -17,7 +17,14 @@ class Kelas extends Model
         'tingkat',
         'jurusan',
         'tahun_ajaran',
+        'tahun_ajaran_id',
+        'jenjang',
+        'fase',
+        'kurikulum',
+        'kapasitas',
+        'ruang_kelas',
         'wali_kelas_id',
+        'status',
     ];
 
     public function waliKelas(): BelongsTo

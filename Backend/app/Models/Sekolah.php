@@ -36,6 +36,7 @@ class Sekolah extends BaseTenant implements TenantWithDatabase
             'alamat',
             'kecamatan',
             'kelurahan',
+            'kode_pos',
             'kabupaten_kota',
             'provinsi',
             'latitude',

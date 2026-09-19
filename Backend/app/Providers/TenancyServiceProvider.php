@@ -7,6 +7,7 @@ namespace App\Providers;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use Spatie\Permission\PermissionRegistrar;
 use Stancl\JobPipeline\JobPipeline;
 use Stancl\Tenancy\Events;
 use Stancl\Tenancy\Jobs;
@@ -70,11 +71,19 @@ class TenancyServiceProvider extends ServiceProvider
             Events\InitializingTenancy::class => [],
             Events\TenancyInitialized::class => [
                 Listeners\BootstrapTenancy::class,
+                // Cache permission Spatie (spatie.permission.cache) disimpan di
+                // tabel `cache` central (CACHE_STORE=database), jadi dipakai
+                // bersama oleh SEMUA tenant — tanpa ini, permission id yang
+                // dicek bisa "nyasar" ke ID milik tenant lain yang diakses
+                // sebelumnya di proses yang sama (nama sama, ID beda per
+                // tenant karena masing-masing punya auto-increment sendiri).
+                fn () => app(PermissionRegistrar::class)->forgetCachedPermissions(),
             ],
 
             Events\EndingTenancy::class => [],
             Events\TenancyEnded::class => [
                 Listeners\RevertToCentralContext::class,
+                fn () => app(PermissionRegistrar::class)->forgetCachedPermissions(),
             ],
 
             Events\BootstrappingTenancy::class => [],

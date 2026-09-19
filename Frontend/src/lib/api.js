@@ -526,7 +526,18 @@ export const api = {
     return request(`/absensi-guru${query ? `?${query}` : ''}`)
   },
 
-  listMataPelajaran: () => request('/mata-pelajaran?per_page=100'),
+  listTahunAjaranKurikulum: () => request('/kurikulum/tahun-ajaran'),
+  getKurikulumDashboard: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/kurikulum/dashboard${query ? `?${query}` : ''}`)
+  },
+
+  listMataPelajaran: (params = {}) => {
+    const query = new URLSearchParams({ per_page: 100, ...params }).toString()
+    return request(`/mata-pelajaran?${query}`)
+  },
+
+  getMataPelajaran: (id) => request(`/mata-pelajaran/${id}`),
 
   createMataPelajaran: (data) =>
     request('/mata-pelajaran', {
@@ -541,6 +552,16 @@ export const api = {
     }),
 
   deleteMataPelajaran: (id) => request(`/mata-pelajaran/${id}`, { method: 'DELETE' }),
+  aktifkanMataPelajaran: (id) => request(`/mata-pelajaran/${id}/aktifkan`, { method: 'POST' }),
+  nonaktifkanMataPelajaran: (id) => request(`/mata-pelajaran/${id}/nonaktifkan`, { method: 'POST' }),
+  exportMataPelajaran: () => downloadFile('/mata-pelajaran/export', 'mata-pelajaran.xlsx'),
+  downloadMataPelajaranTemplate: () =>
+    downloadFile('/mata-pelajaran/import-template', 'template-import-mata-pelajaran.xlsx'),
+  importMataPelajaran: (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return requestForm('/mata-pelajaran/import', formData)
+  },
 
   // Struktur Kurikulum
   listStrukturKurikulum: (params = {}) => {
@@ -566,6 +587,104 @@ export const api = {
     formData.append('file', file)
     return requestForm('/struktur-kurikulum/import', formData)
   },
+
+  // Capaian Pembelajaran
+  listCapaianPembelajaran: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/capaian-pembelajaran${query ? `?${query}` : ''}`)
+  },
+  getCapaianPembelajaran: (id) => request(`/capaian-pembelajaran/${id}`),
+  createCapaianPembelajaran: (data) => request('/capaian-pembelajaran', { method: 'POST', body: JSON.stringify(data) }),
+  updateCapaianPembelajaran: (id, data) => request(`/capaian-pembelajaran/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteCapaianPembelajaran: (id) => request(`/capaian-pembelajaran/${id}`, { method: 'DELETE' }),
+  duplikasiCapaianPembelajaran: (id, tahunAjaranId) =>
+    request(`/capaian-pembelajaran/${id}/duplikasi`, { method: 'POST', body: JSON.stringify({ tahun_ajaran_id: tahunAjaranId }) }),
+  exportCapaianPembelajaran: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return downloadFile(`/capaian-pembelajaran/export${query ? `?${query}` : ''}`, 'capaian-pembelajaran.xlsx')
+  },
+  downloadCapaianPembelajaranTemplate: () =>
+    downloadFile('/capaian-pembelajaran/import-template', 'template-import-capaian-pembelajaran.xlsx'),
+  importCapaianPembelajaran: (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return requestForm('/capaian-pembelajaran/import', formData)
+  },
+
+  // Tujuan Pembelajaran
+  listTujuanPembelajaran: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/tujuan-pembelajaran${query ? `?${query}` : ''}`)
+  },
+  getTujuanPembelajaran: (id) => request(`/tujuan-pembelajaran/${id}`),
+  createTujuanPembelajaran: (data) => request('/tujuan-pembelajaran', { method: 'POST', body: JSON.stringify(data) }),
+  updateTujuanPembelajaran: (id, data) => request(`/tujuan-pembelajaran/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteTujuanPembelajaran: (id) => request(`/tujuan-pembelajaran/${id}`, { method: 'DELETE' }),
+  updateProgresTujuanPembelajaran: (id, progres) =>
+    request(`/tujuan-pembelajaran/${id}/progres`, { method: 'POST', body: JSON.stringify({ progres }) }),
+  duplikasiTujuanPembelajaran: (id, data) =>
+    request(`/tujuan-pembelajaran/${id}/duplikasi`, { method: 'POST', body: JSON.stringify(data) }),
+  exportTujuanPembelajaran: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return downloadFile(`/tujuan-pembelajaran/export${query ? `?${query}` : ''}`, 'tujuan-pembelajaran.xlsx')
+  },
+  downloadTujuanPembelajaranTemplate: () =>
+    downloadFile('/tujuan-pembelajaran/import-template', 'template-import-tujuan-pembelajaran.xlsx'),
+  importTujuanPembelajaran: (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return requestForm('/tujuan-pembelajaran/import', formData)
+  },
+
+  // Indikator kompetensi/ketercapaian — digabung di bawah satu TP, bukan menu tersendiri
+  listIndikatorTp: (tpId) => request(`/tujuan-pembelajaran/${tpId}/indikator`),
+  createIndikatorTp: (tpId, data) =>
+    request(`/tujuan-pembelajaran/${tpId}/indikator`, { method: 'POST', body: JSON.stringify(data) }),
+  updateIndikatorTp: (id, data) =>
+    request(`/tujuan-pembelajaran/indikator/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteIndikatorTp: (id) => request(`/tujuan-pembelajaran/indikator/${id}`, { method: 'DELETE' }),
+  reorderIndikatorTp: (tpId, urutan) =>
+    request(`/tujuan-pembelajaran/${tpId}/indikator/reorder`, { method: 'POST', body: JSON.stringify({ urutan }) }),
+
+  // Program Tahunan
+  listProgramTahunan: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/program-tahunan${query ? `?${query}` : ''}`)
+  },
+  getProgramTahunan: (id) => request(`/program-tahunan/${id}`),
+  createProgramTahunan: (data) => request('/program-tahunan', { method: 'POST', body: JSON.stringify(data) }),
+  updateProgramTahunan: (id, data) => request(`/program-tahunan/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteProgramTahunan: (id) => request(`/program-tahunan/${id}`, { method: 'DELETE' }),
+  updateStatusDokumenProgramTahunan: (id, data) =>
+    request(`/program-tahunan/${id}/status-dokumen`, { method: 'POST', body: JSON.stringify(data) }),
+  exportProgramTahunan: (id) => downloadFile(`/program-tahunan/${id}/export`, 'program-tahunan.xlsx'),
+  getOpsiProgramTahunan: (params = {}) => request(`/program-tahunan/opsi?${new URLSearchParams(params).toString()}`),
+
+  // Program Semester
+  listProgramSemester: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/program-semester${query ? `?${query}` : ''}`)
+  },
+  getProgramSemester: (id) => request(`/program-semester/${id}`),
+  createProgramSemester: (data) => request('/program-semester', { method: 'POST', body: JSON.stringify(data) }),
+  updateProgramSemester: (id, data) => request(`/program-semester/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteProgramSemester: (id) => request(`/program-semester/${id}`, { method: 'DELETE' }),
+  updateStatusDokumenProgramSemester: (id, status) =>
+    request(`/program-semester/${id}/status-dokumen`, { method: 'POST', body: JSON.stringify({ status_dokumen: status }) }),
+  exportProgramSemester: (id) => downloadFile(`/program-semester/${id}/export`, 'program-semester.xlsx'),
+  getOpsiProgramSemester: (params = {}) => request(`/program-semester/opsi?${new URLSearchParams(params).toString()}`),
+
+  // KKM / KKTP
+  listKkmKktp: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/kkm-kktp${query ? `?${query}` : ''}`)
+  },
+  getKkmKktp: (id) => request(`/kkm-kktp/${id}`),
+  createKkmKktp: (data) => request('/kkm-kktp', { method: 'POST', body: JSON.stringify(data) }),
+  updateKkmKktp: (id, data) => request(`/kkm-kktp/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteKkmKktp: (id) => request(`/kkm-kktp/${id}`, { method: 'DELETE' }),
+  updateStatusKkmKktp: (id, status) => request(`/kkm-kktp/${id}/status`, { method: 'POST', body: JSON.stringify({ status }) }),
+  getOpsiTautanKkmKktp: (params) => request(`/kkm-kktp/opsi-tautan?${new URLSearchParams(params).toString()}`),
 
   listJadwal: (params = {}) => {
     const query = new URLSearchParams({ include: 'kelas,mataPelajaran,guru', ...params }).toString()
@@ -663,6 +782,10 @@ export const api = {
   getAnakWaliKelas: (siswaId) => request(`/me/anak/${siswaId}/wali-kelas`),
   getAnakVirtualAccount: (siswaId) => request(`/me/anak/${siswaId}/virtual-account`),
   getAnakQris: (siswaId, tagihanId) => request(`/me/anak/${siswaId}/tagihan/${tagihanId}/qris`),
+  getAnakSaldo: (siswaId) => request(`/me/anak/${siswaId}/saldo`),
+  isiSaldoAnak: (siswaId, data) =>
+    request(`/me/anak/${siswaId}/saldo/isi`, { method: 'POST', body: JSON.stringify(data) }),
+  getAnakTugas: (siswaId) => request(`/me/anak/${siswaId}/tugas`),
 
   // Konfirmasi pembayaran manual (orang tua unggah bukti transfer)
   getMyKonfirmasiPembayaran: () => request('/me/konfirmasi-pembayaran'),
@@ -794,6 +917,53 @@ export const api = {
     }),
 
   deleteKelas: (id) => request(`/kelas/${id}`, { method: 'DELETE' }),
+  getKelas: (id) => request(`/kelas/${id}`),
+  getOpsiKelas: () => request('/kelas/opsi'),
+  updateStatusKelas: (id, status) =>
+    request(`/kelas/${id}/status`, { method: 'POST', body: JSON.stringify({ status }) }),
+  duplikasiKelas: (id, data) =>
+    request(`/kelas/${id}/duplikasi`, { method: 'POST', body: JSON.stringify(data) }),
+
+  // Rombongan Belajar (keanggotaan siswa pada kelas)
+  listSiswaTersediaRombel: (search = '') => request(`/rombel/siswa-tersedia?search=${encodeURIComponent(search)}`),
+  tambahSiswaRombel: (id, siswaIds) =>
+    request(`/rombel/${id}/siswa`, { method: 'POST', body: JSON.stringify({ siswa_ids: siswaIds }) }),
+  keluarkanSiswaRombel: (id, siswaIds) =>
+    request(`/rombel/${id}/keluarkan`, { method: 'POST', body: JSON.stringify({ siswa_ids: siswaIds }) }),
+  pindahSiswaRombel: (id, siswaIds, tujuanKelasId) =>
+    request(`/rombel/${id}/pindah`, {
+      method: 'POST',
+      body: JSON.stringify({ siswa_ids: siswaIds, tujuan_kelas_id: tujuanKelasId }),
+    }),
+  exportSiswaRombel: (id, nama = 'rombel') => downloadFile(`/rombel/${id}/export`, `siswa-${nama}.xlsx`),
+  downloadTemplateSiswaRombel: () => downloadFile('/rombel/import-template', 'template-import-siswa-rombel.xlsx'),
+  importSiswaRombel: (id, file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return requestForm(`/rombel/${id}/import`, formData)
+  },
+
+  // Pembagian Mata Pelajaran
+  listPembagianMapel: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/pembagian-mapel${query ? `?${query}` : ''}`)
+  },
+  getOpsiPembagianMapel: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/pembagian-mapel/opsi${query ? `?${query}` : ''}`)
+  },
+  createPembagianMapel: (data) => request('/pembagian-mapel', { method: 'POST', body: JSON.stringify(data) }),
+  updatePembagianMapel: (id, data) => request(`/pembagian-mapel/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deletePembagianMapel: (id) => request(`/pembagian-mapel/${id}`, { method: 'DELETE' }),
+  updateStatusPembagianMapel: (ids, status) =>
+    request('/pembagian-mapel/status', { method: 'POST', body: JSON.stringify({ ids, status }) }),
+  duplikasiPembagianMapel: (data) => request('/pembagian-mapel/duplikasi', { method: 'POST', body: JSON.stringify(data) }),
+  getBebanPembagianMapel: (params) => request(`/pembagian-mapel/beban?${new URLSearchParams(params).toString()}`),
+  getMonitoringPembagianMapel: (params) => request(`/pembagian-mapel/monitoring?${new URLSearchParams(params).toString()}`),
+  getRiwayatPembagianMapel: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/pembagian-mapel/riwayat${query ? `?${query}` : ''}`)
+  },
 
   listSurat: (params = {}) => {
     const query = new URLSearchParams(params).toString()

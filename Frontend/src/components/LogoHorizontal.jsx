@@ -21,7 +21,7 @@ export default function LogoHorizontal({
       <div className="min-w-0">
         <LogoWordmark size={textClassName} className={`${textColorClassName} truncate`} />
         {subtitle && (
-          <p className={`text-[11px] leading-tight truncate ${textColorClassName} opacity-60`}>{subtitle}</p>
+          <p className={`text-[11px] leading-snug mt-1 ${textColorClassName} opacity-60`}>{subtitle}</p>
         )}
       </div>
     </div>
