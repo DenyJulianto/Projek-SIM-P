@@ -7,12 +7,17 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\JadwalPelajaran;
 use App\Models\Prestasi;
+use App\Models\SaldoSiswa;
+use App\Models\SaldoTransaksi;
 use App\Models\Siswa;
 use App\Models\Tagihan;
+use App\Models\Tugas;
+use App\Models\TugasJawaban;
 use App\Services\PembayaranOnlineService;
 use App\Services\QrisService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -37,7 +42,13 @@ class ParentSelfController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $anak = $request->user()->anak()->with('kelas.waliKelas:id,nama,no_telepon')->get();
+        $anak = $request->user()->anak()->with(['kelas.waliKelas:id,nama,no_telepon', 'user:id,avatar'])->get();
+
+        $anak->each(function (Siswa $siswa) {
+            if ($siswa->user) {
+                $siswa->user->setAttribute('avatar_url', $siswa->user->avatar ? "/avatar/{$siswa->user->avatar}" : null);
+            }
+        });
 
         return response()->json($anak);
     }
@@ -176,5 +187,88 @@ class ParentSelfController extends Controller
             'merchant_nama' => $config['merchant_nama'] ?? null,
             'merchant_kota' => $config['merchant_kota'] ?? null,
         ]);
+    }
+
+    /**
+     * Saldo uang jajan digital anak beserta riwayat transaksi terbaru.
+     * Ini terpisah dari tagihan sekolah (SPP dkk) — murni saldo pribadi
+     * anak, mis. untuk kantin, sehingga tidak melalui alur verifikasi
+     * Bendahara seperti konfirmasi pembayaran tagihan.
+     */
+    public function saldo(Request $request, Siswa $siswa): JsonResponse
+    {
+        $this->authorizeAnak($request, $siswa);
+
+        return response()->json([
+            'saldo' => $siswa->saldo?->saldo ?? 0,
+            'riwayat' => $siswa->saldoTransaksi()->latest()->limit(20)->get(),
+        ]);
+    }
+
+    /**
+     * Orang tua mengisi saldo anak. Berbeda dari pembayaran tagihan,
+     * saldo langsung bertambah tanpa menunggu verifikasi siapa pun —
+     * ini bukan transaksi resmi ke rekening sekolah, jadi tidak perlu
+     * bukti transfer atau persetujuan Bendahara.
+     */
+    public function isiSaldo(Request $request, Siswa $siswa): JsonResponse
+    {
+        $this->authorizeAnak($request, $siswa);
+
+        $data = $request->validate([
+            'jumlah' => ['required', 'numeric', 'min:10000', 'max:5000000'],
+            'keterangan' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $transaksi = DB::transaction(function () use ($siswa, $data, $request) {
+            $saldoSiswa = SaldoSiswa::firstOrCreate(['siswa_id' => $siswa->id], ['saldo' => 0]);
+            $saldoBaru = (float) $saldoSiswa->saldo + (float) $data['jumlah'];
+            $saldoSiswa->update(['saldo' => $saldoBaru]);
+
+            return SaldoTransaksi::create([
+                'siswa_id' => $siswa->id,
+                'diisi_oleh' => $request->user()->id,
+                'jenis' => 'masuk',
+                'jumlah' => $data['jumlah'],
+                'saldo_setelah' => $saldoBaru,
+                'keterangan' => $data['keterangan'] ?? 'Isi saldo oleh orang tua',
+            ]);
+        });
+
+        activity()
+            ->causedBy($request->user())
+            ->log("Mengisi saldo siswa \"{$siswa->nama}\" sebesar Rp " . number_format((float) $data['jumlah'], 0, ',', '.') . '.');
+
+        return response()->json([
+            'saldo' => $transaksi->saldo_setelah,
+            'transaksi' => $transaksi,
+        ], 201);
+    }
+
+    /**
+     * Daftar tugas kelas anak beserta status pengumpulan & nilai anak
+     * sendiri (jawaban_saya) — read-only, orang tua tidak bisa mengumpulkan
+     * jawaban atas nama anaknya, hanya memantau.
+     */
+    public function tugas(Request $request, Siswa $siswa): JsonResponse
+    {
+        $this->authorizeAnak($request, $siswa);
+
+        $tugasList = Tugas::where('kelas_id', $siswa->kelas_id)
+            ->with(['mataPelajaran:id,nama_mapel', 'guru:id,nama'])
+            ->orderByDesc('deadline')
+            ->get();
+
+        $jawabanMap = TugasJawaban::where('siswa_id', $siswa->id)
+            ->whereIn('tugas_id', $tugasList->pluck('id'))
+            ->get()
+            ->keyBy('tugas_id');
+
+        $result = $tugasList->map(function (Tugas $t) use ($jawabanMap) {
+            $t->jawaban_saya = $jawabanMap->get($t->id);
+            return $t;
+        });
+
+        return response()->json($result);
     }
 }

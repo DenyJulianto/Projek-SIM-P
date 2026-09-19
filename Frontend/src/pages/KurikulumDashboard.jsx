@@ -1,14 +1,21 @@
 import { useEffect, useState } from 'react'
+import CapaianPembelajaranManagement from './CapaianPembelajaranManagement'
 import ComingSoon from '../components/ComingSoon'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import { useAuth } from '../lib/AuthContext'
 import { api } from '../lib/api'
 import JamPelajaranManagement from './JamPelajaranManagement'
 import KelasManagement from './KelasManagement'
+import PembagianMapelManagement from './PembagianMapelManagement'
+import RombelManagement from './RombelManagement'
 import MataPelajaranManagement from './MataPelajaranManagement'
 import MyProfile from './MyProfile'
 import ScheduleManagement from './ScheduleManagement'
 import StrukturKurikulumManagement from './StrukturKurikulumManagement'
+import KkmKktpManagement from './KkmKktpManagement'
+import ProgramSemesterManagement from './ProgramSemesterManagement'
+import ProgramTahunanManagement from './ProgramTahunanManagement'
+import TujuanPembelajaranManagement from './TujuanPembelajaranManagement'
 import LogoHorizontal from '../components/LogoHorizontal'
 
 const MENU_GROUPS = [
@@ -20,7 +27,6 @@ const MENU_GROUPS = [
       { key: 'mata-pelajaran', label: 'Mata Pelajaran', icon: BookIcon },
       { key: 'capaian-pembelajaran', label: 'Capaian Pembelajaran', icon: TargetIcon },
       { key: 'tujuan-pembelajaran', label: 'Tujuan Pembelajaran', icon: TargetIcon },
-      { key: 'kompetensi', label: 'Kompetensi', icon: ShieldCheckIcon },
       { key: 'kkm', label: 'KKM / KKTP', icon: GaugeIcon },
       { key: 'prosem', label: 'Program Semester', icon: DocIcon },
       { key: 'protah', label: 'Program Tahunan', icon: DocIcon },
@@ -59,14 +65,6 @@ const MENU_GROUPS = [
 ]
 
 const COMING_SOON_LABEL = {
-  'capaian-pembelajaran': ['Capaian Pembelajaran', 'Pengelolaan Capaian Pembelajaran (CP) per fase sedang disiapkan.'],
-  'tujuan-pembelajaran': ['Tujuan Pembelajaran', 'Pengelolaan Tujuan Pembelajaran (TP) turunan dari CP sedang disiapkan.'],
-  kompetensi: ['Kompetensi', 'Pemetaan kompetensi inti & dasar sedang disiapkan.'],
-  kkm: ['KKM / KKTP', 'Pengaturan Kriteria Ketuntasan Minimal / Ketercapaian Tujuan Pembelajaran sedang disiapkan.'],
-  prosem: ['Program Semester', 'Penyusunan program semester sedang disiapkan.'],
-  protah: ['Program Tahunan', 'Penyusunan program tahunan sedang disiapkan.'],
-  rombel: ['Rombongan Belajar', 'Pengelolaan rombel akan tersedia setelah modul kurikulum diperluas.'],
-  'pembagian-mapel': ['Pembagian Mata Pelajaran', 'Penugasan guru per mata pelajaran & kelas (di luar jadwal jam) sedang disiapkan.'],
   'hari-efektif': ['Hari Efektif', 'Pengaturan hari efektif & libur per tahun ajaran sedang disiapkan.'],
   'guru-pengganti': ['Guru Pengganti', 'Pencatatan penugasan guru pengganti sedang disiapkan.'],
   'perubahan-jadwal': ['Perubahan Jadwal', 'Riwayat & pengajuan perubahan jadwal sedang disiapkan.'],
@@ -79,7 +77,7 @@ const COMING_SOON_LABEL = {
 }
 
 export default function KurikulumDashboard() {
-  const { user, logout } = useAuth()
+  const { logout } = useAuth()
   const [view, setView] = useState('home')
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const [openSection, setOpenSection] = useState(null)
@@ -180,10 +178,17 @@ export default function KurikulumDashboard() {
       </aside>
 
       <main className="flex-1 p-6 sm:p-8 overflow-y-auto">
-        {view === 'home' && <KurikulumHome user={user} onNavigate={setView} />}
+        {view === 'home' && <KurikulumHome onNavigate={setView} />}
         {view === 'struktur-kurikulum' && <StrukturKurikulumManagement onBack={() => setView('home')} />}
+        {view === 'capaian-pembelajaran' && <CapaianPembelajaranManagement onBack={() => setView('home')} />}
+        {view === 'tujuan-pembelajaran' && <TujuanPembelajaranManagement onBack={() => setView('home')} />}
+        {view === 'kkm' && <KkmKktpManagement onBack={() => setView('home')} />}
+        {view === 'prosem' && <ProgramSemesterManagement onBack={() => setView('home')} />}
+        {view === 'protah' && <ProgramTahunanManagement onBack={() => setView('home')} />}
         {view === 'mata-pelajaran' && <MataPelajaranManagement onBack={() => setView('home')} />}
         {view === 'kelas' && <KelasManagement onBack={() => setView('home')} />}
+        {view === 'rombel' && <RombelManagement onBack={() => setView('home')} />}
+        {view === 'pembagian-mapel' && <PembagianMapelManagement onBack={() => setView('home')} />}
         {view === 'jadwal-pelajaran' && <ScheduleManagement onBack={() => setView('home')} />}
         {view === 'jam-pelajaran' && <JamPelajaranManagement onBack={() => setView('home')} />}
         {view === 'profile' && <MyProfile onBack={() => setView('home')} />}
@@ -204,61 +209,350 @@ export default function KurikulumDashboard() {
   )
 }
 
-function KurikulumHome({ user, onNavigate }) {
-  const [stats, setStats] = useState({ kelas: null, mapel: null })
+function KurikulumHome({ onNavigate }) {
+  const [data, setData] = useState(null)
+  const [tahunAjaranId, setTahunAjaranId] = useState('')
+  const [semester, setSemester] = useState('')
+  const [pengumuman, setPengumuman] = useState(null)
 
   useEffect(() => {
-    api.countKelas().then((r) => setStats((s) => ({ ...s, kelas: r.total }))).catch(() => {})
-    api.listMataPelajaran().then((r) => setStats((s) => ({ ...s, mapel: r.total }))).catch(() => {})
+    const params = {}
+    if (tahunAjaranId) params.tahun_ajaran_id = tahunAjaranId
+    if (semester) params.semester = semester
+    api
+      .getKurikulumDashboard(params)
+      .then((d) => {
+        setData(d)
+        setTahunAjaranId((prev) => prev || (d.tahun_ajaran_id ? String(d.tahun_ajaran_id) : ''))
+      })
+      .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tahunAjaranId, semester])
+
+  useEffect(() => {
+    api.listPengumumanAuth({ per_page: 3 }).then((r) => setPengumuman(r.data ?? r)).catch(() => setPengumuman([]))
   }, [])
+
+  if (!data) {
+    return <p className="text-sm text-navy/40 text-center py-16">Memuat dashboard kurikulum...</p>
+  }
+
+  const struktur = data.struktur_kurikulum
+  const cp = data.capaian_pembelajaran
+  const tp = data.tujuan_pembelajaran
+
+  const dokumenStatus = [
+    {
+      key: 'struktur-kurikulum',
+      label: 'Struktur Kurikulum',
+      tone: struktur.aktif > 0 ? 'ok' : 'warn',
+      text: struktur.aktif > 0 ? 'Lengkap' : struktur.total > 0 ? 'Belum ada yang aktif' : 'Belum dibuat',
+    },
+    {
+      key: 'capaian-pembelajaran',
+      label: 'Capaian Pembelajaran',
+      tone: cp.aktif > 0 ? 'ok' : 'warn',
+      text: cp.aktif > 0 ? 'Lengkap' : cp.total > 0 ? `${cp.draft} draft belum aktif` : 'Belum dibuat',
+    },
+    {
+      key: 'tujuan-pembelajaran',
+      label: 'Tujuan Pembelajaran',
+      tone: tp.total === 0 ? 'warn' : tp.belum_diajarkan > 0 ? 'warn' : 'ok',
+      text: tp.total === 0 ? 'Belum dibuat' : tp.belum_diajarkan > 0 ? `${tp.belum_diajarkan} belum diajarkan` : 'Lengkap',
+    },
+    {
+      key: 'kkm',
+      label: 'KKM / KKTP',
+      tone: data.kkm_kktp.aktif > 0 ? 'ok' : 'warn',
+      text: data.kkm_kktp.aktif > 0 ? 'Lengkap' : data.kkm_kktp.total > 0 ? `${data.kkm_kktp.total} belum aktif` : 'Belum dibuat',
+    },
+    {
+      key: 'prosem',
+      label: 'Program Semester',
+      tone: data.program_semester.total > 0 ? 'ok' : 'warn',
+      text: data.program_semester.total > 0 ? `${data.program_semester.total} program disusun` : 'Belum dibuat',
+    },
+    {
+      key: 'protah',
+      label: 'Program Tahunan',
+      tone: data.program_tahunan.total > 0 ? 'ok' : 'warn',
+      text: data.program_tahunan.total > 0 ? `${data.program_tahunan.total} program disusun` : 'Belum dibuat',
+    },
+    ...data.modul_belum_tersedia.map((m) => ({ key: m.key, label: m.label, tone: 'na', text: 'Belum Tersedia' })),
+  ]
 
   return (
     <div>
-      <div className="bg-gradient-to-r from-navy via-navy to-navy-light rounded-2xl p-6 mb-6">
-        <h1 className="text-xl font-extrabold text-white mb-1.5">Selamat datang, {user?.name}!</h1>
-        <p className="text-white/60 text-sm max-w-md">
-          Kurikulum — kelola struktur kurikulum, kelas, jadwal, dan nilai dari sini.
-        </p>
+      <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
+        <div>
+          <h1 className="text-xl font-extrabold text-navy mb-1">Dashboard Kurikulum</h1>
+          <p className="text-sm text-navy/50">Ringkasan data dan progres pengelolaan kurikulum sekolah.</p>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <select value={tahunAjaranId} onChange={(e) => setTahunAjaranId(e.target.value)} className="border border-navy/15 rounded-lg px-3 py-2 text-sm bg-white">
+            {data.tahun_ajaran_options.length === 0 && <option value="">Tahun Ajaran</option>}
+            {data.tahun_ajaran_options.map((ta) => (
+              <option key={ta.id} value={ta.id}>
+                {ta.nama}
+              </option>
+            ))}
+          </select>
+          <select value={semester} onChange={(e) => setSemester(e.target.value)} className="border border-navy/15 rounded-lg px-3 py-2 text-sm bg-white">
+            <option value="">Semua Semester</option>
+            <option value="ganjil">Ganjil</option>
+            <option value="genap">Genap</option>
+          </select>
+          {data.jenjang && (
+            <span className="border border-navy/15 rounded-lg px-3 py-2 text-sm bg-white text-navy/70 font-medium">{data.jenjang}</span>
+          )}
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
-        <StatCard label="Total Kelas" value={stats.kelas} icon={ClassIcon} onClick={() => onNavigate('kelas')} />
-        <StatCard label="Mata Pelajaran" value={stats.mapel} icon={BookIcon} onClick={() => onNavigate('mata-pelajaran')} />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <KpiCard
+          label="Mata Pelajaran"
+          value={String(data.total_mata_pelajaran)}
+          description="Terdata dalam kurikulum"
+          icon={BookIcon}
+          tone="navy"
+          onClick={() => onNavigate('mata-pelajaran')}
+        />
+        <KpiCard
+          label="Struktur Kurikulum"
+          value={struktur.total > 0 ? `${struktur.aktif}/${struktur.total}` : '-'}
+          description="Struktur aktif dari total"
+          icon={LayersIcon}
+          tone="blue"
+          onClick={() => onNavigate('struktur-kurikulum')}
+        />
+        <KpiCard
+          label="Capaian Pembelajaran"
+          value={cp.total > 0 ? `${cp.aktif}/${cp.total}` : '-'}
+          description="CP aktif dari total"
+          icon={TargetIcon}
+          tone="purple"
+          onClick={() => onNavigate('capaian-pembelajaran')}
+        />
+        <KpiCard
+          label="Tujuan Pembelajaran"
+          value={tp.total > 0 ? `${tp.persen_selesai}%` : '-'}
+          description="TP selesai diajarkan"
+          icon={CheckIcon}
+          tone="gold"
+          onClick={() => onNavigate('tujuan-pembelajaran')}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div className="bg-white rounded-2xl border border-navy/10 p-5">
+          <h2 className="text-sm font-bold text-navy">Progres Tujuan Pembelajaran</h2>
+          <p className="text-xs text-navy/40 mb-4">Persentase TP yang sudah selesai diajarkan.</p>
+          {tp.total === 0 ? (
+            <p className="text-sm text-navy/40 text-center py-14">Belum ada Tujuan Pembelajaran.</p>
+          ) : (
+            <div className="flex flex-col sm:flex-row items-center gap-6">
+              <ProgressDonut persen={tp.persen_selesai} selesai={tp.selesai} berlangsung={tp.berlangsung} belumDiajarkan={tp.belum_diajarkan} />
+              <div className="space-y-2 w-full">
+                <LegendRow color="var(--color-navy-light)" label="Selesai" value={tp.selesai} />
+                <LegendRow color="var(--color-gold)" label="Berlangsung" value={tp.berlangsung} />
+                <LegendRow color="#CBD5E1" label="Belum Diajarkan" value={tp.belum_diajarkan} />
+                <div className="border-t border-navy/10 mt-2 pt-2 flex items-center justify-between text-xs">
+                  <span className="text-navy/50">Total Tujuan Pembelajaran</span>
+                  <span className="font-bold text-navy">{tp.total}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white rounded-2xl border border-navy/10 p-5">
+          <h2 className="text-sm font-bold text-navy">Distribusi Mata Pelajaran per Kelompok</h2>
+          <p className="text-xs text-navy/40 mb-4">Jumlah mata pelajaran berdasarkan kelompoknya.</p>
+          {data.distribusi_kelompok_mapel.length === 0 ? (
+            <p className="text-sm text-navy/40 text-center py-14">Belum ada mata pelajaran.</p>
+          ) : (
+            <KelompokBarChart data={data.distribusi_kelompok_mapel} />
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div className="bg-white rounded-2xl border border-navy/10 p-5">
+          <h2 className="text-sm font-bold text-navy mb-3">Dokumen Terbaru</h2>
+          {data.dokumen_terbaru.length === 0 ? (
+            <p className="text-sm text-navy/40 text-center py-10">Belum ada dokumen kurikulum.</p>
+          ) : (
+            <div className="space-y-2">
+              {data.dokumen_terbaru.map((d, i) => (
+                <div key={i} className="flex items-center justify-between gap-3 text-sm border-b border-navy/5 last:border-0 pb-2 last:pb-0">
+                  <div className="min-w-0">
+                    <p className="font-medium text-navy truncate">{d.label}</p>
+                    <p className="text-xs text-navy/40">{d.jenis}</p>
+                  </div>
+                  <span className={`text-[11px] font-semibold px-2 py-1 rounded-full shrink-0 ${STATUS_TONE_MAP[d.status] || 'bg-navy/10 text-navy/50'}`}>
+                    {STATUS_LABEL_MAP[d.status] || d.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white rounded-2xl border border-navy/10 p-5">
+          <h2 className="text-sm font-bold text-navy mb-3">Status Dokumen Kurikulum</h2>
+          <div className="space-y-1">
+            {dokumenStatus.map((d) => (
+              <button
+                key={d.key}
+                onClick={() => onNavigate(d.key)}
+                className="w-full flex items-center justify-between gap-3 text-sm py-2 border-b border-navy/5 last:border-0 hover:bg-navy/5 rounded-lg px-2 -mx-2 transition-colors"
+              >
+                <span className="text-navy/70">{d.label}</span>
+                <span className="flex items-center gap-2 shrink-0">
+                  <span
+                    className={`text-[11px] font-semibold px-2 py-1 rounded-full ${
+                      d.tone === 'ok' ? 'bg-emerald-100 text-emerald-700' : d.tone === 'warn' ? 'bg-amber-100 text-amber-700' : 'bg-navy/10 text-navy/40'
+                    }`}
+                  >
+                    {d.text}
+                  </span>
+                  <ChevronIcon className="h-3.5 w-3.5 text-navy/30 -rotate-90" />
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl border border-navy/10 p-5">
-        <h2 className="text-sm font-bold text-navy mb-3">Pintasan Cepat</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <ShortcutTile label="Jadwal Pelajaran" icon={ScheduleIcon} onClick={() => onNavigate('jadwal-pelajaran')} />
-          <ShortcutTile label="Jam Pelajaran" icon={ClockIcon} onClick={() => onNavigate('jam-pelajaran')} />
-          <ShortcutTile label="Mata Pelajaran" icon={BookIcon} onClick={() => onNavigate('mata-pelajaran')} />
-          <ShortcutTile label="Kelas" icon={ClassIcon} onClick={() => onNavigate('kelas')} />
-        </div>
+        <h2 className="text-sm font-bold text-navy mb-3">Pengumuman</h2>
+        {pengumuman === null ? (
+          <p className="text-sm text-navy/40 text-center py-6">Memuat...</p>
+        ) : pengumuman.length === 0 ? (
+          <p className="text-sm text-navy/40 text-center py-6">Belum ada pengumuman.</p>
+        ) : (
+          <div className="space-y-3">
+            {pengumuman.map((p) => (
+              <div key={p.id} className="flex items-start gap-3">
+                <div className="h-8 w-8 rounded-full bg-navy-light/15 flex items-center justify-center shrink-0 mt-0.5">
+                  <ReportIcon className="h-4 w-4 text-navy" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-semibold text-navy">{p.judul}</p>
+                    <span className="text-[11px] text-navy/40">{p.tanggal_publish?.slice(0, 10)}</span>
+                  </div>
+                  <p className="text-xs text-navy/50 truncate">{p.konten}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
 }
 
-function StatCard({ label, value, icon: Icon, onClick }) {
+const STATUS_LABEL_MAP = { aktif: 'Aktif', draft: 'Draft', nonaktif: 'Nonaktif' }
+const STATUS_TONE_MAP = {
+  aktif: 'bg-emerald-100 text-emerald-700',
+  draft: 'bg-amber-100 text-amber-700',
+  nonaktif: 'bg-navy/10 text-navy/50',
+}
+
+const KPI_TONE = {
+  navy: 'bg-navy',
+  blue: 'bg-sky-500',
+  purple: 'bg-violet-500',
+  gold: 'bg-gold',
+}
+
+function KpiCard({ label, value, description, icon: Icon, tone, onClick }) {
   return (
-    <button onClick={onClick} className="bg-white rounded-2xl border border-navy/10 p-5 text-left hover:border-navy/20 transition-colors">
-      <div className="h-11 w-11 rounded-xl bg-navy-light/15 flex items-center justify-center mb-3">
-        <Icon className="h-5.5 w-5.5 text-navy" />
+    <button onClick={onClick} className="bg-white rounded-2xl border border-navy/10 p-5 text-left hover:border-navy-light/40 hover:shadow-sm transition-all">
+      <div className="flex items-center gap-2.5 mb-3">
+        <div className={`h-9 w-9 rounded-full flex items-center justify-center shrink-0 ${KPI_TONE[tone] || 'bg-navy'}`}>
+          <Icon className="h-4.5 w-4.5 text-white" />
+        </div>
+        <p className="text-[11px] font-bold text-navy/50 uppercase tracking-wide leading-snug">{label}</p>
       </div>
-      <p className="text-2xl font-extrabold text-navy leading-none">{value ?? '-'}</p>
-      <p className="text-xs text-navy/50 mt-1.5 uppercase tracking-wide">{label}</p>
+      <p className="text-lg font-extrabold text-navy leading-none mb-1.5">{value}</p>
+      <p className="text-[11px] text-navy/40">{description}</p>
     </button>
   )
 }
 
-function ShortcutTile({ label, icon: Icon, onClick }) {
+function LegendRow({ color, label, value }) {
   return (
-    <button onClick={onClick} className="bg-navy/5 hover:bg-navy/10 rounded-xl p-3.5 text-left transition-colors">
-      <Icon className="h-5 w-5 text-navy mb-2" />
-      <p className="text-xs font-semibold text-navy leading-snug">{label}</p>
-    </button>
+    <div className="flex items-center justify-between text-sm">
+      <span className="flex items-center gap-2 text-navy/70">
+        <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+        {label}
+      </span>
+      <span className="font-bold text-navy">{value}</span>
+    </div>
   )
 }
+
+function ProgressDonut({ persen, selesai, berlangsung, belumDiajarkan }) {
+  const total = selesai + berlangsung + belumDiajarkan || 1
+  const raw = [
+    { key: 'selesai', value: selesai, color: 'var(--color-navy-light)' },
+    { key: 'berlangsung', value: berlangsung, color: 'var(--color-gold)' },
+    { key: 'belum', value: belumDiajarkan, color: '#CBD5E1' },
+  ]
+
+  const segments = raw.reduce((acc, d) => {
+    const pct = (d.value / total) * 100
+    const prevOffset = acc.length > 0 ? acc[acc.length - 1].offset + acc[acc.length - 1].pct : 0
+    acc.push({ ...d, pct, offset: prevOffset })
+    return acc
+  }, [])
+
+  return (
+    <div className="relative h-40 w-40 shrink-0 mx-auto">
+      <svg viewBox="0 0 36 36" className="h-full w-full -rotate-90">
+        <circle cx="18" cy="18" r="15.915" fill="none" stroke="#F1F5F9" strokeWidth="3.5" />
+        {segments
+          .filter((s) => s.pct > 0)
+          .map((s) => (
+            <circle
+              key={s.key}
+              cx="18"
+              cy="18"
+              r="15.915"
+              fill="none"
+              stroke={s.color}
+              strokeWidth="3.5"
+              strokeDasharray={`${s.pct} ${100 - s.pct}`}
+              strokeDashoffset={-s.offset}
+            />
+          ))}
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-2xl font-extrabold text-navy">{persen}%</span>
+        <span className="text-[11px] text-navy/40">Selesai</span>
+      </div>
+    </div>
+  )
+}
+
+function KelompokBarChart({ data }) {
+  const max = Math.max(...data.map((d) => d.jumlah), 1)
+
+  return (
+    <div className="flex items-end gap-3 h-44">
+      {data.map((d) => (
+        <div key={d.kelompok} className="flex-1 flex flex-col items-center justify-end h-full">
+          <span className="text-[11px] font-bold text-navy mb-1">{d.jumlah}</span>
+          <div className="w-full max-w-10 bg-navy-light rounded-t-md" style={{ height: `${Math.max((d.jumlah / max) * 100, 4)}%` }} />
+          <span className="text-[10px] text-navy/50 mt-1.5 text-center truncate w-full">{d.kelompok}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 
 
 function ChevronIcon(props) {
@@ -304,15 +598,6 @@ function TargetIcon(props) {
       <circle cx="12" cy="12" r="9" />
       <circle cx="12" cy="12" r="4.5" />
       <circle cx="12" cy="12" r="0.8" fill="currentColor" />
-    </svg>
-  )
-}
-
-function ShieldCheckIcon(props) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
-      <path d="m9 12 2 2 4-4" />
     </svg>
   )
 }

@@ -53,6 +53,10 @@ const MENU_GROUPS = [
   {
     section: 'Operasional Sekolah',
     items: [
+      { key: 'siswa', label: 'Data Siswa', icon: StudentIcon, permission: 'siswa.manage' },
+      { key: 'guru', label: 'Data Guru & Pegawai', icon: StaffIcon, permission: 'pegawai.manage' },
+      { key: 'kelas', label: 'Data Kelas', icon: ClassIcon, permission: 'kurikulum.manage' },
+      { key: 'absensi-guru', label: 'Monitoring Absensi Guru', icon: AttendanceIcon, permission: 'monitoring-guru.absensi-guru' },
       { key: 'inventaris', label: 'Sarana & Prasarana', icon: InventoryIcon, permission: 'sarpras.inventaris' },
       { key: 'persuratan', label: 'Surat & Kearsipan', icon: ArchiveIcon, permission: 'persuratan.manage' },
       { key: 'landing', label: 'Edit Landing Page', icon: SchoolIcon, permission: 'humas.informasi' },

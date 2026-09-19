@@ -63,7 +63,7 @@ export default function StrukturKurikulumManagement({ onBack }) {
   }, [filterTahun, filterStatus])
 
   useEffect(() => {
-    api.listTahunAjaran().then((r) => setTahunAjaranList(r.data ?? r)).catch(() => {})
+    api.listTahunAjaranKurikulum().then((r) => setTahunAjaranList(r.data ?? r)).catch(() => {})
     api.listMataPelajaran().then((r) => setMapelCatalog(r.data ?? r)).catch(() => {})
   }, [])
 

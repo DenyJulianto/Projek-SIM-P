@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AvatarController;
 use App\Http\Controllers\Api\BackupController;
 use App\Http\Controllers\Api\BkMonitoringController;
+use App\Http\Controllers\Api\CapaianPembelajaranController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\GuruController;
 use App\Http\Controllers\Api\GuruSelfController;
@@ -21,8 +22,13 @@ use App\Http\Controllers\Api\JamBelajarController;
 use App\Http\Controllers\Api\KasusController;
 use App\Http\Controllers\Api\KegiatanController;
 use App\Http\Controllers\Api\KelasController;
+use App\Http\Controllers\Api\PembagianMapelController;
+use App\Http\Controllers\Api\RombelController;
+use App\Http\Controllers\Api\KkmKktpController;
+use App\Http\Controllers\Api\KompetensiIndikatorController;
 use App\Http\Controllers\Api\KonfirmasiPembayaranController;
 use App\Http\Controllers\Api\KonselingController;
+use App\Http\Controllers\Api\KurikulumDashboardController;
 use App\Http\Controllers\Api\LaporanKeuanganController;
 use App\Http\Controllers\Api\MataPelajaranController;
 use App\Http\Controllers\Api\MateriController;
@@ -35,6 +41,8 @@ use App\Http\Controllers\Api\PengajuanAnggaranController;
 use App\Http\Controllers\Api\PengajuanKepegawaianController;
 use App\Http\Controllers\Api\PengumumanController;
 use App\Http\Controllers\Api\PrestasiController;
+use App\Http\Controllers\Api\ProgramSemesterController;
+use App\Http\Controllers\Api\ProgramTahunanController;
 use App\Http\Controllers\Api\PrincipalController;
 use App\Http\Controllers\Api\ProfilPublikController;
 use App\Http\Controllers\Api\RaporController;
@@ -53,6 +61,7 @@ use App\Http\Controllers\Api\SuratController;
 use App\Http\Controllers\Api\SystemSettingsController;
 use App\Http\Controllers\Api\TagihanController;
 use App\Http\Controllers\Api\TahunAjaranController;
+use App\Http\Controllers\Api\TujuanPembelajaranController;
 use App\Http\Controllers\Api\TugasController;
 use App\Http\Controllers\Api\UjianController;
 use App\Http\Controllers\Api\UserController;
@@ -91,11 +100,8 @@ Route::middleware([
     Route::get('materi-file/{path}', [MateriController::class, 'showFile'])->where('path', '.*');
     Route::get('tugas-file/{path}', [TugasController::class, 'showFile'])->where('path', '.*');
     Route::get('tugas-jawaban-file/{path}', [TugasController::class, 'showJawabanFile'])->where('path', '.*');
-<<<<<<< HEAD
     Route::get('prestasi-bukti-file/{path}', [PrestasiController::class, 'showBuktiFile'])->where('path', '.*');
-=======
     Route::get('bukti-pembayaran-file/{path}', [KonfirmasiPembayaranController::class, 'bukti'])->where('path', '.*');
->>>>>>> 639a5c7382dad255f33be6a534469c2ec2bbe17e
 
     // Landing page publik sekolah — tidak butuh login.
     Route::prefix('public')->group(function () {
@@ -144,6 +150,10 @@ Route::middleware([
         Route::get('/me/anak/{siswa}/virtual-account', [ParentSelfController::class, 'virtualAccount']);
         Route::get('/me/anak/{siswa}/tagihan/{tagihan}/qris', [ParentSelfController::class, 'qris']);
 
+        Route::get('/me/anak/{siswa}/saldo', [ParentSelfController::class, 'saldo']);
+        Route::post('/me/anak/{siswa}/saldo/isi', [ParentSelfController::class, 'isiSaldo']);
+        Route::get('/me/anak/{siswa}/tugas', [ParentSelfController::class, 'tugas']);
+
         Route::get('/me/guru', [GuruSelfController::class, 'profil']);
         Route::get('/me/guru/jadwal', [GuruSelfController::class, 'jadwal']);
         Route::get('/me/guru/kelas', [GuruSelfController::class, 'kelas']);
@@ -169,11 +179,48 @@ Route::middleware([
         Route::delete('/me/wali-kelas/{kelas}/pengumuman/{pengumuman}', [WaliKelasSelfController::class, 'destroyPengumumanKelas']);
         Route::get('/me/wali-kelas/{kelas}/komunikasi-ortu', [WaliKelasSelfController::class, 'komunikasiOrtu']);
 
-        Route::apiResource('kelas', KelasController::class)
+        Route::get('kurikulum/dashboard', [KurikulumDashboardController::class, 'summary'])
+            ->middleware('permission:kurikulum.manage');
+        Route::get('kurikulum/tahun-ajaran', [KurikulumDashboardController::class, 'tahunAjaran'])
             ->middleware('permission:kurikulum.manage');
 
-        Route::apiResource('mata-pelajaran', MataPelajaranController::class)
-            ->middleware('permission:kurikulum.manage');
+        Route::middleware('permission:kurikulum.manage')->group(function () {
+            Route::get('kelas/opsi', [KelasController::class, 'opsi']);
+            Route::post('kelas/{kela}/status', [KelasController::class, 'updateStatus']);
+            Route::post('kelas/{kela}/duplikasi', [KelasController::class, 'duplikasi']);
+            Route::apiResource('kelas', KelasController::class);
+
+            Route::get('rombel/siswa-tersedia', [RombelController::class, 'siswaTersedia']);
+            Route::get('rombel/import-template', [RombelController::class, 'importTemplate']);
+            Route::get('rombel/{kela}/export', [RombelController::class, 'export']);
+            Route::post('rombel/{kela}/import', [RombelController::class, 'import']);
+            Route::post('rombel/{kela}/siswa', [RombelController::class, 'tambah']);
+            Route::post('rombel/{kela}/keluarkan', [RombelController::class, 'keluarkan']);
+            Route::post('rombel/{kela}/pindah', [RombelController::class, 'pindah']);
+
+            Route::prefix('pembagian-mapel')->group(function () {
+                Route::get('opsi', [PembagianMapelController::class, 'opsi']);
+                Route::get('beban', [PembagianMapelController::class, 'beban']);
+                Route::get('monitoring', [PembagianMapelController::class, 'monitoring']);
+                Route::get('riwayat', [PembagianMapelController::class, 'riwayat']);
+                Route::post('duplikasi', [PembagianMapelController::class, 'duplikasi']);
+                Route::post('status', [PembagianMapelController::class, 'updateStatus']);
+                Route::get('/', [PembagianMapelController::class, 'index']);
+                Route::post('/', [PembagianMapelController::class, 'store']);
+                Route::get('{pembagianMapel}', [PembagianMapelController::class, 'show']);
+                Route::put('{pembagianMapel}', [PembagianMapelController::class, 'update']);
+                Route::delete('{pembagianMapel}', [PembagianMapelController::class, 'destroy']);
+            });
+        });
+
+        Route::middleware('permission:kurikulum.manage')->group(function () {
+            Route::get('mata-pelajaran/export', [MataPelajaranController::class, 'export']);
+            Route::get('mata-pelajaran/import-template', [MataPelajaranController::class, 'importTemplate']);
+            Route::post('mata-pelajaran/import', [MataPelajaranController::class, 'import']);
+            Route::post('mata-pelajaran/{mataPelajaran}/aktifkan', [MataPelajaranController::class, 'aktifkan']);
+            Route::post('mata-pelajaran/{mataPelajaran}/nonaktifkan', [MataPelajaranController::class, 'nonaktifkan']);
+            Route::apiResource('mata-pelajaran', MataPelajaranController::class);
+        });
 
         Route::middleware('permission:kurikulum.manage')->prefix('struktur-kurikulum')->group(function () {
             Route::get('export', [StrukturKurikulumController::class, 'export']);
@@ -187,6 +234,71 @@ Route::middleware([
             Route::post('{strukturKurikulum}/aktifkan', [StrukturKurikulumController::class, 'aktifkan']);
             Route::post('{strukturKurikulum}/nonaktifkan', [StrukturKurikulumController::class, 'nonaktifkan']);
             Route::post('{strukturKurikulum}/duplikasi', [StrukturKurikulumController::class, 'duplikasi']);
+        });
+
+        Route::middleware('permission:kurikulum.manage')->prefix('capaian-pembelajaran')->group(function () {
+            Route::get('export', [CapaianPembelajaranController::class, 'export']);
+            Route::get('import-template', [CapaianPembelajaranController::class, 'importTemplate']);
+            Route::post('import', [CapaianPembelajaranController::class, 'import']);
+            Route::get('/', [CapaianPembelajaranController::class, 'index']);
+            Route::post('/', [CapaianPembelajaranController::class, 'store']);
+            Route::get('{capaianPembelajaran}', [CapaianPembelajaranController::class, 'show']);
+            Route::put('{capaianPembelajaran}', [CapaianPembelajaranController::class, 'update']);
+            Route::delete('{capaianPembelajaran}', [CapaianPembelajaranController::class, 'destroy']);
+            Route::post('{capaianPembelajaran}/duplikasi', [CapaianPembelajaranController::class, 'duplikasi']);
+        });
+
+        Route::middleware('permission:kurikulum.manage')->prefix('tujuan-pembelajaran')->group(function () {
+            Route::get('export', [TujuanPembelajaranController::class, 'export']);
+            Route::get('import-template', [TujuanPembelajaranController::class, 'importTemplate']);
+            Route::post('import', [TujuanPembelajaranController::class, 'import']);
+            Route::get('/', [TujuanPembelajaranController::class, 'index']);
+            Route::post('/', [TujuanPembelajaranController::class, 'store']);
+            Route::get('{tujuanPembelajaran}', [TujuanPembelajaranController::class, 'show']);
+            Route::put('{tujuanPembelajaran}', [TujuanPembelajaranController::class, 'update']);
+            Route::delete('{tujuanPembelajaran}', [TujuanPembelajaranController::class, 'destroy']);
+            Route::post('{tujuanPembelajaran}/progres', [TujuanPembelajaranController::class, 'updateProgres']);
+            Route::post('{tujuanPembelajaran}/duplikasi', [TujuanPembelajaranController::class, 'duplikasi']);
+
+            // Indikator kompetensi/ketercapaian digabung di sini (bukan menu
+            // "Kompetensi" terpisah) karena hanya masuk akal dalam konteks TP induknya.
+            Route::get('{tujuanPembelajaran}/indikator', [KompetensiIndikatorController::class, 'index']);
+            Route::post('{tujuanPembelajaran}/indikator', [KompetensiIndikatorController::class, 'store']);
+            Route::post('{tujuanPembelajaran}/indikator/reorder', [KompetensiIndikatorController::class, 'reorder']);
+            Route::put('indikator/{indikator}', [KompetensiIndikatorController::class, 'update']);
+            Route::delete('indikator/{indikator}', [KompetensiIndikatorController::class, 'destroy']);
+        });
+
+        Route::middleware('permission:kurikulum.manage')->prefix('program-tahunan')->group(function () {
+            Route::get('opsi', [ProgramTahunanController::class, 'opsi']);
+            Route::get('{programTahunan}/export', [ProgramTahunanController::class, 'export']);
+            Route::post('{programTahunan}/status-dokumen', [ProgramTahunanController::class, 'updateStatusDokumen']);
+            Route::get('/', [ProgramTahunanController::class, 'index']);
+            Route::post('/', [ProgramTahunanController::class, 'store']);
+            Route::get('{programTahunan}', [ProgramTahunanController::class, 'show']);
+            Route::put('{programTahunan}', [ProgramTahunanController::class, 'update']);
+            Route::delete('{programTahunan}', [ProgramTahunanController::class, 'destroy']);
+        });
+
+        Route::middleware('permission:kurikulum.manage')->prefix('program-semester')->group(function () {
+            Route::get('opsi', [ProgramSemesterController::class, 'opsi']);
+            Route::get('{programSemester}/export', [ProgramSemesterController::class, 'export']);
+            Route::post('{programSemester}/status-dokumen', [ProgramSemesterController::class, 'updateStatusDokumen']);
+            Route::get('/', [ProgramSemesterController::class, 'index']);
+            Route::post('/', [ProgramSemesterController::class, 'store']);
+            Route::get('{programSemester}', [ProgramSemesterController::class, 'show']);
+            Route::put('{programSemester}', [ProgramSemesterController::class, 'update']);
+            Route::delete('{programSemester}', [ProgramSemesterController::class, 'destroy']);
+        });
+
+        Route::middleware('permission:kurikulum.manage')->prefix('kkm-kktp')->group(function () {
+            Route::get('opsi-tautan', [KkmKktpController::class, 'opsiTautan']);
+            Route::get('/', [KkmKktpController::class, 'index']);
+            Route::post('/', [KkmKktpController::class, 'store']);
+            Route::get('{kkmKktp}', [KkmKktpController::class, 'show']);
+            Route::put('{kkmKktp}', [KkmKktpController::class, 'update']);
+            Route::delete('{kkmKktp}', [KkmKktpController::class, 'destroy']);
+            Route::post('{kkmKktp}/status', [KkmKktpController::class, 'updateStatus']);
         });
 
         Route::get('guru/export', [GuruController::class, 'export'])
