@@ -100,6 +100,7 @@ class RolePermissionSeeder extends Seeder
                 'kurikulum.manage',
                 'jadwal.manage',
                 'nilai.lock',
+                'nilai.verify',
                 'rapor.publish',
             ],
             'Kesiswaan' => [

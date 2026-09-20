@@ -943,6 +943,145 @@ export const api = {
     return requestForm(`/rombel/${id}/import`, formData)
   },
 
+  // Guru Pengganti
+  getOpsiGuruPengganti: () => request('/guru-pengganti/opsi'),
+  listGuruPengganti: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/guru-pengganti${query ? `?${query}` : ''}`)
+  },
+  getGuruPengganti: (id) => request(`/guru-pengganti/${id}`),
+  getJadwalGuruPengganti: (params) => request(`/guru-pengganti/jadwal-guru?${new URLSearchParams(params).toString()}`),
+  getKetersediaanGuru: (params) => request(`/guru-pengganti/ketersediaan?${new URLSearchParams(params).toString()}`),
+  createGuruPengganti: (data) => request('/guru-pengganti', { method: 'POST', body: JSON.stringify(data) }),
+  updateGuruPengganti: (id, data) => request(`/guru-pengganti/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  keputusanGuruPengganti: (id, data) =>
+    request(`/guru-pengganti/${id}/keputusan`, { method: 'POST', body: JSON.stringify(data) }),
+  batalkanGuruPengganti: (id, data = {}) =>
+    request(`/guru-pengganti/${id}/batalkan`, { method: 'POST', body: JSON.stringify(data) }),
+  getRiwayatGuruPengganti: () => request('/guru-pengganti/riwayat'),
+  exportGuruPengganti: (params = {}) =>
+    downloadFile(`/guru-pengganti/export?${new URLSearchParams(params).toString()}`, 'guru-pengganti.xlsx'),
+
+  // Perubahan Jadwal
+  getOpsiPerubahanJadwal: () => request('/perubahan-jadwal/opsi'),
+  listJadwalPerubahan: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/perubahan-jadwal/jadwal${query ? `?${query}` : ''}`)
+  },
+  listPerubahanJadwal: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/perubahan-jadwal${query ? `?${query}` : ''}`)
+  },
+  getPerubahanJadwal: (id) => request(`/perubahan-jadwal/${id}`),
+  cekBentrokPerubahanJadwal: (params) => request(`/perubahan-jadwal/cek-bentrok?${new URLSearchParams(params).toString()}`),
+  createPerubahanJadwal: (data) => request('/perubahan-jadwal', { method: 'POST', body: JSON.stringify(data) }),
+  updatePerubahanJadwal: (id, data) => request(`/perubahan-jadwal/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  keputusanPerubahanJadwal: (id, data) =>
+    request(`/perubahan-jadwal/${id}/keputusan`, { method: 'POST', body: JSON.stringify(data) }),
+  batalkanPerubahanJadwal: (id, data = {}) =>
+    request(`/perubahan-jadwal/${id}/batalkan`, { method: 'POST', body: JSON.stringify(data) }),
+  terapkanPerubahanJadwal: (id) => request(`/perubahan-jadwal/${id}/terapkan`, { method: 'POST' }),
+  getRiwayatPerubahanJadwal: () => request('/perubahan-jadwal/riwayat'),
+  exportPerubahanJadwal: (params = {}) =>
+    downloadFile(`/perubahan-jadwal/export?${new URLSearchParams(params).toString()}`, 'perubahan-jadwal.xlsx'),
+
+  // Kalender Akademik
+  getOpsiKalender: () => request('/kalender-akademik/opsi'),
+  getPengaturanKalender: (tahunAjaranId) => request(`/kalender-akademik/pengaturan?tahun_ajaran_id=${tahunAjaranId}`),
+  updatePengaturanKalender: (data) => request('/kalender-akademik/pengaturan', { method: 'PUT', body: JSON.stringify(data) }),
+  getEntriKalender: (params) => request(`/kalender-akademik/entri?${new URLSearchParams(params).toString()}`),
+  getPengingatKalender: () => request('/kalender-akademik/pengingat'),
+  getKegiatanKalender: (id) => request(`/kalender-akademik/kegiatan/${id}`),
+  createKegiatanKalender: (data) => request('/kalender-akademik/kegiatan', { method: 'POST', body: JSON.stringify(data) }),
+  updateKegiatanKalender: (id, data) => request(`/kalender-akademik/kegiatan/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteKegiatanKalender: (id) => request(`/kalender-akademik/kegiatan/${id}`, { method: 'DELETE' }),
+  unggahLampiranKalender: (kegiatanId, file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return requestForm(`/kalender-akademik/kegiatan/${kegiatanId}/lampiran`, formData)
+  },
+  hapusLampiranKalender: (id) => request(`/kalender-akademik/lampiran/${id}`, { method: 'DELETE' }),
+  unduhLampiranKalender: (id, nama) => downloadFile(`/kalender-akademik/lampiran/${id}/unduh`, nama),
+  duplikasiKalender: (data) => request('/kalender-akademik/duplikasi', { method: 'POST', body: JSON.stringify(data) }),
+  getRiwayatKalender: (tahunAjaranId) => request(`/kalender-akademik/riwayat?tahun_ajaran_id=${tahunAjaranId}`),
+  exportKalender: (tahunAjaranId) => downloadFile(`/kalender-akademik/export?tahun_ajaran_id=${tahunAjaranId}`, 'kalender-akademik.xlsx'),
+  pdfKalender: (tahunAjaranId) => downloadFile(`/kalender-akademik/pdf?tahun_ajaran_id=${tahunAjaranId}`, 'kalender-akademik.pdf'),
+
+  // Laporan Akademik
+  getOpsiLaporan: () => request('/laporan-akademik/opsi'),
+  getLaporan: (jenis, params) => request(`/laporan-akademik/${jenis}?${new URLSearchParams(params).toString()}`),
+  exportLaporan: (jenis, params, format) =>
+    downloadFile(`/laporan-akademik/${jenis}/export?${new URLSearchParams({ ...params, format }).toString()}`, `laporan-${jenis}.${format}`),
+  catatCetakLaporan: (jenis, params) => request(`/laporan-akademik/${jenis}/cetak?${new URLSearchParams(params).toString()}`, { method: 'POST' }),
+  getRiwayatLaporan: (params) => request(`/laporan-akademik/riwayat?${new URLSearchParams(params).toString()}`),
+  unduhRiwayatLaporan: (id, nama) => downloadFile(`/laporan-akademik/riwayat/${id}/unduh`, nama),
+
+  // Penerbitan Rapor
+  getOpsiPenerbitanRapor: () => request('/penerbitan-rapor/opsi'),
+  getPenerbitanRapor: (params) => request(`/penerbitan-rapor?${new URLSearchParams(params).toString()}`),
+  previewPenerbitanRapor: (params) => request(`/penerbitan-rapor/preview?${new URLSearchParams(params).toString()}`),
+  generatePenerbitanRapor: (data) => request('/penerbitan-rapor/generate', { method: 'POST', body: JSON.stringify(data) }),
+  ajukanPenerbitanRapor: (data) => request('/penerbitan-rapor/ajukan', { method: 'POST', body: JSON.stringify(data) }),
+  pengesahanPenerbitanRapor: (data) => request('/penerbitan-rapor/pengesahan', { method: 'POST', body: JSON.stringify(data) }),
+  terbitkanRapor: (data) => request('/penerbitan-rapor/terbitkan', { method: 'POST', body: JSON.stringify(data) }),
+  cabutRapor: (data) => request('/penerbitan-rapor/cabut', { method: 'POST', body: JSON.stringify(data) }),
+  getCetakKelasRapor: (params) => request(`/penerbitan-rapor/cetak-kelas?${new URLSearchParams(params).toString()}`),
+  getRiwayatPenerbitanRapor: (params) => request(`/penerbitan-rapor/riwayat?${new URLSearchParams(params).toString()}`),
+  downloadRaporSiswa: (params, nama = 'rapor') =>
+    downloadFile(`/penerbitan-rapor/pdf?${new URLSearchParams(params).toString()}`, `${nama}.pdf`),
+  downloadRaporKelas: (params, nama = 'rapor-kelas') =>
+    downloadFile(`/penerbitan-rapor/pdf-kelas?${new URLSearchParams(params).toString()}`, `${nama}.pdf`),
+
+  // Verifikasi Nilai
+  getVerifikasiNilai: (params) => request(`/verifikasi-nilai?${new URLSearchParams(params).toString()}`),
+  periksaVerifikasiNilai: (params) => request(`/verifikasi-nilai/periksa?${new URLSearchParams(params).toString()}`),
+  keputusanVerifikasiNilai: (data) => request('/verifikasi-nilai/keputusan', { method: 'POST', body: JSON.stringify(data) }),
+  getRiwayatVerifikasiNilai: (params = {}) => request(`/verifikasi-nilai/riwayat?${new URLSearchParams(params).toString()}`),
+  exportVerifikasiNilai: (params) =>
+    downloadFile(`/verifikasi-nilai/export?${new URLSearchParams(params).toString()}`, 'verifikasi-nilai.xlsx'),
+
+  // Penguncian Nilai
+  getPenguncianNilai: (params) => request(`/penguncian-nilai?${new URLSearchParams(params).toString()}`),
+  cekPenguncianNilai: (params) => request(`/penguncian-nilai/cek?${new URLSearchParams(params).toString()}`),
+  kunciNilai: (data) => request('/penguncian-nilai/kunci', { method: 'POST', body: JSON.stringify(data) }),
+  kunciNilaiMassal: (data) => request('/penguncian-nilai/kunci-massal', { method: 'POST', body: JSON.stringify(data) }),
+  bukaKunciNilai: (data) => request('/penguncian-nilai/buka-kunci', { method: 'POST', body: JSON.stringify(data) }),
+  getRiwayatPenguncianNilai: (params = {}) => request(`/penguncian-nilai/riwayat?${new URLSearchParams(params).toString()}`),
+
+  // Monitoring Nilai
+  getOpsiMonitoringNilai: () => request('/monitoring-nilai/opsi'),
+  getMonitoringNilai: (params) => request(`/monitoring-nilai?${new URLSearchParams(params).toString()}`),
+  getDetailMonitoringNilai: (params) => request(`/monitoring-nilai/detail?${new URLSearchParams(params).toString()}`),
+  exportMonitoringNilai: (params) =>
+    downloadFile(`/monitoring-nilai/export?${new URLSearchParams(params).toString()}`, 'monitoring-nilai.xlsx'),
+
+  // Notifikasi pengguna
+  getMyNotifikasi: () => request('/me/notifikasi'),
+  bacaNotifikasi: (id) => request(`/me/notifikasi/${id}/baca`, { method: 'POST' }),
+  bacaSemuaNotifikasi: () => request('/me/notifikasi/baca-semua', { method: 'POST' }),
+
+  // Hari Efektif
+  getOpsiHariEfektif: () => request('/hari-efektif/opsi'),
+  getHariEfektif: (params) => request(`/hari-efektif?${new URLSearchParams(params).toString()}`),
+  simpanPeriodeHariEfektif: (data) => request('/hari-efektif/periode', { method: 'POST', body: JSON.stringify(data) }),
+  generateHariEfektif: (data) => request('/hari-efektif/generate', { method: 'POST', body: JSON.stringify(data) }),
+  createHariEfektif: (data) => request('/hari-efektif', { method: 'POST', body: JSON.stringify(data) }),
+  updateHariEfektif: (id, data) => request(`/hari-efektif/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteHariEfektif: (id) => request(`/hari-efektif/${id}`, { method: 'DELETE' }),
+  tandaiHariEfektif: (data) => request('/hari-efektif/tandai', { method: 'POST', body: JSON.stringify(data) }),
+  updateStatusHariEfektif: (data) => request('/hari-efektif/status', { method: 'POST', body: JSON.stringify(data) }),
+  getRiwayatHariEfektif: (params) => request(`/hari-efektif/riwayat?${new URLSearchParams(params).toString()}`),
+  exportHariEfektif: (params) =>
+    downloadFile(`/hari-efektif/export?${new URLSearchParams(params).toString()}`, 'hari-efektif.xlsx'),
+  downloadTemplateHariEfektif: () => downloadFile('/hari-efektif/import-template', 'template-import-hari-efektif.xlsx'),
+  importHariEfektif: (params, file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('tahun_ajaran_id', params.tahun_ajaran_id)
+    formData.append('semester', params.semester)
+    return requestForm('/hari-efektif/import', formData)
+  },
+
   // Pembagian Mata Pelajaran
   listPembagianMapel: (params = {}) => {
     const query = new URLSearchParams(params).toString()
