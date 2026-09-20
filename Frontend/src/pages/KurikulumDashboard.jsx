@@ -6,7 +6,16 @@ import { useAuth } from '../lib/AuthContext'
 import { api } from '../lib/api'
 import JamPelajaranManagement from './JamPelajaranManagement'
 import KelasManagement from './KelasManagement'
+import GuruPenggantiManagement from './GuruPenggantiManagement'
+import HariEfektifManagement from './HariEfektifManagement'
+import MonitoringNilaiManagement from './MonitoringNilaiManagement'
 import PembagianMapelManagement from './PembagianMapelManagement'
+import KalenderAkademikManagement from './KalenderAkademikManagement'
+import LaporanAkademikManagement from './LaporanAkademikManagement'
+import PenerbitanRaporManagement from './PenerbitanRaporManagement'
+import PenguncianNilaiManagement from './PenguncianNilaiManagement'
+import VerifikasiNilaiManagement from './VerifikasiNilaiManagement'
+import PerubahanJadwalManagement from './PerubahanJadwalManagement'
 import RombelManagement from './RombelManagement'
 import MataPelajaranManagement from './MataPelajaranManagement'
 import MyProfile from './MyProfile'
@@ -65,15 +74,6 @@ const MENU_GROUPS = [
 ]
 
 const COMING_SOON_LABEL = {
-  'hari-efektif': ['Hari Efektif', 'Pengaturan hari efektif & libur per tahun ajaran sedang disiapkan.'],
-  'guru-pengganti': ['Guru Pengganti', 'Pencatatan penugasan guru pengganti sedang disiapkan.'],
-  'perubahan-jadwal': ['Perubahan Jadwal', 'Riwayat & pengajuan perubahan jadwal sedang disiapkan.'],
-  'monitoring-nilai': ['Monitoring Nilai', 'Pemantauan progres input nilai per guru/kelas sedang disiapkan.'],
-  'penguncian-nilai': ['Penguncian Nilai', 'Penguncian nilai akhir periode sedang disiapkan.'],
-  verifikasi: ['Verifikasi', 'Verifikasi nilai & rapor sebelum diterbitkan sedang disiapkan.'],
-  'penerbitan-rapor': ['Penerbitan Rapor', 'Alur penerbitan rapor ke wali kelas/siswa sedang disiapkan.'],
-  kalender: ['Kalender Akademik', 'Tampilan kalender tahun ajaran, semester, dan agenda sekolah sedang disiapkan.'],
-  laporan: ['Laporan Akademik', 'Laporan rekap capaian akademik sekolah sedang disiapkan.'],
 }
 
 export default function KurikulumDashboard() {
@@ -189,7 +189,16 @@ export default function KurikulumDashboard() {
         {view === 'kelas' && <KelasManagement onBack={() => setView('home')} />}
         {view === 'rombel' && <RombelManagement onBack={() => setView('home')} />}
         {view === 'pembagian-mapel' && <PembagianMapelManagement onBack={() => setView('home')} />}
-        {view === 'jadwal-pelajaran' && <ScheduleManagement onBack={() => setView('home')} />}
+        {view === 'hari-efektif' && <HariEfektifManagement onBack={() => setView('home')} />}
+        {view === 'guru-pengganti' && <GuruPenggantiManagement onBack={() => setView('home')} />}
+        {view === 'perubahan-jadwal' && <PerubahanJadwalManagement onBack={() => setView('home')} />}
+        {view === 'monitoring-nilai' && <MonitoringNilaiManagement onBack={() => setView('home')} />}
+        {view === 'penguncian-nilai' && <PenguncianNilaiManagement onBack={() => setView('home')} />}
+        {view === 'verifikasi' && <VerifikasiNilaiManagement onBack={() => setView('home')} />}
+        {view === 'penerbitan-rapor' && <PenerbitanRaporManagement onBack={() => setView('home')} />}
+        {view === 'kalender' && <KalenderAkademikManagement onBack={() => setView('home')} onNavigate={setView} />}
+        {view === 'laporan' && <LaporanAkademikManagement onBack={() => setView('home')} />}
+        {view === 'jadwal-pelajaran' &&<ScheduleManagement onBack={() => setView('home')} />}
         {view === 'jam-pelajaran' && <JamPelajaranManagement onBack={() => setView('home')} />}
         {view === 'profile' && <MyProfile onBack={() => setView('home')} />}
         {COMING_SOON_LABEL[view] && (

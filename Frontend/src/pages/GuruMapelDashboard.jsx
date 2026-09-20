@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import ComingSoon from '../components/ComingSoon'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
+import NotifikasiPanel from '../components/NotifikasiPanel'
 import { useAuth } from '../lib/AuthContext'
 import { api, BASE_URL } from '../lib/api'
 import AttendanceRecap from './AttendanceRecap'
@@ -210,6 +211,8 @@ function GuruMapelHome({ user, onNavigate }) {
           Kelola jadwal mengajar, absensi, nilai, dan penilaian sikap siswa dari sini.
         </p>
       </div>
+
+      <NotifikasiPanel />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
         <StatCard label="Kelas Diampu" value={kelas?.length} icon={ClassIcon} onClick={() => onNavigate('kelas-saya')} />

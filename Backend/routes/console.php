@@ -22,3 +22,15 @@ Artisan::command('inspire', function () {
 |
 */
 Schedule::command('tenants:run backup:scheduled')->everyMinute();
+
+/*
+|--------------------------------------------------------------------------
+| Pengingat Kalender Akademik
+|--------------------------------------------------------------------------
+|
+| Tiap pagi mengirim notifikasi dalam aplikasi untuk agenda kalender
+| akademik yang sudah memasuki jendela pengingatnya. Sama seperti backup,
+| butuh cron `php artisan schedule:run` di server agar berjalan otomatis.
+|
+*/
+Schedule::command('tenants:run kalender:pengingat')->dailyAt('06:00');

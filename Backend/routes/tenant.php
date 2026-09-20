@@ -14,14 +14,24 @@ use App\Http\Controllers\Api\BkMonitoringController;
 use App\Http\Controllers\Api\CapaianPembelajaranController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\GuruController;
+use App\Http\Controllers\Api\GuruPenggantiController;
 use App\Http\Controllers\Api\GuruSelfController;
+use App\Http\Controllers\Api\MonitoringNilaiController;
+use App\Http\Controllers\Api\NotifikasiSelfController;
+use App\Http\Controllers\Api\PenerbitanRaporController;
+use App\Http\Controllers\Api\PenguncianNilaiController;
+use App\Http\Controllers\Api\VerifikasiNilaiController;
+use App\Http\Controllers\Api\PerubahanJadwalController;
 use App\Http\Controllers\Api\IntegrationController;
 use App\Http\Controllers\Api\InventarisController;
 use App\Http\Controllers\Api\JadwalPelajaranController;
 use App\Http\Controllers\Api\JamBelajarController;
+use App\Http\Controllers\Api\KalenderAkademikController;
+use App\Http\Controllers\Api\LaporanAkademikController;
 use App\Http\Controllers\Api\KasusController;
 use App\Http\Controllers\Api\KegiatanController;
 use App\Http\Controllers\Api\KelasController;
+use App\Http\Controllers\Api\HariEfektifController;
 use App\Http\Controllers\Api\PembagianMapelController;
 use App\Http\Controllers\Api\RombelController;
 use App\Http\Controllers\Api\KkmKktpController;
@@ -154,6 +164,10 @@ Route::middleware([
         Route::post('/me/anak/{siswa}/saldo/isi', [ParentSelfController::class, 'isiSaldo']);
         Route::get('/me/anak/{siswa}/tugas', [ParentSelfController::class, 'tugas']);
 
+        Route::get('/me/notifikasi', [NotifikasiSelfController::class, 'index']);
+        Route::post('/me/notifikasi/baca-semua', [NotifikasiSelfController::class, 'bacaSemua']);
+        Route::post('/me/notifikasi/{id}/baca', [NotifikasiSelfController::class, 'baca']);
+
         Route::get('/me/guru', [GuruSelfController::class, 'profil']);
         Route::get('/me/guru/jadwal', [GuruSelfController::class, 'jadwal']);
         Route::get('/me/guru/kelas', [GuruSelfController::class, 'kelas']);
@@ -197,6 +211,118 @@ Route::middleware([
             Route::post('rombel/{kela}/siswa', [RombelController::class, 'tambah']);
             Route::post('rombel/{kela}/keluarkan', [RombelController::class, 'keluarkan']);
             Route::post('rombel/{kela}/pindah', [RombelController::class, 'pindah']);
+
+            Route::prefix('laporan-akademik')->group(function () {
+                Route::get('opsi', [LaporanAkademikController::class, 'opsi']);
+                Route::get('riwayat', [LaporanAkademikController::class, 'riwayat']);
+                Route::get('riwayat/{riwayat}/unduh', [LaporanAkademikController::class, 'unduh'])->whereNumber('riwayat');
+                Route::get('{jenis}', [LaporanAkademikController::class, 'tampil']);
+                Route::get('{jenis}/export', [LaporanAkademikController::class, 'export']);
+                Route::post('{jenis}/cetak', [LaporanAkademikController::class, 'catatCetak']);
+            });
+
+            Route::prefix('kalender-akademik')->group(function () {
+                Route::get('opsi', [KalenderAkademikController::class, 'opsi']);
+                Route::get('pengaturan', [KalenderAkademikController::class, 'pengaturan']);
+                Route::put('pengaturan', [KalenderAkademikController::class, 'updatePengaturan']);
+                Route::get('entri', [KalenderAkademikController::class, 'entri']);
+                Route::get('pengingat', [KalenderAkademikController::class, 'pengingat']);
+                Route::get('riwayat', [KalenderAkademikController::class, 'riwayat']);
+                Route::get('export', [KalenderAkademikController::class, 'export']);
+                Route::get('pdf', [KalenderAkademikController::class, 'pdf']);
+                Route::post('duplikasi', [KalenderAkademikController::class, 'duplikasi']);
+                Route::post('kegiatan', [KalenderAkademikController::class, 'store']);
+                Route::get('kegiatan/{kegiatan}', [KalenderAkademikController::class, 'show']);
+                Route::put('kegiatan/{kegiatan}', [KalenderAkademikController::class, 'update']);
+                Route::delete('kegiatan/{kegiatan}', [KalenderAkademikController::class, 'destroy']);
+                Route::post('kegiatan/{kegiatan}/lampiran', [KalenderAkademikController::class, 'unggahLampiran']);
+                Route::get('lampiran/{lampiran}/unduh', [KalenderAkademikController::class, 'unduhLampiran']);
+                Route::delete('lampiran/{lampiran}', [KalenderAkademikController::class, 'hapusLampiran']);
+            });
+
+            Route::prefix('penerbitan-rapor')->group(function () {
+                Route::get('opsi', [PenerbitanRaporController::class, 'opsi']);
+                Route::get('preview', [PenerbitanRaporController::class, 'preview']);
+                Route::get('pdf', [PenerbitanRaporController::class, 'pdf']);
+                Route::get('pdf-kelas', [PenerbitanRaporController::class, 'pdfKelas']);
+                Route::get('cetak-kelas', [PenerbitanRaporController::class, 'cetakKelas']);
+                Route::get('riwayat', [PenerbitanRaporController::class, 'riwayat']);
+                Route::post('generate', [PenerbitanRaporController::class, 'generate'])->middleware('permission:rapor.publish');
+                Route::post('ajukan', [PenerbitanRaporController::class, 'ajukan'])->middleware('permission:rapor.publish');
+                Route::post('pengesahan', [PenerbitanRaporController::class, 'pengesahan'])->middleware('permission:rapor.approve');
+                Route::post('terbitkan', [PenerbitanRaporController::class, 'terbitkan'])->middleware('permission:rapor.publish');
+                Route::post('cabut', [PenerbitanRaporController::class, 'cabut'])->middleware('permission:rapor.publish');
+                Route::get('/', [PenerbitanRaporController::class, 'index']);
+            });
+
+            Route::prefix('verifikasi-nilai')->group(function () {
+                Route::get('periksa', [VerifikasiNilaiController::class, 'periksa']);
+                Route::get('riwayat', [VerifikasiNilaiController::class, 'riwayat']);
+                Route::get('export', [VerifikasiNilaiController::class, 'export']);
+                Route::post('keputusan', [VerifikasiNilaiController::class, 'keputusan'])->middleware('permission:nilai.verify');
+                Route::get('/', [VerifikasiNilaiController::class, 'index']);
+            });
+
+            Route::prefix('penguncian-nilai')->group(function () {
+                Route::get('cek', [PenguncianNilaiController::class, 'cek']);
+                Route::get('riwayat', [PenguncianNilaiController::class, 'riwayat']);
+                Route::post('kunci', [PenguncianNilaiController::class, 'kunci'])->middleware('permission:nilai.lock');
+                Route::post('kunci-massal', [PenguncianNilaiController::class, 'kunciMassal'])->middleware('permission:nilai.lock');
+                Route::post('buka-kunci', [PenguncianNilaiController::class, 'bukaKunci'])->middleware('permission:nilai.lock');
+                Route::get('/', [PenguncianNilaiController::class, 'index']);
+            });
+
+            Route::prefix('monitoring-nilai')->group(function () {
+                Route::get('opsi', [MonitoringNilaiController::class, 'opsi']);
+                Route::get('detail', [MonitoringNilaiController::class, 'detail']);
+                Route::get('export', [MonitoringNilaiController::class, 'export']);
+                Route::get('/', [MonitoringNilaiController::class, 'index']);
+            });
+
+            Route::prefix('perubahan-jadwal')->group(function () {
+                Route::get('opsi', [PerubahanJadwalController::class, 'opsi']);
+                Route::get('jadwal', [PerubahanJadwalController::class, 'jadwal']);
+                Route::get('cek-bentrok', [PerubahanJadwalController::class, 'cekBentrok']);
+                Route::get('riwayat', [PerubahanJadwalController::class, 'riwayat']);
+                Route::get('export', [PerubahanJadwalController::class, 'export']);
+                Route::get('/', [PerubahanJadwalController::class, 'index']);
+                Route::post('/', [PerubahanJadwalController::class, 'store']);
+                Route::get('{perubahanJadwal}', [PerubahanJadwalController::class, 'show']);
+                Route::put('{perubahanJadwal}', [PerubahanJadwalController::class, 'update']);
+                Route::post('{perubahanJadwal}/keputusan', [PerubahanJadwalController::class, 'keputusan']);
+                Route::post('{perubahanJadwal}/batalkan', [PerubahanJadwalController::class, 'batalkan']);
+                Route::post('{perubahanJadwal}/terapkan', [PerubahanJadwalController::class, 'terapkan']);
+            });
+
+            Route::prefix('guru-pengganti')->group(function () {
+                Route::get('opsi', [GuruPenggantiController::class, 'opsi']);
+                Route::get('jadwal-guru', [GuruPenggantiController::class, 'jadwalGuru']);
+                Route::get('ketersediaan', [GuruPenggantiController::class, 'ketersediaan']);
+                Route::get('riwayat', [GuruPenggantiController::class, 'riwayat']);
+                Route::get('export', [GuruPenggantiController::class, 'export']);
+                Route::get('/', [GuruPenggantiController::class, 'index']);
+                Route::post('/', [GuruPenggantiController::class, 'store']);
+                Route::get('{guruPengganti}', [GuruPenggantiController::class, 'show']);
+                Route::put('{guruPengganti}', [GuruPenggantiController::class, 'update']);
+                Route::post('{guruPengganti}/keputusan', [GuruPenggantiController::class, 'keputusan']);
+                Route::post('{guruPengganti}/batalkan', [GuruPenggantiController::class, 'batalkan']);
+            });
+
+            Route::prefix('hari-efektif')->group(function () {
+                Route::get('opsi', [HariEfektifController::class, 'opsi']);
+                Route::get('export', [HariEfektifController::class, 'export']);
+                Route::get('import-template', [HariEfektifController::class, 'importTemplate']);
+                Route::get('riwayat', [HariEfektifController::class, 'riwayat']);
+                Route::post('import', [HariEfektifController::class, 'import']);
+                Route::post('periode', [HariEfektifController::class, 'simpanPeriode']);
+                Route::post('generate', [HariEfektifController::class, 'generate']);
+                Route::post('tandai', [HariEfektifController::class, 'tandai']);
+                Route::post('status', [HariEfektifController::class, 'updateStatus']);
+                Route::get('/', [HariEfektifController::class, 'show']);
+                Route::post('/', [HariEfektifController::class, 'store']);
+                Route::put('{hariEfektif}', [HariEfektifController::class, 'update']);
+                Route::delete('{hariEfektif}', [HariEfektifController::class, 'destroy']);
+            });
 
             Route::prefix('pembagian-mapel')->group(function () {
                 Route::get('opsi', [PembagianMapelController::class, 'opsi']);
