@@ -7,15 +7,15 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class PengumumanKelas extends Model
+class ModulAjar extends Model
 {
-    protected $table = 'pengumuman_kelas';
+    protected $table = 'modul_ajar';
 
-    protected $fillable = ['kelas_id', 'guru_id', 'judul', 'konten', 'kategori'];
+    protected $fillable = ['guru_id', 'kurikulum', 'judul', 'mata_pelajaran', 'kelas', 'status', 'data'];
 
-    public function kelas(): BelongsTo
+    protected function casts(): array
     {
-        return $this->belongsTo(Kelas::class);
+        return ['data' => 'array'];
     }
 
     public function guru(): BelongsTo
