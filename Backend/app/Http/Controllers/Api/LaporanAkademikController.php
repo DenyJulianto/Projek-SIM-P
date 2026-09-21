@@ -1065,7 +1065,7 @@ class LaporanAkademikController extends Controller
         };
     }
 
-    private function xlsx(array $laporan, string $sekolah): string
+    public function xlsx(array $laporan, string $sekolah): string
     {
         $k = $laporan['konteks'];
         $wb = new Spreadsheet;

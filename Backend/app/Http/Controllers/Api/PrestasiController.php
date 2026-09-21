@@ -33,9 +33,13 @@ class PrestasiController extends Controller
             'tingkat' => ['required', 'in:sekolah,kecamatan,kabupaten_kota,provinsi,nasional,internasional'],
             'tanggal' => ['required', 'date'],
             'keterangan' => ['nullable', 'string'],
+            'bidang' => ['nullable', 'string', 'max:60'],
+            'jenis' => ['nullable', 'in:individu,kelompok'],
+            'penyelenggara' => ['nullable', 'string', 'max:255'],
+            'peringkat' => ['nullable', 'string', 'max:100'],
         ]);
 
-        $prestasi = Prestasi::create($data);
+        $prestasi = Prestasi::create(array_filter($data, fn ($v) => $v !== null) + ['dicatat_oleh' => $request->user()?->id]);
 
         activity()->causedBy($request->user())->log("Menambahkan prestasi \"{$prestasi->judul}\".");
 
@@ -50,6 +54,10 @@ class PrestasiController extends Controller
             'tingkat' => ['required', 'in:sekolah,kecamatan,kabupaten_kota,provinsi,nasional,internasional'],
             'tanggal' => ['required', 'date'],
             'keterangan' => ['nullable', 'string'],
+            'bidang' => ['nullable', 'string', 'max:60'],
+            'jenis' => ['nullable', 'in:individu,kelompok'],
+            'penyelenggara' => ['nullable', 'string', 'max:255'],
+            'peringkat' => ['nullable', 'string', 'max:100'],
         ]);
 
         $prestasi->update($data);

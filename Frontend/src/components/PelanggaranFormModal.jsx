@@ -17,6 +17,10 @@ export default function PelanggaranFormModal({ item, onClose, onSaved }) {
     tanggal: item?.tanggal?.slice(0, 10) || new Date().toISOString().slice(0, 10),
     keterangan: item?.keterangan || '',
     tindakan: item?.tindakan || '',
+    kategori: item?.kategori || '',
+    poin: item?.poin ?? '',
+    status: item?.status || 'aktif',
+    catatan: item?.catatan || '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -125,6 +129,36 @@ export default function PelanggaranFormModal({ item, onClose, onSaved }) {
             />
           </Field>
 
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Kategori (opsional)">
+              <input
+                type="text"
+                list="kategori-pelanggaran"
+                value={form.kategori}
+                onChange={(e) => update('kategori', e.target.value)}
+                className="input"
+                placeholder="mis. Kedisiplinan"
+              />
+              <datalist id="kategori-pelanggaran">
+                {['Kedisiplinan', 'Ketertiban', 'Kehadiran', 'Seragam & Atribut', 'Sopan Santun', 'Akademik', 'Lainnya'].map((k) => (
+                  <option key={k} value={k} />
+                ))}
+              </datalist>
+            </Field>
+            <Field label="Poin (bila sekolah memakai poin)">
+              <input type="number" min="0" max="1000" value={form.poin} onChange={(e) => update('poin', e.target.value)} className="input" />
+            </Field>
+          </div>
+          <Field label="Status penanganan">
+            <select value={form.status} onChange={(e) => update('status', e.target.value)} className="input">
+              <option value="aktif">Aktif</option>
+              <option value="dalam_pembinaan">Dalam Pembinaan</option>
+              <option value="selesai">Selesai</option>
+            </select>
+          </Field>
+          <Field label="Catatan (opsional)">
+            <textarea rows={2} value={form.catatan} onChange={(e) => update('catatan', e.target.value)} className="input" />
+          </Field>
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"

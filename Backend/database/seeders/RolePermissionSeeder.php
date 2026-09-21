@@ -24,6 +24,7 @@ class RolePermissionSeeder extends Seeder
         'kesiswaan.absensi',
         'kesiswaan.pelanggaran',
         'kesiswaan.prestasi',
+        'rekap-pembinaan.view',
         'sarpras.fasilitas',
         'sarpras.kondisi-barang',
         'sarpras.inventaris',
@@ -61,6 +62,12 @@ class RolePermissionSeeder extends Seeder
         $rolePermissions = [
             'Admin Sekolah' => [
                 'dashboard.view-all',
+                'laporan-kesiswaan.manage',
+                'laporan-kesiswaan.hapus-arsip',
+                'rekap-pembinaan.view',
+                'rekap-pembinaan.manage',
+                'ppdb.manage',
+                'ekstrakurikuler.manage',
                 'kurikulum.manage',
                 'pegawai.manage',
                 'siswa.manage',
@@ -83,6 +90,7 @@ class RolePermissionSeeder extends Seeder
                 'anggaran.approve',
                 'kepegawaian.approve',
                 'laporan.view-all',
+                'rekap-pembinaan.view',
             ],
             'Wakil Kepala Sekolah' => $seeder->wakasekPermissions,
             'Tata Usaha' => [
@@ -105,6 +113,10 @@ class RolePermissionSeeder extends Seeder
             ],
             'Kesiswaan' => [
                 'siswa.manage',
+                'laporan-kesiswaan.manage',
+                'rekap-pembinaan.view',
+                'rekap-pembinaan.manage',
+                'ppdb.manage',
                 'kurikulum.manage',
                 'absensi-kelas.manage',
                 'pelanggaran.manage',
@@ -129,11 +141,14 @@ class RolePermissionSeeder extends Seeder
                 'rapor-kelas.manage',
                 'prestasi.manage',
                 'pelanggaran.manage',
+                'rekap-pembinaan.view-kelas',
             ],
             'Guru BK' => [
                 'konseling.manage',
                 'kasus.manage',
                 'pemanggilan-orangtua.manage',
+                'rekap-pembinaan.view',
+                'rekap-pembinaan.manage',
             ],
             // Catatan keamanan: JANGAN beri 'nilai.view'/'absensi.view' di sini.
             // Kedua permission itu cocok dengan gate OR-chain endpoint umum

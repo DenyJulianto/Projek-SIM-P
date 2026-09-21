@@ -27,7 +27,22 @@ use App\Http\Controllers\Api\InventarisController;
 use App\Http\Controllers\Api\JadwalPelajaranController;
 use App\Http\Controllers\Api\JamBelajarController;
 use App\Http\Controllers\Api\KalenderAkademikController;
+use App\Http\Controllers\Api\EkskulAnggotaController;
+use App\Http\Controllers\Api\EkskulController;
+use App\Http\Controllers\Api\EkskulKegiatanController;
+use App\Http\Controllers\Api\EkskulLaporanController;
+use App\Http\Controllers\Api\EkskulPenilaianController;
 use App\Http\Controllers\Api\LaporanAkademikController;
+use App\Http\Controllers\Api\LaporanKesiswaanController;
+use App\Http\Controllers\Api\MutasiSiswaController;
+use App\Http\Controllers\Api\PembinaanTindakLanjutController;
+use App\Http\Controllers\Api\RekapPembinaanController;
+use App\Http\Controllers\Api\PpdbPemantauController;
+use App\Http\Controllers\Api\PpdbPendaftarController;
+use App\Http\Controllers\Api\PpdbPenerimaanController;
+use App\Http\Controllers\Api\PpdbPengumumanController;
+use App\Http\Controllers\Api\PpdbPeriodeController;
+use App\Http\Controllers\Api\PpdbSeleksiController;
 use App\Http\Controllers\Api\KasusController;
 use App\Http\Controllers\Api\KegiatanController;
 use App\Http\Controllers\Api\KelasController;
@@ -425,6 +440,165 @@ Route::middleware([
             Route::put('{kkmKktp}', [KkmKktpController::class, 'update']);
             Route::delete('{kkmKktp}', [KkmKktpController::class, 'destroy']);
             Route::post('{kkmKktp}/status', [KkmKktpController::class, 'updateStatus']);
+        });
+
+        Route::middleware('permission:ekstrakurikuler.manage')->group(function () {
+            Route::prefix('ekskul')->group(function () {
+                Route::get('opsi', [EkskulController::class, 'opsi']);
+                Route::post('duplikasi', [EkskulController::class, 'duplikasi']);
+                Route::get('/', [EkskulController::class, 'index']);
+                Route::post('/', [EkskulController::class, 'store']);
+                Route::get('{ekskul}', [EkskulController::class, 'show'])->whereNumber('ekskul');
+                Route::put('{ekskul}', [EkskulController::class, 'update'])->whereNumber('ekskul');
+                Route::delete('{ekskul}', [EkskulController::class, 'destroy'])->whereNumber('ekskul');
+                Route::post('{ekskul}/status', [EkskulController::class, 'status'])->whereNumber('ekskul');
+                Route::get('{ekskul}/logo', [EkskulController::class, 'logo'])->whereNumber('ekskul');
+                Route::post('{ekskul}/logo', [EkskulController::class, 'unggahLogo'])->whereNumber('ekskul');
+                Route::delete('{ekskul}/logo', [EkskulController::class, 'hapusLogo'])->whereNumber('ekskul');
+            });
+
+            Route::prefix('ekskul-anggota')->group(function () {
+                Route::get('siswa-tersedia', [EkskulAnggotaController::class, 'siswaTersedia']);
+                Route::get('riwayat', [EkskulAnggotaController::class, 'riwayat']);
+                Route::get('export', [EkskulAnggotaController::class, 'export']);
+                Route::get('template', [EkskulAnggotaController::class, 'template']);
+                Route::post('import', [EkskulAnggotaController::class, 'import']);
+                Route::get('/', [EkskulAnggotaController::class, 'index']);
+                Route::post('/', [EkskulAnggotaController::class, 'store']);
+                Route::post('{anggota}/pindah', [EkskulAnggotaController::class, 'pindah'])->whereNumber('anggota');
+                Route::post('{anggota}/keluar', [EkskulAnggotaController::class, 'keluar'])->whereNumber('anggota');
+            });
+
+            Route::prefix('ekskul-kegiatan')->group(function () {
+                Route::post('cek-bentrok', [EkskulKegiatanController::class, 'cekBentrok']);
+                Route::post('rutin', [EkskulKegiatanController::class, 'rutin']);
+                Route::get('/', [EkskulKegiatanController::class, 'index']);
+                Route::post('/', [EkskulKegiatanController::class, 'store']);
+                Route::get('{kegiatan}', [EkskulKegiatanController::class, 'show'])->whereNumber('kegiatan');
+                Route::put('{kegiatan}', [EkskulKegiatanController::class, 'update'])->whereNumber('kegiatan');
+                Route::delete('{kegiatan}', [EkskulKegiatanController::class, 'destroy'])->whereNumber('kegiatan');
+                Route::post('{kegiatan}/batalkan', [EkskulKegiatanController::class, 'batalkan'])->whereNumber('kegiatan');
+                Route::get('{kegiatan}/presensi', [EkskulKegiatanController::class, 'presensi'])->whereNumber('kegiatan');
+                Route::post('{kegiatan}/presensi', [EkskulKegiatanController::class, 'simpanPresensi'])->whereNumber('kegiatan');
+            });
+
+            Route::prefix('ekskul-presensi')->group(function () {
+                Route::get('rekap', [EkskulKegiatanController::class, 'rekap']);
+                Route::get('export', [EkskulKegiatanController::class, 'exportRekap']);
+                Route::get('riwayat', [EkskulKegiatanController::class, 'riwayatPresensi']);
+            });
+
+            Route::prefix('ekskul-penilaian')->group(function () {
+                Route::get('/', [EkskulPenilaianController::class, 'index']);
+                Route::post('simpan', [EkskulPenilaianController::class, 'simpan']);
+                Route::post('validasi', [EkskulPenilaianController::class, 'validasi']);
+                Route::post('kunci', [EkskulPenilaianController::class, 'kunci']);
+                Route::post('buka-kunci', [EkskulPenilaianController::class, 'bukaKunci']);
+                Route::get('riwayat', [EkskulPenilaianController::class, 'riwayat']);
+                Route::get('export', [EkskulPenilaianController::class, 'export']);
+            });
+
+            Route::prefix('ekskul-laporan')->group(function () {
+                Route::get('{jenis}', [EkskulLaporanController::class, 'tampil']);
+                Route::get('{jenis}/export', [EkskulLaporanController::class, 'export']);
+            });
+        });
+
+        Route::middleware('permission:laporan-kesiswaan.manage')->prefix('laporan-kesiswaan')->group(function () {
+            Route::get('opsi', [LaporanKesiswaanController::class, 'opsi']);
+            Route::get('dashboard', [LaporanKesiswaanController::class, 'dashboard']);
+            Route::get('pengaturan', [LaporanKesiswaanController::class, 'pengaturan']);
+            Route::put('pengaturan', [LaporanKesiswaanController::class, 'simpanPengaturan']);
+            Route::get('arsip', [LaporanKesiswaanController::class, 'arsip']);
+            Route::get('arsip/{arsip}', [LaporanKesiswaanController::class, 'bukaArsip'])->whereNumber('arsip');
+            Route::get('arsip/{arsip}/unduh', [LaporanKesiswaanController::class, 'unduhArsip'])->whereNumber('arsip');
+            Route::delete('arsip/{arsip}', [LaporanKesiswaanController::class, 'hapusArsip'])->whereNumber('arsip');
+            Route::get('mutasi/cari-siswa', [MutasiSiswaController::class, 'cariSiswa']);
+            Route::get('mutasi/riwayat', [MutasiSiswaController::class, 'riwayat']);
+            Route::post('mutasi', [MutasiSiswaController::class, 'store']);
+            Route::put('mutasi/{mutasi}', [MutasiSiswaController::class, 'update'])->whereNumber('mutasi');
+            Route::post('mutasi/{mutasi}/batalkan', [MutasiSiswaController::class, 'batalkan'])->whereNumber('mutasi');
+            Route::get('mutasi/{mutasi}/surat', [MutasiSiswaController::class, 'surat'])->whereNumber('mutasi');
+            Route::get('laporan/{jenis}', [LaporanKesiswaanController::class, 'tampil']);
+            Route::get('laporan/{jenis}/export', [LaporanKesiswaanController::class, 'export']);
+            Route::post('laporan/{jenis}/cetak', [LaporanKesiswaanController::class, 'cetak']);
+        });
+
+        // Rekap Pembinaan: data sensitif, dibatasi per peran. Wali kelas hanya melihat siswa kelas binaannya (dicek di controller).
+        Route::middleware('permission:rekap-pembinaan.view|rekap-pembinaan.view-kelas|rekap-pembinaan.manage')->prefix('rekap-pembinaan')->group(function () {
+            Route::get('opsi', [RekapPembinaanController::class, 'opsi']);
+            Route::get('siswa', [RekapPembinaanController::class, 'daftarSiswa']);
+            Route::get('siswa/{siswa}', [RekapPembinaanController::class, 'profil'])->whereNumber('siswa');
+            Route::get('siswa/{siswa}/laporan', [RekapPembinaanController::class, 'laporan'])->whereNumber('siswa');
+            Route::get('siswa/{siswa}/laporan/export', [RekapPembinaanController::class, 'export'])->whereNumber('siswa');
+            Route::post('siswa/{siswa}/laporan/cetak', [RekapPembinaanController::class, 'catatCetak'])->whereNumber('siswa');
+            Route::get('pelanggaran/{pelanggaran}/riwayat', [RekapPembinaanController::class, 'riwayatPelanggaran'])->whereNumber('pelanggaran');
+            Route::get('tindak-lanjut/{tindakLanjut}/riwayat', [PembinaanTindakLanjutController::class, 'riwayat'])->whereNumber('tindakLanjut');
+
+            Route::middleware('permission:rekap-pembinaan.manage')->group(function () {
+                Route::post('tindak-lanjut', [PembinaanTindakLanjutController::class, 'store']);
+                Route::put('tindak-lanjut/{tindakLanjut}', [PembinaanTindakLanjutController::class, 'update'])->whereNumber('tindakLanjut');
+                Route::put('pelanggaran/{pelanggaran}/status', [PembinaanTindakLanjutController::class, 'ubahStatusPelanggaran'])->whereNumber('pelanggaran');
+            });
+        });
+
+        Route::middleware('permission:ppdb.manage')->prefix('ppdb')->group(function () {
+            Route::get('opsi', [PpdbPeriodeController::class, 'opsi']);
+            Route::get('dashboard', [PpdbPeriodeController::class, 'dashboard']);
+            Route::get('notifikasi', [PpdbPemantauController::class, 'notifikasi']);
+            Route::get('audit', [PpdbPemantauController::class, 'audit']);
+            Route::get('periode', [PpdbPeriodeController::class, 'index']);
+            Route::post('periode', [PpdbPeriodeController::class, 'store']);
+            Route::get('periode/{periode}', [PpdbPeriodeController::class, 'show']);
+            Route::put('periode/{periode}', [PpdbPeriodeController::class, 'update']);
+            Route::delete('periode/{periode}', [PpdbPeriodeController::class, 'destroy']);
+            Route::post('periode/{periode}/status', [PpdbPeriodeController::class, 'status']);
+            Route::post('periode/{periode}/jalur', [PpdbPeriodeController::class, 'storeJalur']);
+            Route::put('jalur/{jalur}', [PpdbPeriodeController::class, 'updateJalur']);
+            Route::delete('jalur/{jalur}', [PpdbPeriodeController::class, 'destroyJalur']);
+            Route::post('periode/{periode}/persyaratan', [PpdbPeriodeController::class, 'storePersyaratan']);
+            Route::put('persyaratan/{persyaratan}', [PpdbPeriodeController::class, 'updatePersyaratan']);
+            Route::delete('persyaratan/{persyaratan}', [PpdbPeriodeController::class, 'destroyPersyaratan']);
+
+            Route::get('pendaftar', [PpdbPendaftarController::class, 'index']);
+            Route::post('pendaftar', [PpdbPendaftarController::class, 'store']);
+            Route::get('pendaftar/asal-sekolah', [PpdbPendaftarController::class, 'asalSekolah']);
+            Route::get('pendaftar/{pendaftar}', [PpdbPendaftarController::class, 'show']);
+            Route::put('pendaftar/{pendaftar}', [PpdbPendaftarController::class, 'update']);
+            Route::post('pendaftar/{pendaftar}/batalkan', [PpdbPendaftarController::class, 'batalkan']);
+            Route::post('pendaftar/{pendaftar}/pulihkan', [PpdbPendaftarController::class, 'pulihkan']);
+            Route::post('pendaftar/{pendaftar}/dokumen', [PpdbPendaftarController::class, 'unggahDokumen']);
+            Route::post('pendaftar/{pendaftar}/verifikasi', [PpdbPendaftarController::class, 'verifikasi']);
+            Route::get('pendaftar/{pendaftar}/bukti', [PpdbPendaftarController::class, 'bukti']);
+            Route::get('dokumen/{dokumen}/berkas', [PpdbPendaftarController::class, 'berkasDokumen']);
+            Route::post('dokumen/{dokumen}/periksa', [PpdbPendaftarController::class, 'periksaDokumen']);
+            Route::delete('dokumen/{dokumen}', [PpdbPendaftarController::class, 'hapusDokumen']);
+
+            Route::get('seleksi', [PpdbSeleksiController::class, 'index']);
+            Route::get('seleksi/riwayat', [PpdbSeleksiController::class, 'riwayat']);
+            Route::post('seleksi/proses', [PpdbSeleksiController::class, 'proses']);
+            Route::put('seleksi/{pendaftar}/nilai', [PpdbSeleksiController::class, 'nilai']);
+            Route::post('seleksi/{pendaftar}/tandai', [PpdbSeleksiController::class, 'tandai']);
+
+            Route::get('pengumuman', [PpdbPengumumanController::class, 'index']);
+            Route::post('pengumuman/terbitkan', [PpdbPengumumanController::class, 'terbitkan']);
+            Route::post('pengumuman/batalkan', [PpdbPengumumanController::class, 'batalkan']);
+            Route::get('pengumuman/pdf', [PpdbPengumumanController::class, 'pdf']);
+            Route::get('pengumuman/{pendaftar}/surat', [PpdbPengumumanController::class, 'surat']);
+            Route::post('pengumuman/{pendaftar}/notifikasi', [PpdbPengumumanController::class, 'notifikasi']);
+
+            Route::get('daftar-ulang', [PpdbPenerimaanController::class, 'daftarUlang']);
+            Route::get('daftar-ulang/riwayat', [PpdbPenerimaanController::class, 'riwayatDaftarUlang']);
+            Route::post('daftar-ulang/{pendaftar}/konfirmasi', [PpdbPenerimaanController::class, 'konfirmasiDaftarUlang']);
+            Route::post('daftar-ulang/{pendaftar}/batal', [PpdbPenerimaanController::class, 'batalDaftarUlang']);
+            Route::post('daftar-ulang/{pendaftar}/buka-kembali', [PpdbPenerimaanController::class, 'bukaKembaliDaftarUlang']);
+            Route::post('daftar-ulang/{pendaftar}/pengingat', [PpdbPenerimaanController::class, 'pengingat']);
+
+            Route::get('penerimaan', [PpdbPenerimaanController::class, 'penerimaan']);
+            Route::get('penerimaan/riwayat', [PpdbPenerimaanController::class, 'riwayatPenerimaan']);
+            Route::post('penerimaan/terima', [PpdbPenerimaanController::class, 'terima']);
+            Route::post('penerimaan/batal', [PpdbPenerimaanController::class, 'batalTerima']);
+            Route::post('penerimaan/import', [PpdbPenerimaanController::class, 'import']);
         });
 
         Route::get('guru/export', [GuruController::class, 'export'])

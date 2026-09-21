@@ -6,6 +6,7 @@ import KasusManagement from './KasusManagement'
 import KonselingManagement from './KonselingManagement'
 import MyProfile from './MyProfile'
 import PemanggilanManagement from './PemanggilanManagement'
+import RekapPembinaanManagement from './RekapPembinaanManagement'
 import LogoHorizontal from '../components/LogoHorizontal'
 
 const MENU_GROUPS = [
@@ -46,7 +47,10 @@ const MENU_GROUPS = [
   },
   {
     section: 'Laporan',
-    items: [{ key: 'laporan-bk', label: 'Laporan BK', icon: DocIcon }],
+    items: [
+      { key: 'laporan-bk', label: 'Laporan BK', icon: DocIcon },
+      { key: 'rekap-pembinaan', label: 'Rekap Pembinaan', icon: ReportIcon },
+    ],
   },
   { section: null, items: [{ key: 'profile', label: 'Profil Saya', icon: ProfileIcon }] },
 ]
@@ -194,6 +198,7 @@ export default function BkDashboard() {
         {view === 'rekap-kasus' && <RekapKasusView onBack={() => setView('home')} />}
         {view === 'statistik-layanan' && <StatistikLayananView onBack={() => setView('home')} />}
         {view === 'laporan-bk' && <LaporanBkView onBack={() => setView('home')} />}
+        {view === 'rekap-pembinaan' && <RekapPembinaanManagement onBack={() => setView('home')} />}
         {view === 'profile' && <MyProfile onBack={() => setView('home')} />}
       </main>
 

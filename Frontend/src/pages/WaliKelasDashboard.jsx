@@ -5,6 +5,7 @@ import { api } from '../lib/api'
 import MyProfile from './MyProfile'
 import PelanggaranManagement from './PelanggaranManagement'
 import PrestasiManagement from './PrestasiManagement'
+import RekapPembinaanManagement from './RekapPembinaanManagement'
 import LogoHorizontal from '../components/LogoHorizontal'
 
 const MENU_GROUPS = [
@@ -43,6 +44,7 @@ const MENU_GROUPS = [
       { key: 'catatan-perilaku', label: 'Catatan Perilaku', icon: NoteIcon },
       { key: 'prestasi', label: 'Prestasi', icon: TrophyIcon },
       { key: 'pelanggaran', label: 'Pelanggaran', icon: AlertIcon },
+      { key: 'rekap-pembinaan', label: 'Rekap Pembinaan', icon: ReportIcon },
       { key: 'konsultasi-bk', label: 'Konsultasi BK', icon: HeartIcon },
     ],
   },
@@ -222,6 +224,7 @@ export default function WaliKelasDashboard() {
             {view === 'status-rapor' && <StatusRaporView onBack={() => setView('home')} kelas={kelas} />}
             {view === 'prestasi' && <PrestasiManagement onBack={() => setView('home')} />}
             {view === 'pelanggaran' && <PelanggaranManagement onBack={() => setView('home')} />}
+            {view === 'rekap-pembinaan' && <RekapPembinaanManagement onBack={() => setView('home')} />}
             {view === 'konsultasi-bk' && <KonsultasiBkView onBack={() => setView('home')} kelas={kelas} />}
             {view === 'pengumuman-kelas' && <PengumumanKelasView onBack={() => setView('home')} kelas={kelas} />}
             {view === 'komunikasi-ortu' && <KomunikasiOrtuView onBack={() => setView('home')} kelas={kelas} />}
