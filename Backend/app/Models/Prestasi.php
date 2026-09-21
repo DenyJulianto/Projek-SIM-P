@@ -11,7 +11,7 @@ class Prestasi extends Model
 {
     protected $table = 'prestasi';
 
-    protected $fillable = ['siswa_id', 'judul', 'tingkat', 'tanggal', 'keterangan', 'file', 'sumber', 'status'];
+    protected $fillable = ['siswa_id', 'judul', 'bidang', 'jenis', 'tingkat', 'penyelenggara', 'peringkat', 'tanggal', 'keterangan', 'file', 'sumber', 'status', 'dicatat_oleh'];
 
     protected function casts(): array
     {

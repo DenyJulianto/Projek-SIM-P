@@ -9,6 +9,7 @@ import LaporanKepsek from './principal/LaporanKepsek'
 import PemantauanView from './principal/PemantauanView'
 import PrincipalHome from './principal/PrincipalHome'
 import MyProfile from './MyProfile'
+import RekapPembinaanManagement from './RekapPembinaanManagement'
 import LogoHorizontal from '../components/LogoHorizontal'
 
 const MENU_GROUPS = [
@@ -25,6 +26,7 @@ const MENU_GROUPS = [
       { key: 'pemantauan-jadwal', label: 'Jadwal Pelajaran', icon: ScheduleIcon },
       { key: 'pemantauan-surat', label: 'Persuratan', icon: MailIcon },
       { key: 'pemantauan-prestasi-pelanggaran', label: 'Prestasi & Pelanggaran', icon: AwardIcon },
+      { key: 'rekap-pembinaan', label: 'Rekap Pembinaan Siswa', icon: StudentIcon },
     ],
   },
   {
@@ -275,6 +277,7 @@ export default function PrincipalDashboard() {
             {view.startsWith('anggaran-') && <AnggaranView tab={view.replace('anggaran-', '')} />}
             {view.startsWith('kepeg-') && <KepegawaianKepsekView tab={view.replace('kepeg-', '')} />}
             {view === 'laporan' && <LaporanKepsek />}
+            {view === 'rekap-pembinaan' && <RekapPembinaanManagement onBack={() => setView('home')} />}
             {view === 'profile' && <MyProfile onBack={() => setView('home')} />}
           </div>
         </div>

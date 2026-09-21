@@ -31,9 +31,13 @@ class PelanggaranController extends Controller
             'tanggal' => ['required', 'date'],
             'keterangan' => ['nullable', 'string'],
             'tindakan' => ['nullable', 'string'],
+            'kategori' => ['nullable', 'string', 'max:60'],
+            'poin' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'status' => ['nullable', 'in:aktif,dalam_pembinaan,selesai'],
+            'catatan' => ['nullable', 'string'],
         ]);
 
-        $pelanggaran = Pelanggaran::create($data);
+        $pelanggaran = Pelanggaran::create(array_filter($data, fn ($v) => $v !== null) + ['dicatat_oleh' => $request->user()?->id]);
 
         activity()->causedBy($request->user())->log("Mencatat pelanggaran \"{$pelanggaran->jenis}\".");
 
@@ -49,8 +53,13 @@ class PelanggaranController extends Controller
             'tanggal' => ['required', 'date'],
             'keterangan' => ['nullable', 'string'],
             'tindakan' => ['nullable', 'string'],
+            'kategori' => ['nullable', 'string', 'max:60'],
+            'poin' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'status' => ['nullable', 'in:aktif,dalam_pembinaan,selesai'],
+            'catatan' => ['nullable', 'string'],
         ]);
 
+        $data['status'] ??= $pelanggaran->status;
         $pelanggaran->update($data);
 
         activity()->causedBy($request->user())->log("Memperbarui catatan pelanggaran \"{$pelanggaran->jenis}\".");

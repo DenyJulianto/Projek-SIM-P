@@ -1007,6 +1007,161 @@ export const api = {
   exportKalender: (tahunAjaranId) => downloadFile(`/kalender-akademik/export?tahun_ajaran_id=${tahunAjaranId}`, 'kalender-akademik.xlsx'),
   pdfKalender: (tahunAjaranId) => downloadFile(`/kalender-akademik/pdf?tahun_ajaran_id=${tahunAjaranId}`, 'kalender-akademik.pdf'),
 
+  // Laporan Kesiswaan
+  lkOpsi: () => request('/laporan-kesiswaan/opsi'),
+  lkDashboard: (params) => request(`/laporan-kesiswaan/dashboard?${new URLSearchParams(params).toString()}`),
+  lkLaporan: (jenis, params) => request(`/laporan-kesiswaan/laporan/${jenis}?${new URLSearchParams(params).toString()}`),
+  lkExport: (jenis, params, format) =>
+    downloadFile(`/laporan-kesiswaan/laporan/${jenis}/export?${new URLSearchParams({ ...params, format }).toString()}`, `laporan-kesiswaan-${jenis}.${format}`),
+  lkCatatCetak: (jenis, params) => request(`/laporan-kesiswaan/laporan/${jenis}/cetak?${new URLSearchParams(params).toString()}`, { method: 'POST' }),
+  lkArsip: (params) => request(`/laporan-kesiswaan/arsip?${new URLSearchParams(params).toString()}`),
+  lkBukaArsip: (id) => request(`/laporan-kesiswaan/arsip/${id}`),
+  lkUnduhArsip: (id, format) => downloadFile(`/laporan-kesiswaan/arsip/${id}/unduh?format=${format}`, `arsip-laporan-${id}.${format}`),
+  lkHapusArsip: (id) => request(`/laporan-kesiswaan/arsip/${id}`, { method: 'DELETE' }),
+  lkPengaturan: () => request('/laporan-kesiswaan/pengaturan'),
+  lkSimpanPengaturan: (data) => request('/laporan-kesiswaan/pengaturan', { method: 'PUT', body: JSON.stringify(data) }),
+  lkCariSiswa: (search) => request(`/laporan-kesiswaan/mutasi/cari-siswa?search=${encodeURIComponent(search)}`),
+  lkCatatMutasi: (data) => request('/laporan-kesiswaan/mutasi', { method: 'POST', body: JSON.stringify(data) }),
+  lkBatalMutasi: (id, data) => request(`/laporan-kesiswaan/mutasi/${id}/batalkan`, { method: 'POST', body: JSON.stringify(data) }),
+  lkRiwayatMutasi: (siswaId) => request(`/laporan-kesiswaan/mutasi/riwayat?siswa_id=${siswaId}`),
+  lkSuratMutasi: (id, nama) => downloadFile(`/laporan-kesiswaan/mutasi/${id}/surat`, nama),
+
+  // Rekap Pembinaan
+  rpOpsi: () => request('/rekap-pembinaan/opsi'),
+  rpSiswa: (params) => request(`/rekap-pembinaan/siswa?${new URLSearchParams(params).toString()}`),
+  rpProfil: (id, params) => request(`/rekap-pembinaan/siswa/${id}?${new URLSearchParams(params).toString()}`),
+  rpRiwayatPelanggaran: (id) => request(`/rekap-pembinaan/pelanggaran/${id}/riwayat`),
+  rpStatusPelanggaran: (id, data) => request(`/rekap-pembinaan/pelanggaran/${id}/status`, { method: 'PUT', body: JSON.stringify(data) }),
+  rpRiwayatTl: (id) => request(`/rekap-pembinaan/tindak-lanjut/${id}/riwayat`),
+  rpSimpanTl: (id, data) => request(id ? `/rekap-pembinaan/tindak-lanjut/${id}` : '/rekap-pembinaan/tindak-lanjut', { method: id ? 'PUT' : 'POST', body: JSON.stringify(data) }),
+  rpLaporan: (siswaId, params) => request(`/rekap-pembinaan/siswa/${siswaId}/laporan?${new URLSearchParams(params).toString()}`),
+  rpExport: (siswaId, params, format) =>
+    downloadFile(`/rekap-pembinaan/siswa/${siswaId}/laporan/export?${new URLSearchParams({ ...params, format }).toString()}`, `rekap-pembinaan.${format}`),
+  rpCatatCetak: (siswaId, params) => request(`/rekap-pembinaan/siswa/${siswaId}/laporan/cetak?${new URLSearchParams(params).toString()}`, { method: 'POST' }),
+
+  // Ekstrakurikuler
+  ekskulOpsi: () => request('/ekskul/opsi'),
+  ekskulList: (params) => request(`/ekskul?${new URLSearchParams(params).toString()}`),
+  ekskulGet: (id) => request(`/ekskul/${id}`),
+  ekskulCreate: (data) => request('/ekskul', { method: 'POST', body: JSON.stringify(data) }),
+  ekskulUpdate: (id, data) => request(`/ekskul/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  ekskulDelete: (id) => request(`/ekskul/${id}`, { method: 'DELETE' }),
+  ekskulStatus: (id, status) => request(`/ekskul/${id}/status`, { method: 'POST', body: JSON.stringify({ status }) }),
+  ekskulDuplikasi: (data) => request('/ekskul/duplikasi', { method: 'POST', body: JSON.stringify(data) }),
+  ekskulUnggahLogo: (id, file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return requestForm(`/ekskul/${id}/logo`, formData)
+  },
+  ekskulHapusLogo: (id) => request(`/ekskul/${id}/logo`, { method: 'DELETE' }),
+  ekskulBlobLogo: async (id) => {
+    const res = await fetch(`${BASE_URL}/ekskul/${id}/logo`, { headers: { ...authHeaders() } })
+    if (!res.ok) throw new Error('Logo tidak dapat dimuat')
+    return URL.createObjectURL(await res.blob())
+  },
+  ekskulAnggota: (params) => request(`/ekskul-anggota?${new URLSearchParams(params).toString()}`),
+  ekskulSiswaTersedia: (params) => request(`/ekskul-anggota/siswa-tersedia?${new URLSearchParams(params).toString()}`),
+  ekskulTambahAnggota: (data) => request('/ekskul-anggota', { method: 'POST', body: JSON.stringify(data) }),
+  ekskulPindahAnggota: (id, data) => request(`/ekskul-anggota/${id}/pindah`, { method: 'POST', body: JSON.stringify(data) }),
+  ekskulKeluarAnggota: (id, data) => request(`/ekskul-anggota/${id}/keluar`, { method: 'POST', body: JSON.stringify(data) }),
+  ekskulRiwayatAnggota: (params) => request(`/ekskul-anggota/riwayat?${new URLSearchParams(params).toString()}`),
+  ekskulExportAnggota: (params) => downloadFile(`/ekskul-anggota/export?${new URLSearchParams(params).toString()}`, 'peserta-ekstrakurikuler.xlsx'),
+  ekskulTemplateAnggota: () => downloadFile('/ekskul-anggota/template', 'template-import-peserta-ekskul.xlsx'),
+  ekskulImportAnggota: (ekskulId, file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('ekskul_id', ekskulId)
+    return requestForm('/ekskul-anggota/import', formData)
+  },
+  ekskulKegiatanList: (params) => request(`/ekskul-kegiatan?${new URLSearchParams(params).toString()}`),
+  ekskulKegiatanGet: (id) => request(`/ekskul-kegiatan/${id}`),
+  ekskulKegiatanCreate: (data) => request('/ekskul-kegiatan', { method: 'POST', body: JSON.stringify(data) }),
+  ekskulKegiatanUpdate: (id, data) => request(`/ekskul-kegiatan/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  ekskulKegiatanDelete: (id) => request(`/ekskul-kegiatan/${id}`, { method: 'DELETE' }),
+  ekskulKegiatanBatal: (id, alasan) => request(`/ekskul-kegiatan/${id}/batalkan`, { method: 'POST', body: JSON.stringify({ alasan }) }),
+  ekskulCekBentrok: (data) => request('/ekskul-kegiatan/cek-bentrok', { method: 'POST', body: JSON.stringify(data) }),
+  ekskulJadwalRutin: (data) => request('/ekskul-kegiatan/rutin', { method: 'POST', body: JSON.stringify(data) }),
+  ekskulPresensi: (kegiatanId) => request(`/ekskul-kegiatan/${kegiatanId}/presensi`),
+  ekskulSimpanPresensi: (kegiatanId, data) => request(`/ekskul-kegiatan/${kegiatanId}/presensi`, { method: 'POST', body: JSON.stringify(data) }),
+  ekskulRekapKehadiran: (params) => request(`/ekskul-presensi/rekap?${new URLSearchParams(params).toString()}`),
+  ekskulExportKehadiran: (params) => downloadFile(`/ekskul-presensi/export?${new URLSearchParams(params).toString()}`, 'rekap-kehadiran-ekskul.xlsx'),
+  ekskulRiwayatPresensi: (params) => request(`/ekskul-presensi/riwayat?${new URLSearchParams(params).toString()}`),
+  ekskulPenilaian: (params) => request(`/ekskul-penilaian?${new URLSearchParams(params).toString()}`),
+  ekskulSimpanPenilaian: (data) => request('/ekskul-penilaian/simpan', { method: 'POST', body: JSON.stringify(data) }),
+  ekskulValidasiPenilaian: (data) => request('/ekskul-penilaian/validasi', { method: 'POST', body: JSON.stringify(data) }),
+  ekskulKunciPenilaian: (data) => request('/ekskul-penilaian/kunci', { method: 'POST', body: JSON.stringify(data) }),
+  ekskulBukaKunciPenilaian: (data) => request('/ekskul-penilaian/buka-kunci', { method: 'POST', body: JSON.stringify(data) }),
+  ekskulRiwayatPenilaian: (params) => request(`/ekskul-penilaian/riwayat?${new URLSearchParams(params).toString()}`),
+  ekskulExportPenilaian: (ekskulId, nama) => downloadFile(`/ekskul-penilaian/export?ekskul_id=${ekskulId}`, `penilaian-${nama}.xlsx`),
+  ekskulLaporan: (jenis, params) => request(`/ekskul-laporan/${jenis}?${new URLSearchParams(params).toString()}`),
+  ekskulExportLaporan: (jenis, params, format) => downloadFile(`/ekskul-laporan/${jenis}/export?${new URLSearchParams({ ...params, format }).toString()}`, `ekskul-${jenis}.${format}`),
+
+  // PPDB
+  ppdbOpsi: () => request('/ppdb/opsi'),
+  ppdbListPeriode: () => request('/ppdb/periode'),
+  ppdbGetPeriode: (id) => request(`/ppdb/periode/${id}`),
+  ppdbCreatePeriode: (data) => request('/ppdb/periode', { method: 'POST', body: JSON.stringify(data) }),
+  ppdbUpdatePeriode: (id, data) => request(`/ppdb/periode/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  ppdbDeletePeriode: (id) => request(`/ppdb/periode/${id}`, { method: 'DELETE' }),
+  ppdbStatusPeriode: (id, status) => request(`/ppdb/periode/${id}/status`, { method: 'POST', body: JSON.stringify({ status }) }),
+  ppdbCreateJalur: (periodeId, data) => request(`/ppdb/periode/${periodeId}/jalur`, { method: 'POST', body: JSON.stringify(data) }),
+  ppdbUpdateJalur: (id, data) => request(`/ppdb/jalur/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  ppdbDeleteJalur: (id) => request(`/ppdb/jalur/${id}`, { method: 'DELETE' }),
+  ppdbCreatePersyaratan: (periodeId, data) => request(`/ppdb/periode/${periodeId}/persyaratan`, { method: 'POST', body: JSON.stringify(data) }),
+  ppdbUpdatePersyaratan: (id, data) => request(`/ppdb/persyaratan/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  ppdbDeletePersyaratan: (id) => request(`/ppdb/persyaratan/${id}`, { method: 'DELETE' }),
+  ppdbDashboard: (periodeId) => request(`/ppdb/dashboard?periode_id=${periodeId}`),
+  ppdbListPendaftar: (params) => request(`/ppdb/pendaftar?${new URLSearchParams(params).toString()}`),
+  ppdbAsalSekolah: (periodeId) => request(`/ppdb/pendaftar/asal-sekolah?periode_id=${periodeId}`),
+  ppdbGetPendaftar: (id) => request(`/ppdb/pendaftar/${id}`),
+  ppdbCreatePendaftar: (data) => request('/ppdb/pendaftar', { method: 'POST', body: JSON.stringify(data) }),
+  ppdbUpdatePendaftar: (id, data) => request(`/ppdb/pendaftar/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  ppdbBatalkanPendaftar: (id, alasan) => request(`/ppdb/pendaftar/${id}/batalkan`, { method: 'POST', body: JSON.stringify({ alasan }) }),
+  ppdbPulihkanPendaftar: (id) => request(`/ppdb/pendaftar/${id}/pulihkan`, { method: 'POST' }),
+  ppdbUnggahDokumen: (pendaftarId, file, persyaratanId, nama) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    if (persyaratanId) formData.append('ppdb_persyaratan_id', persyaratanId)
+    if (nama) formData.append('nama', nama)
+    return requestForm(`/ppdb/pendaftar/${pendaftarId}/dokumen`, formData)
+  },
+  ppdbHapusDokumen: (id) => request(`/ppdb/dokumen/${id}`, { method: 'DELETE' }),
+  ppdbPeriksaDokumen: (id, data) => request(`/ppdb/dokumen/${id}/periksa`, { method: 'POST', body: JSON.stringify(data) }),
+  ppdbUnduhDokumen: (id, nama) => downloadFile(`/ppdb/dokumen/${id}/berkas?unduh=1`, nama),
+  // Berkas dokumen dilayani lewat rute terautentikasi, jadi preview memakai blob URL.
+  ppdbBlobDokumen: async (id) => {
+    const res = await fetch(`${BASE_URL}/ppdb/dokumen/${id}/berkas`, { headers: { ...authHeaders() } })
+    if (!res.ok) throw new Error(`Dokumen tidak dapat dibuka (${res.status})`)
+    const blob = await res.blob()
+    return { url: URL.createObjectURL(blob), tipe: blob.type }
+  },
+  ppdbVerifikasi: (id, data) => request(`/ppdb/pendaftar/${id}/verifikasi`, { method: 'POST', body: JSON.stringify(data) }),
+  ppdbBukti: (id, nama) => downloadFile(`/ppdb/pendaftar/${id}/bukti`, nama),
+  ppdbSeleksi: (params) => request(`/ppdb/seleksi?${new URLSearchParams(params).toString()}`),
+  ppdbSeleksiNilai: (id, nilai) => request(`/ppdb/seleksi/${id}/nilai`, { method: 'PUT', body: JSON.stringify({ nilai }) }),
+  ppdbSeleksiProses: (data) => request('/ppdb/seleksi/proses', { method: 'POST', body: JSON.stringify(data) }),
+  ppdbSeleksiTandai: (id, data) => request(`/ppdb/seleksi/${id}/tandai`, { method: 'POST', body: JSON.stringify(data) }),
+  ppdbSeleksiRiwayat: (periodeId) => request(`/ppdb/seleksi/riwayat?periode_id=${periodeId}`),
+  ppdbPengumuman: (params) => request(`/ppdb/pengumuman?${new URLSearchParams(params).toString()}`),
+  ppdbTerbitkanPengumuman: (data) => request('/ppdb/pengumuman/terbitkan', { method: 'POST', body: JSON.stringify(data) }),
+  ppdbBatalkanPengumuman: (data) => request('/ppdb/pengumuman/batalkan', { method: 'POST', body: JSON.stringify(data) }),
+  ppdbPdfHasil: (params) => downloadFile(`/ppdb/pengumuman/pdf?${new URLSearchParams(params).toString()}`, 'hasil-seleksi-ppdb.pdf'),
+  ppdbSuratHasil: (id, nama) => downloadFile(`/ppdb/pengumuman/${id}/surat`, nama),
+  ppdbNotifikasiHasil: (id) => request(`/ppdb/pengumuman/${id}/notifikasi`, { method: 'POST' }),
+  ppdbDaftarUlang: (params) => request(`/ppdb/daftar-ulang?${new URLSearchParams(params).toString()}`),
+  ppdbKonfirmasiDaftarUlang: (id, data) => request(`/ppdb/daftar-ulang/${id}/konfirmasi`, { method: 'POST', body: JSON.stringify(data) }),
+  ppdbBatalDaftarUlang: (id, catatan) => request(`/ppdb/daftar-ulang/${id}/batal`, { method: 'POST', body: JSON.stringify({ catatan }) }),
+  ppdbBukaKembaliDaftarUlang: (id) => request(`/ppdb/daftar-ulang/${id}/buka-kembali`, { method: 'POST' }),
+  ppdbPengingatDaftarUlang: (id) => request(`/ppdb/daftar-ulang/${id}/pengingat`, { method: 'POST' }),
+  ppdbRiwayatDaftarUlang: (periodeId) => request(`/ppdb/daftar-ulang/riwayat?periode_id=${periodeId}`),
+  ppdbPenerimaan: (params) => request(`/ppdb/penerimaan?${new URLSearchParams(params).toString()}`),
+  ppdbTerima: (data) => request('/ppdb/penerimaan/terima', { method: 'POST', body: JSON.stringify(data) }),
+  ppdbBatalTerima: (data) => request('/ppdb/penerimaan/batal', { method: 'POST', body: JSON.stringify(data) }),
+  ppdbImport: (data) => request('/ppdb/penerimaan/import', { method: 'POST', body: JSON.stringify(data) }),
+  ppdbRiwayatPenerimaan: (periodeId) => request(`/ppdb/penerimaan/riwayat?periode_id=${periodeId}`),
+  ppdbNotifikasi: (periodeId) => request(`/ppdb/notifikasi?periode_id=${periodeId}`),
+  ppdbAudit: (params) => request(`/ppdb/audit?${new URLSearchParams(params).toString()}`),
+
   // Laporan Akademik
   getOpsiLaporan: () => request('/laporan-akademik/opsi'),
   getLaporan: (jenis, params) => request(`/laporan-akademik/${jenis}?${new URLSearchParams(params).toString()}`),

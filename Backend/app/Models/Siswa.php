@@ -76,4 +76,9 @@ class Siswa extends Model
     {
         return $this->hasMany(SaldoTransaksi::class);
     }
+
+    public function pelanggaran(): HasMany
+    {
+        return $this->hasMany(Pelanggaran::class);
+    }
 }

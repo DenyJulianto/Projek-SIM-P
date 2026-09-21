@@ -7,8 +7,12 @@ import AttendanceRecap from './AttendanceRecap'
 import KelasManagement from './KelasManagement'
 import MyProfile from './MyProfile'
 import PelanggaranManagement from './PelanggaranManagement'
+import EkskulManagement from './EkskulManagement'
+import LaporanKesiswaanManagement from './LaporanKesiswaanManagement'
+import PpdbManagement from './PpdbManagement'
 import PrestasiManagement from './PrestasiManagement'
 import RekapPelanggaran from './RekapPelanggaran'
+import RekapPembinaanManagement from './RekapPembinaanManagement'
 import RekapPrestasi from './RekapPrestasi'
 import SiswaManagement from './SiswaManagement'
 import StatistikSiswa from './StatistikSiswa'
@@ -54,12 +58,7 @@ const MENU_GROUPS = [
 ]
 
 const COMING_SOON_LABEL = {
-  ppdb: ['PPDB', 'Alur penerimaan peserta didik baru sedang disiapkan.'],
-  ekstrakurikuler: ['Ekstrakurikuler', 'Pengelolaan data ekstrakurikuler & anggota sedang disiapkan.'],
   'organisasi-siswa': ['Organisasi Siswa', 'Pengelolaan data organisasi siswa (OSIS, dll.) sedang disiapkan.'],
-  'rekap-ekskul': ['Rekap Ekstrakurikuler', 'Rekap keikutsertaan ekstrakurikuler akan tersedia setelah modul Ekstrakurikuler dibangun.'],
-  'laporan-kesiswaan': ['Laporan Kesiswaan', 'Laporan gabungan kesiswaan sedang disiapkan.'],
-  'rekap-pembinaan': ['Rekap Pembinaan', 'Rekap gabungan pelanggaran & prestasi per siswa sedang disiapkan.'],
 }
 
 export default function KesiswaanDashboard() {
@@ -158,12 +157,17 @@ export default function KesiswaanDashboard() {
       <main className="flex-1 p-6 sm:p-8 overflow-y-auto">
         {view === 'home' && <KesiswaanHome user={user} onNavigate={setView} />}
         {view === 'siswa' && <SiswaManagement onBack={() => setView('home')} />}
+        {view === 'ppdb' && <PpdbManagement onBack={() => setView('home')} />}
+        {view === 'ekstrakurikuler' && <EkskulManagement onBack={() => setView('home')} />}
+        {view === 'laporan-kesiswaan' && <LaporanKesiswaanManagement onBack={() => setView('home')} />}
+        {view === 'rekap-ekskul' && <EkskulManagement onBack={() => setView('home')} tabAwal="laporan" />}
         {view === 'kelas-rombel' && <KelasManagement onBack={() => setView('home')} />}
         {view === 'pelanggaran' && <PelanggaranManagement onBack={() => setView('home')} />}
         {view === 'prestasi' && <PrestasiManagement onBack={() => setView('home')} />}
         {view === 'kehadiran-siswa' && (
           <AttendanceRecap onBack={() => setView('home')} canSiswa canGuru={false} />
         )}
+        {view === 'rekap-pembinaan' && <RekapPembinaanManagement onBack={() => setView('home')} />}
         {view === 'rekap-pelanggaran' && <RekapPelanggaran onBack={() => setView('home')} />}
         {view === 'rekap-prestasi' && <RekapPrestasi onBack={() => setView('home')} />}
         {view === 'statistik-siswa' && <StatistikSiswa onBack={() => setView('home')} />}
