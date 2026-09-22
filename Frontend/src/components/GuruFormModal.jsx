@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { api } from '../lib/api'
 
 const AGAMA_OPTIONS = ['Islam', 'Kristen', 'Katolik', 'Hindu', 'Buddha', 'Konghucu']
+const STATUS_KEPEGAWAIAN_OPTIONS = ['PNS', 'PPPK', 'GTY/PTY', 'Honorer', 'Kontrak']
 
 export default function GuruFormModal({ guru, onClose, onSaved }) {
   const isEdit = Boolean(guru)
@@ -11,6 +12,8 @@ export default function GuruFormModal({ guru, onClose, onSaved }) {
     nip: guru?.nip || '',
     nuptk: guru?.nuptk || '',
     jabatan: guru?.jabatan || '',
+    mata_pelajaran: guru?.mata_pelajaran || '',
+    status_kepegawaian: guru?.status_kepegawaian || '',
     pendidikan_terakhir: guru?.pendidikan_terakhir || '',
     tahun_mulai_mengajar: guru?.tahun_mulai_mengajar || '',
     agama: guru?.agama || '',
@@ -100,14 +103,40 @@ export default function GuruFormModal({ guru, onClose, onSaved }) {
             </Field>
           </div>
 
-          <Field label="Jabatan">
-            <input
-              type="text"
-              value={form.jabatan}
-              onChange={(e) => update('jabatan', e.target.value)}
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Jabatan">
+              <input
+                type="text"
+                value={form.jabatan}
+                onChange={(e) => update('jabatan', e.target.value)}
+                className="input"
+                placeholder="Guru Mata Pelajaran, Wali Kelas, dll."
+              />
+            </Field>
+            <Field label="Mata Pelajaran">
+              <input
+                type="text"
+                value={form.mata_pelajaran}
+                onChange={(e) => update('mata_pelajaran', e.target.value)}
+                className="input"
+                placeholder="Matematika, dll."
+              />
+            </Field>
+          </div>
+
+          <Field label="Status Kepegawaian">
+            <select
+              value={form.status_kepegawaian}
+              onChange={(e) => update('status_kepegawaian', e.target.value)}
               className="input"
-              placeholder="Guru Mata Pelajaran, Wali Kelas, dll."
-            />
+            >
+              <option value="">Pilih status kepegawaian...</option>
+              {STATUS_KEPEGAWAIAN_OPTIONS.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
           </Field>
 
           <div className="grid grid-cols-2 gap-3">

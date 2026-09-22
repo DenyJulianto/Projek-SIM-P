@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Nilai;
+use App\Models\PenguncianNilai;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -43,6 +44,8 @@ class NilaiController extends Controller
             'tahun_ajaran' => ['required', 'string', 'max:20'],
         ]);
 
+        PenguncianNilai::pastikanBolehUbah((int) $data['siswa_id'], (int) $data['mata_pelajaran_id'], $data['tahun_ajaran'], $data['semester']);
+
         $nilai = Nilai::create($data);
 
         return response()->json($nilai, 201);
@@ -62,6 +65,10 @@ class NilaiController extends Controller
             'tahun_ajaran' => ['sometimes', 'string', 'max:20'],
         ]);
 
+        // Cek posisi lama dan posisi baru (bila semester/tahun ajaran dipindah).
+        PenguncianNilai::pastikanBolehUbah($nilai->siswa_id, $nilai->mata_pelajaran_id, $nilai->tahun_ajaran, $nilai->semester);
+        PenguncianNilai::pastikanBolehUbah($nilai->siswa_id, $nilai->mata_pelajaran_id, $data['tahun_ajaran'] ?? $nilai->tahun_ajaran, $data['semester'] ?? $nilai->semester);
+
         $nilai->update($data);
 
         return response()->json($nilai);
@@ -69,6 +76,8 @@ class NilaiController extends Controller
 
     public function destroy(Nilai $nilai): JsonResponse
     {
+        PenguncianNilai::pastikanBolehUbah($nilai->siswa_id, $nilai->mata_pelajaran_id, $nilai->tahun_ajaran, $nilai->semester);
+
         $nilai->delete();
 
         return response()->json(['message' => 'Nilai berhasil dihapus.']);

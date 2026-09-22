@@ -57,6 +57,8 @@ class UserController extends Controller
             'roles.*' => ['string', 'exists:roles,name'],
         ]);
 
+        $this->assertCanAssignRoles($request, $data['roles'] ?? []);
+
         $user = User::create([
             'name' => $data['name'],
             'email' => $data['email'],
@@ -96,6 +98,8 @@ class UserController extends Controller
             ]);
         }
 
+        $this->assertCanAssignRoles($request, $data['roles'] ?? [], $user);
+
         $statusChanged = array_key_exists('is_active', $data) && $data['is_active'] !== $user->is_active;
 
         $user->name = $data['name'];
@@ -133,6 +137,34 @@ class UserController extends Controller
         }
 
         return response()->json($this->presentSingleUser($user));
+    }
+
+    /**
+     * Hanya sesama Super Admin yang boleh memberi ATAU mencabut role
+     * 'Super Admin' — Admin Sekolah biasa (walau punya 'pengguna.manage')
+     * tidak boleh menaikkan dirinya/orang lain jadi Super Admin, dan juga
+     * tidak boleh mengubah role akun yang sudah menjadi Super Admin sama
+     * sekali (mencegah pencabutan diam-diam lewat form edit biasa).
+     */
+    private function assertCanAssignRoles(Request $request, array $roles, ?User $target = null): void
+    {
+        $actorIsSuperAdmin = $request->user()->hasRole('Super Admin');
+
+        if ($actorIsSuperAdmin) {
+            return;
+        }
+
+        if (in_array('Super Admin', $roles, true)) {
+            throw ValidationException::withMessages([
+                'roles' => ['Hanya Super Admin yang dapat memberikan peran Super Admin.'],
+            ]);
+        }
+
+        if ($target && $target->hasRole('Super Admin')) {
+            throw ValidationException::withMessages([
+                'roles' => ['Hanya Super Admin yang dapat mengubah peran akun Super Admin.'],
+            ]);
+        }
     }
 
     /**

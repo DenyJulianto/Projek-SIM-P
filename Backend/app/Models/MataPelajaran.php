@@ -11,7 +11,16 @@ class MataPelajaran extends Model
 {
     protected $table = 'mata_pelajaran';
 
-    protected $fillable = ['kode_mapel', 'nama_mapel', 'deskripsi'];
+    protected $fillable = [
+        'kode_mapel',
+        'nama_mapel',
+        'kelompok',
+        'jenis',
+        'jenjang',
+        'alokasi_jp_default',
+        'status',
+        'deskripsi',
+    ];
 
     public function jadwalPelajaran(): HasMany
     {
@@ -21,5 +30,10 @@ class MataPelajaran extends Model
     public function nilai(): HasMany
     {
         return $this->hasMany(Nilai::class);
+    }
+
+    public function strukturKurikulumMapel(): HasMany
+    {
+        return $this->hasMany(StrukturKurikulumMapel::class);
     }
 }

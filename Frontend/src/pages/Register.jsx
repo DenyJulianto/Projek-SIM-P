@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import CompleteNameForm from '../components/CompleteNameForm'
 import PasswordInput from '../components/PasswordInput'
 import { useAuth } from '../lib/AuthContext'
-import { api } from '../lib/api'
+import { api, IS_CENTRAL_DOMAIN } from '../lib/api'
+import LogoStacked from '../components/LogoStacked'
 
 export default function Register() {
   const { register, verifyEmail, resendVerificationCode, setUser } = useAuth()
@@ -20,6 +21,7 @@ export default function Register() {
   const [background, setBackground] = useState('')
 
   useEffect(() => {
+    if (IS_CENTRAL_DOMAIN) return
     api.getProfil().then((p) => setBackground(p.auth_background || '')).catch(() => {})
   }, [])
 
@@ -212,12 +214,7 @@ export default function Register() {
         </div>
 
         <div className="order-1 md:order-2 bg-gradient-to-br from-navy via-navy to-navy-light text-white p-10 flex flex-col items-center text-center justify-between">
-          <div className="flex flex-col items-center">
-            <div className="h-14 w-14 rounded-full bg-white/10 flex items-center justify-center">
-              <CapIcon className="h-7 w-7 text-white" />
-            </div>
-            <p className="mt-3 font-bold tracking-wide">SIM Pendidikan</p>
-          </div>
+          <LogoStacked />
 
           <div>
             <h2 className="text-2xl font-extrabold mb-3">Halo, Teman!</h2>
@@ -239,14 +236,6 @@ export default function Register() {
   )
 }
 
-function CapIcon(props) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="m2 9 10-5 10 5-10 5-10-5Z" />
-      <path d="M6 11v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5" />
-    </svg>
-  )
-}
 
 function MailIcon(props) {
   return (

@@ -5,6 +5,8 @@ import { api } from '../lib/api'
 import MyProfile from './MyProfile'
 import PelanggaranManagement from './PelanggaranManagement'
 import PrestasiManagement from './PrestasiManagement'
+import RekapPembinaanManagement from './RekapPembinaanManagement'
+import LogoHorizontal from '../components/LogoHorizontal'
 
 const MENU_GROUPS = [
   { section: null, items: [{ key: 'home', label: 'Dashboard', icon: GridIcon }] },
@@ -42,6 +44,7 @@ const MENU_GROUPS = [
       { key: 'catatan-perilaku', label: 'Catatan Perilaku', icon: NoteIcon },
       { key: 'prestasi', label: 'Prestasi', icon: TrophyIcon },
       { key: 'pelanggaran', label: 'Pelanggaran', icon: AlertIcon },
+      { key: 'rekap-pembinaan', label: 'Rekap Pembinaan', icon: ReportIcon },
       { key: 'konsultasi-bk', label: 'Konsultasi BK', icon: HeartIcon },
     ],
   },
@@ -61,6 +64,18 @@ export default function WaliKelasDashboard() {
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const [kelasList, setKelasList] = useState(null)
   const [selectedKelasId, setSelectedKelasId] = useState(null)
+  const [openSection, setOpenSection] = useState(null)
+
+  useEffect(() => {
+    const activeGroup = MENU_GROUPS.find(
+      (group) => group.section && group.items.some((item) => item.key === view)
+    )
+    if (activeGroup) setOpenSection(activeGroup.section)
+  }, [view])
+
+  function toggleSection(section) {
+    setOpenSection((prev) => (prev === section ? null : section))
+  }
 
   useEffect(() => {
     api
@@ -78,40 +93,75 @@ export default function WaliKelasDashboard() {
     <div className="h-screen bg-white flex overflow-hidden">
       <aside className="w-64 shrink-0 bg-navy text-white flex flex-col py-6 px-4 h-screen">
         <div className="flex items-center gap-2 px-2 mb-6">
-          <div className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-            <CapIcon className="h-5 w-5 text-white" />
-          </div>
-          <p className="font-bold tracking-wide text-sm">SIM Pendidikan</p>
+          <LogoHorizontal />
         </div>
 
-        <nav className="flex-1 space-y-4 overflow-y-auto">
-          {MENU_GROUPS.map((group, gi) => (
-            <div key={gi} className="space-y-1">
-              {group.section && (
-                <p className="px-4 text-[10px] font-bold text-white/40 uppercase tracking-wider">
-                  {group.section}
-                </p>
-              )}
-              {group.items.map((item) => {
-                const Icon = item.icon
-                const active = view === item.key
-                return (
-                  <button
-                    key={item.key}
-                    onClick={() => setView(item.key)}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors text-left ${
-                      active
-                        ? 'bg-white text-navy shadow-sm'
-                        : 'text-white/75 hover:bg-white/10 hover:text-white'
-                    }`}
-                  >
-                    <Icon className="h-4.5 w-4.5 shrink-0" />
-                    <span className="truncate min-w-0">{item.label}</span>
-                  </button>
-                )
-              })}
-            </div>
-          ))}
+        <nav className="flex-1 space-y-1.5 overflow-y-auto">
+          {MENU_GROUPS.map((group, gi) => {
+            if (!group.section) {
+              return (
+                <div key={gi} className="space-y-1.5 pb-1.5">
+                  {group.items.map((item) => {
+                    const Icon = item.icon
+                    const active = view === item.key
+                    return (
+                      <button
+                        key={item.key}
+                        onClick={() => setView(item.key)}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors text-left ${
+                          active
+                            ? 'bg-white text-navy shadow-sm'
+                            : 'text-white/75 hover:bg-white/10 hover:text-white'
+                        }`}
+                      >
+                        <Icon className="h-4.5 w-4.5 shrink-0" />
+                        <span className="truncate min-w-0">{item.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )
+            }
+
+            const isOpen = openSection === group.section
+            const hasActiveItem = group.items.some((item) => item.key === view)
+
+            return (
+              <div key={gi} className="pb-1">
+                <button
+                  onClick={() => toggleSection(group.section)}
+                  className={`w-full flex items-center justify-between gap-2 px-4 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider transition-colors ${
+                    hasActiveItem ? 'text-white' : 'text-white/40 hover:text-white/70'
+                  }`}
+                >
+                  <span className="truncate min-w-0">{group.section}</span>
+                  <ChevronIcon className={`h-3.5 w-3.5 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {isOpen && (
+                  <div className="space-y-1.5 mt-1">
+                    {group.items.map((item) => {
+                      const Icon = item.icon
+                      const active = view === item.key
+                      return (
+                        <button
+                          key={item.key}
+                          onClick={() => setView(item.key)}
+                          className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors text-left ${
+                            active
+                              ? 'bg-white text-navy shadow-sm'
+                              : 'text-white/75 hover:bg-white/10 hover:text-white'
+                          }`}
+                        >
+                          <Icon className="h-4.5 w-4.5 shrink-0" />
+                          <span className="truncate min-w-0">{item.label}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </nav>
 
         <button
@@ -174,6 +224,7 @@ export default function WaliKelasDashboard() {
             {view === 'status-rapor' && <StatusRaporView onBack={() => setView('home')} kelas={kelas} />}
             {view === 'prestasi' && <PrestasiManagement onBack={() => setView('home')} />}
             {view === 'pelanggaran' && <PelanggaranManagement onBack={() => setView('home')} />}
+            {view === 'rekap-pembinaan' && <RekapPembinaanManagement onBack={() => setView('home')} />}
             {view === 'konsultasi-bk' && <KonsultasiBkView onBack={() => setView('home')} kelas={kelas} />}
             {view === 'pengumuman-kelas' && <PengumumanKelasView onBack={() => setView('home')} kelas={kelas} />}
             {view === 'komunikasi-ortu' && <KomunikasiOrtuView onBack={() => setView('home')} kelas={kelas} />}
@@ -1194,11 +1245,11 @@ function ShortcutTile({ label, icon: Icon, onClick }) {
   )
 }
 
-function CapIcon(props) {
+
+function ChevronIcon(props) {
   return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="m2 9 10-5 10 5-10 5-10-5Z" />
-      <path d="M6 11v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5" />
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+      <path d="m6 9 6 6 6-6" />
     </svg>
   )
 }

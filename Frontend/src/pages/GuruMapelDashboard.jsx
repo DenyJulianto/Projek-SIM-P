@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import ComingSoon from '../components/ComingSoon'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
+import NotifikasiPanel from '../components/NotifikasiPanel'
 import { useAuth } from '../lib/AuthContext'
-import { api } from '../lib/api'
+import { api, BASE_URL } from '../lib/api'
 import AttendanceRecap from './AttendanceRecap'
 import MyProfile from './MyProfile'
 import NilaiManagement from './NilaiManagement'
 import NilaiSikapManagement from './NilaiSikapManagement'
+import LogoHorizontal from '../components/LogoHorizontal'
 
 const MENU_GROUPS = [
   { section: null, items: [{ key: 'home', label: 'Dashboard', icon: GridIcon }] },
@@ -49,55 +51,98 @@ const MENU_GROUPS = [
   { section: null, items: [{ key: 'profile', label: 'Profil Saya', icon: ProfileIcon }] },
 ]
 
-const COMING_SOON_LABEL = {
-  materi: ['Materi', 'Modul unggah & bagikan materi pembelajaran sedang disiapkan.'],
-  tugas: ['Tugas', 'Modul pemberian & penilaian tugas sedang disiapkan.'],
-  ujian: ['Ujian', 'Modul pembuatan & penilaian ujian online sedang disiapkan.'],
-}
+const COMING_SOON_LABEL = {}
 
 export default function GuruMapelDashboard() {
   const { user, logout } = useAuth()
   const [view, setView] = useState('home')
   const [confirmingLogout, setConfirmingLogout] = useState(false)
+  const [openSection, setOpenSection] = useState(null)
+
+  useEffect(() => {
+    const activeGroup = MENU_GROUPS.find(
+      (group) => group.section && group.items.some((item) => item.key === view)
+    )
+    if (activeGroup) setOpenSection(activeGroup.section)
+  }, [view])
+
+  function toggleSection(section) {
+    setOpenSection((prev) => (prev === section ? null : section))
+  }
 
   return (
     <div className="h-screen bg-white flex overflow-hidden">
       <aside className="w-64 shrink-0 bg-navy text-white flex flex-col py-6 px-4 h-screen">
         <div className="flex items-center gap-2 px-2 mb-6">
-          <div className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-            <CapIcon className="h-5 w-5 text-white" />
-          </div>
-          <p className="font-bold tracking-wide text-sm">SIM Pendidikan</p>
+          <LogoHorizontal />
         </div>
 
-        <nav className="flex-1 space-y-4 overflow-y-auto">
-          {MENU_GROUPS.map((group, gi) => (
-            <div key={gi} className="space-y-1">
-              {group.section && (
-                <p className="px-4 text-[10px] font-bold text-white/40 uppercase tracking-wider">
-                  {group.section}
-                </p>
-              )}
-              {group.items.map((item) => {
-                const Icon = item.icon
-                const active = view === item.key
-                return (
-                  <button
-                    key={item.key}
-                    onClick={() => setView(item.key)}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors text-left ${
-                      active
-                        ? 'bg-white text-navy shadow-sm'
-                        : 'text-white/75 hover:bg-white/10 hover:text-white'
-                    }`}
-                  >
-                    <Icon className="h-4.5 w-4.5 shrink-0" />
-                    <span className="truncate min-w-0">{item.label}</span>
-                  </button>
-                )
-              })}
-            </div>
-          ))}
+        <nav className="flex-1 space-y-1.5 overflow-y-auto">
+          {MENU_GROUPS.map((group, gi) => {
+            if (!group.section) {
+              return (
+                <div key={gi} className="space-y-1.5 pb-1.5">
+                  {group.items.map((item) => {
+                    const Icon = item.icon
+                    const active = view === item.key
+                    return (
+                      <button
+                        key={item.key}
+                        onClick={() => setView(item.key)}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors text-left ${
+                          active
+                            ? 'bg-white text-navy shadow-sm'
+                            : 'text-white/75 hover:bg-white/10 hover:text-white'
+                        }`}
+                      >
+                        <Icon className="h-4.5 w-4.5 shrink-0" />
+                        <span className="truncate min-w-0">{item.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )
+            }
+
+            const isOpen = openSection === group.section
+            const hasActiveItem = group.items.some((item) => item.key === view)
+
+            return (
+              <div key={gi} className="pb-1">
+                <button
+                  onClick={() => toggleSection(group.section)}
+                  className={`w-full flex items-center justify-between gap-2 px-4 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider transition-colors ${
+                    hasActiveItem ? 'text-white' : 'text-white/40 hover:text-white/70'
+                  }`}
+                >
+                  <span className="truncate min-w-0">{group.section}</span>
+                  <ChevronIcon className={`h-3.5 w-3.5 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {isOpen && (
+                  <div className="space-y-1.5 mt-1">
+                    {group.items.map((item) => {
+                      const Icon = item.icon
+                      const active = view === item.key
+                      return (
+                        <button
+                          key={item.key}
+                          onClick={() => setView(item.key)}
+                          className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors text-left ${
+                            active
+                              ? 'bg-white text-navy shadow-sm'
+                              : 'text-white/75 hover:bg-white/10 hover:text-white'
+                          }`}
+                        >
+                          <Icon className="h-4.5 w-4.5 shrink-0" />
+                          <span className="truncate min-w-0">{item.label}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </nav>
 
         <button
@@ -125,6 +170,9 @@ export default function GuruMapelDashboard() {
             description="Nilai yang diinput di sini otomatis menjadi sumber data E-Rapor siswa untuk semester & tahun ajaran yang dipilih."
           />
         )}
+        {view === 'materi' && <MateriManagement onBack={() => setView('home')} />}
+        {view === 'tugas' && <TugasManagement onBack={() => setView('home')} />}
+        {view === 'ujian' && <UjianManagement onBack={() => setView('home')} />}
         {view === 'pengumuman' && <PengumumanView onBack={() => setView('home')} />}
         {view === 'profile' && <MyProfile onBack={() => setView('home')} />}
         {COMING_SOON_LABEL[view] && (
@@ -163,6 +211,8 @@ function GuruMapelHome({ user, onNavigate }) {
           Kelola jadwal mengajar, absensi, nilai, dan penilaian sikap siswa dari sini.
         </p>
       </div>
+
+      <NotifikasiPanel />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
         <StatCard label="Kelas Diampu" value={kelas?.length} icon={ClassIcon} onClick={() => onNavigate('kelas-saya')} />
@@ -355,6 +405,848 @@ function PengumumanView({ onBack }) {
   )
 }
 
+function useGuruContext() {
+  const [guru, setGuru] = useState(null)
+  const [pilihan, setPilihan] = useState(null) // [{kelas_id, nama_kelas, mata_pelajaran_id, nama_mapel}]
+
+  useEffect(() => {
+    api.getMyGuruProfil().then(setGuru).catch(() => {})
+    api.getMyGuruJadwal().then((jadwal) => {
+      const map = new Map()
+      ;(jadwal || []).forEach((j) => {
+        if (!j.kelas || !j.mata_pelajaran) return
+        const key = `${j.kelas.id}-${j.mata_pelajaran.id}`
+        if (!map.has(key)) {
+          map.set(key, {
+            kelas_id: j.kelas.id,
+            nama_kelas: j.kelas.nama_kelas,
+            mata_pelajaran_id: j.mata_pelajaran.id,
+            nama_mapel: j.mata_pelajaran.nama_mapel,
+          })
+        }
+      })
+      setPilihan(Array.from(map.values()))
+    }).catch(() => setPilihan([]))
+  }, [])
+
+  return { guru, pilihan }
+}
+
+function KelasMapelSelect({ pilihan, value, onChange }) {
+  return (
+    <select
+      value={value ? `${value.kelas_id}-${value.mata_pelajaran_id}` : ''}
+      onChange={(e) => {
+        const found = pilihan.find((p) => `${p.kelas_id}-${p.mata_pelajaran_id}` === e.target.value)
+        onChange(found || null)
+      }}
+      className="input"
+      required
+    >
+      <option value="">Pilih kelas & mata pelajaran...</option>
+      {pilihan.map((p) => (
+        <option key={`${p.kelas_id}-${p.mata_pelajaran_id}`} value={`${p.kelas_id}-${p.mata_pelajaran_id}`}>
+          {p.nama_kelas} — {p.nama_mapel}
+        </option>
+      ))}
+    </select>
+  )
+}
+
+function MateriManagement({ onBack }) {
+  const { guru, pilihan } = useGuruContext()
+  const [items, setItems] = useState(null)
+  const [showForm, setShowForm] = useState(false)
+  const [kelasMapel, setKelasMapel] = useState(null)
+  const [judul, setJudul] = useState('')
+  const [deskripsi, setDeskripsi] = useState('')
+  const [tautan, setTautan] = useState('')
+  const [file, setFile] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  function load() {
+    if (!guru) return
+    api.listMateri({ 'filter[guru_id]': guru.id, per_page: 50 }).then((r) => setItems(r.data)).catch(() => setItems([]))
+  }
+
+  useEffect(load, [guru])
+
+  function resetForm() {
+    setKelasMapel(null)
+    setJudul('')
+    setDeskripsi('')
+    setTautan('')
+    setFile(null)
+    setError('')
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!kelasMapel) {
+      setError('Pilih kelas & mata pelajaran terlebih dahulu.')
+      return
+    }
+    setBusy(true)
+    setError('')
+    try {
+      await api.createMateri({
+        kelas_id: kelasMapel.kelas_id,
+        mata_pelajaran_id: kelasMapel.mata_pelajaran_id,
+        guru_id: guru.id,
+        judul,
+        deskripsi,
+        tautan,
+        file,
+      })
+      setShowForm(false)
+      resetForm()
+      load()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleDelete(m) {
+    if (!window.confirm(`Hapus materi "${m.judul}"?`)) return
+    try {
+      await api.deleteMateri(m.id)
+      load()
+    } catch (err) {
+      window.alert(err.message)
+    }
+  }
+
+  return (
+    <PageShell title="Materi" onBack={onBack}>
+      <div className="flex justify-end mb-4">
+        <button
+          onClick={() => {
+            resetForm()
+            setShowForm((v) => !v)
+          }}
+          className="bg-navy hover:bg-navy-light text-white text-sm font-semibold px-5 py-2.5 rounded-full"
+        >
+          {showForm ? 'Batal' : '+ Tambah Materi'}
+        </button>
+      </div>
+
+      {showForm && (
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-navy/10 p-5 mb-5 space-y-3">
+          <KelasMapelSelect pilihan={pilihan || []} value={kelasMapel} onChange={setKelasMapel} />
+          <input
+            type="text"
+            value={judul}
+            onChange={(e) => setJudul(e.target.value)}
+            placeholder="Judul materi"
+            required
+            className="input"
+          />
+          <textarea
+            value={deskripsi}
+            onChange={(e) => setDeskripsi(e.target.value)}
+            placeholder="Deskripsi / ringkasan materi"
+            rows={3}
+            className="w-full border border-navy/15 rounded-lg px-3 py-2 text-sm"
+          />
+          <input
+            type="text"
+            value={tautan}
+            onChange={(e) => setTautan(e.target.value)}
+            placeholder="Tautan (opsional, mis. video/link eksternal)"
+            className="input"
+          />
+          <input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} className="text-xs text-navy/60" />
+          {error && <p className="text-xs text-red-500">{error}</p>}
+          <button
+            type="submit"
+            disabled={busy}
+            className="text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-full px-5 py-2.5 disabled:opacity-50"
+          >
+            {busy ? 'Menyimpan...' : 'Simpan Materi'}
+          </button>
+        </form>
+      )}
+
+      <div className="space-y-3">
+        {(items || []).map((m) => (
+          <div key={m.id} className="bg-white rounded-2xl border border-navy/10 p-4 flex items-start justify-between gap-4">
+            <div>
+              <p className="font-bold text-navy">{m.judul}</p>
+              <p className="text-xs text-navy/50 mt-0.5">
+                {m.kelas?.nama_kelas} &middot; {m.mata_pelajaran?.nama_mapel}
+              </p>
+              {m.deskripsi && <p className="text-sm text-navy/60 mt-1.5">{m.deskripsi}</p>}
+            </div>
+            <button
+              onClick={() => handleDelete(m)}
+              className="text-xs font-semibold text-red-600 border border-red-200 rounded-full px-3.5 py-1.5 hover:bg-red-600 hover:text-white transition-colors shrink-0"
+            >
+              Hapus
+            </button>
+          </div>
+        ))}
+      </div>
+      {items && items.length === 0 && <EmptyState text="Belum ada materi yang dibagikan." />}
+      {items === null && <EmptyState text="Memuat..." />}
+    </PageShell>
+  )
+}
+
+function TugasManagement({ onBack }) {
+  const { guru, pilihan } = useGuruContext()
+  const [items, setItems] = useState(null)
+  const [showForm, setShowForm] = useState(false)
+  const [kelasMapel, setKelasMapel] = useState(null)
+  const [judul, setJudul] = useState('')
+  const [deskripsi, setDeskripsi] = useState('')
+  const [deadline, setDeadline] = useState('')
+  const [file, setFile] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [openJawabanId, setOpenJawabanId] = useState(null)
+  const [jawabanList, setJawabanList] = useState(null)
+
+  function load() {
+    if (!guru) return
+    api.listTugas({ 'filter[guru_id]': guru.id, per_page: 50 }).then((r) => setItems(r.data)).catch(() => setItems([]))
+  }
+
+  useEffect(load, [guru])
+
+  function resetForm() {
+    setKelasMapel(null)
+    setJudul('')
+    setDeskripsi('')
+    setDeadline('')
+    setFile(null)
+    setError('')
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!kelasMapel) {
+      setError('Pilih kelas & mata pelajaran terlebih dahulu.')
+      return
+    }
+    setBusy(true)
+    setError('')
+    try {
+      await api.createTugas({
+        kelas_id: kelasMapel.kelas_id,
+        mata_pelajaran_id: kelasMapel.mata_pelajaran_id,
+        guru_id: guru.id,
+        judul,
+        deskripsi,
+        deadline,
+        file,
+      })
+      setShowForm(false)
+      resetForm()
+      load()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleDelete(t) {
+    if (!window.confirm(`Hapus tugas "${t.judul}"?`)) return
+    try {
+      await api.deleteTugas(t.id)
+      load()
+    } catch (err) {
+      window.alert(err.message)
+    }
+  }
+
+  function reloadJawaban(tugasId) {
+    api.listTugasJawaban(tugasId).then(setJawabanList).catch(() => setJawabanList([]))
+  }
+
+  function toggleJawaban(t) {
+    if (openJawabanId === t.id) {
+      setOpenJawabanId(null)
+      return
+    }
+    setOpenJawabanId(t.id)
+    setJawabanList(null)
+    reloadJawaban(t.id)
+  }
+
+  return (
+    <PageShell title="Tugas" onBack={onBack}>
+      <div className="flex justify-end mb-4">
+        <button
+          onClick={() => {
+            resetForm()
+            setShowForm((v) => !v)
+          }}
+          className="bg-navy hover:bg-navy-light text-white text-sm font-semibold px-5 py-2.5 rounded-full"
+        >
+          {showForm ? 'Batal' : '+ Tambah Tugas'}
+        </button>
+      </div>
+
+      {showForm && (
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-navy/10 p-5 mb-5 space-y-3">
+          <KelasMapelSelect pilihan={pilihan || []} value={kelasMapel} onChange={setKelasMapel} />
+          <input
+            type="text"
+            value={judul}
+            onChange={(e) => setJudul(e.target.value)}
+            placeholder="Judul tugas"
+            required
+            className="input"
+          />
+          <textarea
+            value={deskripsi}
+            onChange={(e) => setDeskripsi(e.target.value)}
+            placeholder="Instruksi tugas"
+            rows={3}
+            className="w-full border border-navy/15 rounded-lg px-3 py-2 text-sm"
+          />
+          <div>
+            <label className="block text-xs font-semibold text-navy/60 mb-1">Batas Waktu Pengumpulan</label>
+            <input
+              type="datetime-local"
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
+              required
+              className="input"
+            />
+          </div>
+          <input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} className="text-xs text-navy/60" />
+          {error && <p className="text-xs text-red-500">{error}</p>}
+          <button
+            type="submit"
+            disabled={busy}
+            className="text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-full px-5 py-2.5 disabled:opacity-50"
+          >
+            {busy ? 'Menyimpan...' : 'Simpan Tugas'}
+          </button>
+        </form>
+      )}
+
+      <div className="space-y-3">
+        {(items || []).map((t) => (
+          <div key={t.id} className="bg-white rounded-2xl border border-navy/10 p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-bold text-navy">{t.judul}</p>
+                <p className="text-xs text-navy/50 mt-0.5">
+                  {t.kelas?.nama_kelas} &middot; {t.mata_pelajaran?.nama_mapel} &middot; Batas:{' '}
+                  {new Date(t.deadline).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => toggleJawaban(t)}
+                  className="text-xs font-semibold text-navy border border-navy/20 rounded-full px-3.5 py-1.5 hover:bg-navy hover:text-white transition-colors"
+                >
+                  {t.jawaban_count ?? 0} Jawaban
+                </button>
+                <button
+                  onClick={() => handleDelete(t)}
+                  className="text-xs font-semibold text-red-600 border border-red-200 rounded-full px-3.5 py-1.5 hover:bg-red-600 hover:text-white transition-colors"
+                >
+                  Hapus
+                </button>
+              </div>
+            </div>
+
+            {openJawabanId === t.id && (
+              <div className="mt-4 pt-4 border-t border-navy/10">
+                {jawabanList === null ? (
+                  <EmptyState text="Memuat..." />
+                ) : jawabanList.length === 0 ? (
+                  <EmptyState text="Belum ada siswa yang mengumpulkan." />
+                ) : (
+                  <div className="space-y-2">
+                    {jawabanList.map((j) => (
+                      <TugasJawabanRow key={j.id} jawaban={j} onGraded={() => reloadJawaban(t.id)} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      {items && items.length === 0 && <EmptyState text="Belum ada tugas yang diberikan." />}
+      {items === null && <EmptyState text="Memuat..." />}
+    </PageShell>
+  )
+}
+
+function TugasJawabanRow({ jawaban, onGraded }) {
+  const [editing, setEditing] = useState(false)
+  const [nilai, setNilai] = useState(jawaban.nilai ?? '')
+  const [catatan, setCatatan] = useState(jawaban.catatan_guru ?? '')
+  const [busy, setBusy] = useState(false)
+
+  async function handleSave() {
+    setBusy(true)
+    try {
+      await api.nilaiTugasJawaban(jawaban.id, { nilai: Number(nilai), catatan_guru: catatan })
+      setEditing(false)
+      onGraded()
+    } catch (err) {
+      window.alert(err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="bg-navy/[0.03] rounded-xl p-3.5">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-navy">{jawaban.siswa?.nama}</p>
+          <p className="text-xs text-navy/50">
+            {jawaban.submitted_at
+              ? new Date(jawaban.submitted_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })
+              : 'Belum mengumpulkan'}
+            {jawaban.status === 'dinilai' && ` · Nilai: ${jawaban.nilai}`}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {jawaban.file && (
+            <a
+              href={`${BASE_URL}/tugas-jawaban-file/${jawaban.file.replace('tugas-jawaban/', '')}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs font-semibold text-navy-light hover:underline"
+            >
+              Lihat File
+            </a>
+          )}
+          <button
+            onClick={() => setEditing((v) => !v)}
+            className="text-xs font-semibold text-navy border border-navy/20 rounded-full px-3 py-1 hover:bg-navy hover:text-white transition-colors"
+          >
+            {jawaban.status === 'dinilai' ? 'Ubah Nilai' : 'Beri Nilai'}
+          </button>
+        </div>
+      </div>
+      {jawaban.jawaban_text && <p className="text-sm text-navy/70 mt-2 whitespace-pre-line">{jawaban.jawaban_text}</p>}
+      {editing && (
+        <div className="mt-3 pt-3 border-t border-navy/10 flex items-end gap-2 flex-wrap">
+          <div>
+            <label className="block text-[11px] font-semibold text-navy/50 mb-1">Nilai (0-100)</label>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              value={nilai}
+              onChange={(e) => setNilai(e.target.value)}
+              className="input w-24"
+            />
+          </div>
+          <div className="flex-1 min-w-[160px]">
+            <label className="block text-[11px] font-semibold text-navy/50 mb-1">Catatan (opsional)</label>
+            <input type="text" value={catatan} onChange={(e) => setCatatan(e.target.value)} className="input" />
+          </div>
+          <button
+            onClick={handleSave}
+            disabled={busy}
+            className="text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-full px-4 py-2 disabled:opacity-50"
+          >
+            {busy ? 'Menyimpan...' : 'Simpan'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function UjianManagement({ onBack }) {
+  const { guru, pilihan } = useGuruContext()
+  const [items, setItems] = useState(null)
+  const [showForm, setShowForm] = useState(false)
+  const [kelasMapel, setKelasMapel] = useState(null)
+  const [judul, setJudul] = useState('')
+  const [deskripsi, setDeskripsi] = useState('')
+  const [waktuMulai, setWaktuMulai] = useState('')
+  const [waktuSelesai, setWaktuSelesai] = useState('')
+  const [durasi, setDurasi] = useState(60)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [openId, setOpenId] = useState(null)
+
+  function load() {
+    if (!guru) return
+    api.listUjian({ 'filter[guru_id]': guru.id, per_page: 50 }).then((r) => setItems(r.data)).catch(() => setItems([]))
+  }
+
+  useEffect(load, [guru])
+
+  function resetForm() {
+    setKelasMapel(null)
+    setJudul('')
+    setDeskripsi('')
+    setWaktuMulai('')
+    setWaktuSelesai('')
+    setDurasi(60)
+    setError('')
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!kelasMapel) {
+      setError('Pilih kelas & mata pelajaran terlebih dahulu.')
+      return
+    }
+    setBusy(true)
+    setError('')
+    try {
+      await api.createUjian({
+        kelas_id: kelasMapel.kelas_id,
+        mata_pelajaran_id: kelasMapel.mata_pelajaran_id,
+        guru_id: guru.id,
+        judul,
+        deskripsi,
+        waktu_mulai: waktuMulai,
+        waktu_selesai: waktuSelesai,
+        durasi_menit: Number(durasi),
+      })
+      setShowForm(false)
+      resetForm()
+      load()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleDelete(u) {
+    if (!window.confirm(`Hapus ujian "${u.judul}"?`)) return
+    try {
+      await api.deleteUjian(u.id)
+      load()
+    } catch (err) {
+      window.alert(err.message)
+    }
+  }
+
+  return (
+    <PageShell title="Ujian" onBack={onBack}>
+      <div className="flex justify-end mb-4">
+        <button
+          onClick={() => {
+            resetForm()
+            setShowForm((v) => !v)
+          }}
+          className="bg-navy hover:bg-navy-light text-white text-sm font-semibold px-5 py-2.5 rounded-full"
+        >
+          {showForm ? 'Batal' : '+ Buat Ujian'}
+        </button>
+      </div>
+
+      {showForm && (
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-navy/10 p-5 mb-5 space-y-3">
+          <KelasMapelSelect pilihan={pilihan || []} value={kelasMapel} onChange={setKelasMapel} />
+          <input
+            type="text"
+            value={judul}
+            onChange={(e) => setJudul(e.target.value)}
+            placeholder="Judul ujian"
+            required
+            className="input"
+          />
+          <textarea
+            value={deskripsi}
+            onChange={(e) => setDeskripsi(e.target.value)}
+            placeholder="Deskripsi (opsional)"
+            rows={2}
+            className="w-full border border-navy/15 rounded-lg px-3 py-2 text-sm"
+          />
+          <div className="grid sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-navy/60 mb-1">Waktu Mulai</label>
+              <input
+                type="datetime-local"
+                value={waktuMulai}
+                onChange={(e) => setWaktuMulai(e.target.value)}
+                required
+                className="input"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-navy/60 mb-1">Waktu Selesai</label>
+              <input
+                type="datetime-local"
+                value={waktuSelesai}
+                onChange={(e) => setWaktuSelesai(e.target.value)}
+                required
+                className="input"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-navy/60 mb-1">Durasi (menit)</label>
+              <input
+                type="number"
+                min="1"
+                value={durasi}
+                onChange={(e) => setDurasi(e.target.value)}
+                required
+                className="input"
+              />
+            </div>
+          </div>
+          {error && <p className="text-xs text-red-500">{error}</p>}
+          <button
+            type="submit"
+            disabled={busy}
+            className="text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-full px-5 py-2.5 disabled:opacity-50"
+          >
+            {busy ? 'Menyimpan...' : 'Simpan Ujian'}
+          </button>
+        </form>
+      )}
+
+      <div className="space-y-3">
+        {(items || []).map((u) => (
+          <div key={u.id} className="bg-white rounded-2xl border border-navy/10 p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-bold text-navy">{u.judul}</p>
+                <p className="text-xs text-navy/50 mt-0.5">
+                  {u.kelas?.nama_kelas} &middot; {u.mata_pelajaran?.nama_mapel} &middot; {u.soal_count ?? 0} soal &middot;{' '}
+                  {u.attempts_count ?? 0} siswa mengerjakan
+                </p>
+                <p className="text-xs text-navy/40 mt-0.5">
+                  {new Date(u.waktu_mulai).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })} —{' '}
+                  {new Date(u.waktu_selesai).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => setOpenId(openId === u.id ? null : u.id)}
+                  className="text-xs font-semibold text-navy border border-navy/20 rounded-full px-3.5 py-1.5 hover:bg-navy hover:text-white transition-colors"
+                >
+                  {openId === u.id ? 'Tutup' : 'Kelola'}
+                </button>
+                <button
+                  onClick={() => handleDelete(u)}
+                  className="text-xs font-semibold text-red-600 border border-red-200 rounded-full px-3.5 py-1.5 hover:bg-red-600 hover:text-white transition-colors"
+                >
+                  Hapus
+                </button>
+              </div>
+            </div>
+
+            {openId === u.id && <UjianDetail ujian={u} onChanged={load} />}
+          </div>
+        ))}
+      </div>
+      {items && items.length === 0 && <EmptyState text="Belum ada ujian yang dibuat." />}
+      {items === null && <EmptyState text="Memuat..." />}
+    </PageShell>
+  )
+}
+
+function UjianDetail({ ujian, onChanged }) {
+  const [tab, setTab] = useState('soal')
+  const [soal, setSoal] = useState(null)
+  const [attempts, setAttempts] = useState(null)
+  const [showForm, setShowForm] = useState(false)
+  const [pertanyaan, setPertanyaan] = useState('')
+  const [pilihanA, setPilihanA] = useState('')
+  const [pilihanB, setPilihanB] = useState('')
+  const [pilihanC, setPilihanC] = useState('')
+  const [pilihanD, setPilihanD] = useState('')
+  const [jawabanBenar, setJawabanBenar] = useState('a')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  function loadSoal() {
+    api.listUjianSoal(ujian.id).then(setSoal).catch(() => setSoal([]))
+  }
+
+  useEffect(() => {
+    if (tab === 'soal') loadSoal()
+    if (tab === 'hasil') api.listUjianAttempts(ujian.id).then(setAttempts).catch(() => setAttempts([]))
+  }, [tab])
+
+  function resetForm() {
+    setPertanyaan('')
+    setPilihanA('')
+    setPilihanB('')
+    setPilihanC('')
+    setPilihanD('')
+    setJawabanBenar('a')
+    setError('')
+  }
+
+  async function handleAddSoal(e) {
+    e.preventDefault()
+    setBusy(true)
+    setError('')
+    try {
+      await api.createUjianSoal(ujian.id, {
+        pertanyaan,
+        pilihan_a: pilihanA,
+        pilihan_b: pilihanB,
+        pilihan_c: pilihanC,
+        pilihan_d: pilihanD,
+        jawaban_benar: jawabanBenar,
+      })
+      resetForm()
+      setShowForm(false)
+      loadSoal()
+      onChanged()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleDeleteSoal(s) {
+    if (!window.confirm('Hapus soal ini?')) return
+    try {
+      await api.deleteUjianSoal(s.id)
+      loadSoal()
+      onChanged()
+    } catch (err) {
+      window.alert(err.message)
+    }
+  }
+
+  return (
+    <div className="mt-4 pt-4 border-t border-navy/10">
+      <div className="flex gap-2 mb-3">
+        <button
+          onClick={() => setTab('soal')}
+          className={`text-xs font-semibold px-3.5 py-1.5 rounded-full transition-colors ${
+            tab === 'soal' ? 'bg-navy text-white' : 'bg-navy/5 text-navy/60'
+          }`}
+        >
+          Soal
+        </button>
+        <button
+          onClick={() => setTab('hasil')}
+          className={`text-xs font-semibold px-3.5 py-1.5 rounded-full transition-colors ${
+            tab === 'hasil' ? 'bg-navy text-white' : 'bg-navy/5 text-navy/60'
+          }`}
+        >
+          Hasil Siswa
+        </button>
+      </div>
+
+      {tab === 'soal' && (
+        <div className="space-y-2.5">
+          {(soal || []).map((s, i) => (
+            <div key={s.id} className="bg-navy/[0.03] rounded-xl p-3.5">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-semibold text-navy">
+                  {i + 1}. {s.pertanyaan}
+                </p>
+                <button
+                  onClick={() => handleDeleteSoal(s)}
+                  className="text-[11px] font-semibold text-red-600 hover:underline shrink-0"
+                >
+                  Hapus
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 text-xs text-navy/60">
+                {['a', 'b', 'c', 'd'].map((opt) => (
+                  <p key={opt} className={s.jawaban_benar === opt ? 'font-bold text-emerald-700' : ''}>
+                    {opt.toUpperCase()}. {s[`pilihan_${opt}`]}
+                  </p>
+                ))}
+              </div>
+            </div>
+          ))}
+          {soal && soal.length === 0 && <p className="text-sm text-navy/40 text-center py-4">Belum ada soal.</p>}
+          {soal === null && <p className="text-sm text-navy/40 text-center py-4">Memuat...</p>}
+
+          {showForm ? (
+            <form onSubmit={handleAddSoal} className="bg-white border border-navy/10 rounded-xl p-3.5 space-y-2.5">
+              <textarea
+                value={pertanyaan}
+                onChange={(e) => setPertanyaan(e.target.value)}
+                placeholder="Pertanyaan"
+                rows={2}
+                required
+                className="w-full border border-navy/15 rounded-lg px-3 py-2 text-sm"
+              />
+              {[
+                ['a', pilihanA, setPilihanA],
+                ['b', pilihanB, setPilihanB],
+                ['c', pilihanC, setPilihanC],
+                ['d', pilihanD, setPilihanD],
+              ].map(([opt, val, setVal]) => (
+                <div key={opt} className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    checked={jawabanBenar === opt}
+                    onChange={() => setJawabanBenar(opt)}
+                    title="Tandai sebagai jawaban benar"
+                  />
+                  <span className="text-xs font-bold text-navy/60 uppercase w-4">{opt}</span>
+                  <input
+                    type="text"
+                    value={val}
+                    onChange={(e) => setVal(e.target.value)}
+                    placeholder={`Pilihan ${opt.toUpperCase()}`}
+                    required
+                    className="input flex-1"
+                  />
+                </div>
+              ))}
+              {error && <p className="text-xs text-red-500">{error}</p>}
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-full px-4 py-2 disabled:opacity-50"
+                >
+                  {busy ? 'Menyimpan...' : 'Simpan Soal'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowForm(false)}
+                  className="text-xs font-semibold text-navy/60 px-4 py-2"
+                >
+                  Batal
+                </button>
+              </div>
+            </form>
+          ) : (
+            <button
+              onClick={() => setShowForm(true)}
+              className="text-xs font-semibold text-navy border border-navy/20 rounded-full px-4 py-2 hover:bg-navy hover:text-white transition-colors"
+            >
+              + Tambah Soal
+            </button>
+          )}
+        </div>
+      )}
+
+      {tab === 'hasil' && (
+        <div className="space-y-2">
+          {(attempts || []).map((a) => (
+            <div key={a.id} className="bg-navy/[0.03] rounded-xl p-3 flex items-center justify-between">
+              <p className="text-sm font-semibold text-navy">{a.siswa?.nama}</p>
+              <p className="text-xs text-navy/60">
+                {a.finished_at ? `Nilai: ${a.nilai}` : 'Sedang mengerjakan...'}
+              </p>
+            </div>
+          ))}
+          {attempts && attempts.length === 0 && <p className="text-sm text-navy/40 text-center py-4">Belum ada siswa yang mengerjakan.</p>}
+          {attempts === null && <p className="text-sm text-navy/40 text-center py-4">Memuat...</p>}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function StatCard({ label, value, icon: Icon, onClick }) {
   return (
     <button onClick={onClick} className="bg-white rounded-2xl border border-navy/10 p-5 text-left hover:border-navy/20 transition-colors">
@@ -376,11 +1268,11 @@ function ShortcutTile({ label, icon: Icon, onClick }) {
   )
 }
 
-function CapIcon(props) {
+
+function ChevronIcon(props) {
   return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="m2 9 10-5 10 5-10 5-10-5Z" />
-      <path d="M6 11v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5" />
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+      <path d="m6 9 6 6 6-6" />
     </svg>
   )
 }

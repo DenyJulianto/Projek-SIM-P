@@ -23,11 +23,15 @@ import PrincipalDashboard from './PrincipalDashboard'
 import RoleManagement from './RoleManagement'
 import SiswaDashboard from './SiswaDashboard'
 import SiswaManagement from './SiswaManagement'
+import SinkronisasiData from './SinkronisasiData'
+import SuperAdminDashboard from './SuperAdminDashboard'
 import SuratArsipManagement from './SuratArsipManagement'
 import SystemConfig from './SystemConfig'
 import TataUsahaDashboard from './TataUsahaDashboard'
 import UserManagement from './UserManagement'
 import WaliKelasDashboard from './WaliKelasDashboard'
+import Logo from '../components/Logo'
+import LogoHorizontal from '../components/LogoHorizontal'
 
 const MENU_GROUPS = [
   {
@@ -42,12 +46,17 @@ const MENU_GROUPS = [
       { key: 'konfigurasi', label: 'Konfigurasi Sistem', icon: GearIcon, permission: 'pengguna.manage' },
       { key: 'integrasi', label: 'Integrasi', icon: PlugIcon, permission: 'pengguna.manage' },
       { key: 'backup', label: 'Backup & Pemulihan', icon: DatabaseIcon, permission: 'pengguna.manage' },
+      { key: 'sinkronisasi', label: 'Sinkronisasi Data', icon: SyncMenuIcon, permission: 'pengguna.manage' },
       { key: 'audit-log', label: 'Audit Log', icon: LogIcon, permission: 'pengguna.manage' },
     ],
   },
   {
     section: 'Operasional Sekolah',
     items: [
+      { key: 'siswa', label: 'Data Siswa', icon: StudentIcon, permission: 'siswa.manage' },
+      { key: 'guru', label: 'Data Guru & Pegawai', icon: StaffIcon, permission: 'pegawai.manage' },
+      { key: 'kelas', label: 'Data Kelas', icon: ClassIcon, permission: 'kurikulum.manage' },
+      { key: 'absensi-guru', label: 'Monitoring Absensi Guru', icon: AttendanceIcon, permission: 'monitoring-guru.absensi-guru' },
       { key: 'inventaris', label: 'Sarana & Prasarana', icon: InventoryIcon, permission: 'sarpras.inventaris' },
       { key: 'persuratan', label: 'Surat & Kearsipan', icon: ArchiveIcon, permission: 'persuratan.manage' },
       { key: 'landing', label: 'Edit Landing Page', icon: SchoolIcon, permission: 'humas.informasi' },
@@ -60,13 +69,14 @@ const MENU_GROUPS = [
 ]
 
 export default function Dashboard() {
-  const { user, logout, hasPermission } = useAuth()
+  const { user, logout, hasPermission, isSuperAdmin } = useAuth()
   const [view, setView] = useState('home')
   const [profil, setProfil] = useState(null)
   const [editingProfil, setEditingProfil] = useState(false)
   const [stats, setStats] = useState({ siswa: null, guru: null, kelas: null })
   const [notices, setNotices] = useState([])
   const [confirmingLogout, setConfirmingLogout] = useState(false)
+  const [openSection, setOpenSection] = useState(null)
 
   const canEditProfil = hasPermission('humas.informasi')
   const isAdmin = hasPermission('pengguna.manage')
@@ -74,6 +84,18 @@ export default function Dashboard() {
     ...group,
     items: group.items.filter((item) => !item.permission || hasPermission(item.permission)),
   })).filter((group) => group.items.length > 0)
+
+  useEffect(() => {
+    const activeGroup = menuGroups.find(
+      (group) => group.section && group.items.some((item) => item.key === view)
+    )
+    if (activeGroup) setOpenSection(activeGroup.section)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view])
+
+  function toggleSection(section) {
+    setOpenSection((prev) => (prev === section ? null : section))
+  }
 
   useEffect(() => {
     if (canEditProfil) api.getProfil().then(setProfil).catch(() => {})
@@ -124,6 +146,10 @@ export default function Dashboard() {
       return
     }
     setView(item.key)
+  }
+
+  if (isSuperAdmin()) {
+    return <SuperAdminDashboard />
   }
 
   const isPrincipal = user?.roles?.some((r) => r.name === 'Kepala Sekolah') && !isAdmin
@@ -180,43 +206,80 @@ export default function Dashboard() {
     <div className="h-screen bg-white flex overflow-hidden">
         <aside className="w-64 shrink-0 bg-navy flex flex-col py-5 h-screen">
           <div className="mx-4 mb-6 rounded-2xl bg-gradient-to-br from-navy-light to-navy px-4 py-4 flex items-center gap-3 shrink-0">
-            <div className="h-10 w-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
-              <CapIcon className="h-5.5 w-5.5 text-white" />
-            </div>
-            <div className="min-w-0">
-              <p className="font-extrabold tracking-wide text-sm text-white leading-tight">SIM Pendidikan</p>
-              <p className="text-[10px] text-white/70 leading-tight truncate">Sistem Informasi Manajemen</p>
-            </div>
+            <LogoHorizontal
+              subtitle="Sistem Informasi Manajemen"
+              badgeClassName="h-10 w-10"
+              ringClassName="ring-white/40"
+              iconClassName="h-6 w-6"
+            />
           </div>
 
-          <nav className="flex-1 space-y-4 overflow-y-auto px-4">
-            {menuGroups.map((group, gi) => (
-              <div key={gi} className="space-y-1">
-                {group.section && (
-                  <p className="px-4 text-[10px] font-bold text-white/40 uppercase tracking-wider">
-                    {group.section}
-                  </p>
-                )}
-                {group.items.map((item) => {
-                  const Icon = item.icon
-                  const active = item.key === 'dashboard' ? view === 'home' : view === item.key
-                  return (
-                    <button
-                      key={item.key}
-                      onClick={() => (item.key === 'dashboard' ? setView('home') : handleAction(item))}
-                      className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${
-                        active
-                          ? 'bg-navy-light text-white shadow-sm'
-                          : 'text-white/75 hover:bg-white/10 hover:text-white'
-                      }`}
-                    >
-                      <Icon className="h-4.5 w-4.5 shrink-0" />
-                      <span className="truncate min-w-0">{item.label}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            ))}
+          <nav className="flex-1 space-y-1.5 overflow-y-auto px-4">
+            {menuGroups.map((group, gi) => {
+              if (!group.section) {
+                return (
+                  <div key={gi} className="space-y-1 pb-1.5">
+                    {group.items.map((item) => {
+                      const Icon = item.icon
+                      const active = item.key === 'dashboard' ? view === 'home' : view === item.key
+                      return (
+                        <button
+                          key={item.key}
+                          onClick={() => (item.key === 'dashboard' ? setView('home') : handleAction(item))}
+                          className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${
+                            active
+                              ? 'bg-navy-light text-white shadow-sm'
+                              : 'text-white/75 hover:bg-white/10 hover:text-white'
+                          }`}
+                        >
+                          <Icon className="h-4.5 w-4.5 shrink-0" />
+                          <span className="truncate min-w-0">{item.label}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )
+              }
+
+              const isOpen = openSection === group.section
+              const hasActiveItem = group.items.some((item) => item.key === view)
+
+              return (
+                <div key={gi} className="pb-1">
+                  <button
+                    onClick={() => toggleSection(group.section)}
+                    className={`w-full flex items-center justify-between gap-2 px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-colors ${
+                      hasActiveItem ? 'text-white' : 'text-white/40 hover:text-white/70'
+                    }`}
+                  >
+                    <span className="truncate min-w-0">{group.section}</span>
+                    <ChevronIcon className={`h-3.5 w-3.5 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  {isOpen && (
+                    <div className="space-y-1 mt-1">
+                      {group.items.map((item) => {
+                        const Icon = item.icon
+                        const active = view === item.key
+                        return (
+                          <button
+                            key={item.key}
+                            onClick={() => handleAction(item)}
+                            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${
+                              active
+                                ? 'bg-navy-light text-white shadow-sm'
+                                : 'text-white/75 hover:bg-white/10 hover:text-white'
+                            }`}
+                          >
+                            <Icon className="h-4.5 w-4.5 shrink-0" />
+                            <span className="truncate min-w-0">{item.label}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </nav>
 
           <div className="px-4 pt-3 mt-2 border-t border-white/10 shrink-0">
@@ -253,6 +316,8 @@ export default function Dashboard() {
             <Integrations onBack={() => setView('home')} />
           ) : view === 'backup' ? (
             <BackupRestore onBack={() => setView('home')} />
+          ) : view === 'sinkronisasi' ? (
+            <SinkronisasiData onBack={() => setView('home')} />
           ) : view === 'audit-log' ? (
             <AuditLog onBack={() => setView('home')} />
           ) : view === 'profile' ? (
@@ -284,7 +349,9 @@ export default function Dashboard() {
                       kelola data sekolah Anda dari dashboard ini.
                     </p>
                   </div>
-                  <CapIcon className="h-16 w-16 text-white/20 shrink-0 hidden sm:block" />
+                  <div className="h-20 w-20 rounded-full bg-white ring-2 ring-white/30 flex items-center justify-center shrink-0 hidden sm:flex">
+                    <Logo className="h-14 w-14" />
+                  </div>
                 </div>
 
                 {(stats.siswa !== null || stats.guru !== null || stats.kelas !== null) && (
@@ -434,11 +501,11 @@ function GradientStatCard({ label, value, icon: Icon, from, to }) {
   )
 }
 
-function CapIcon(props) {
+
+function ChevronIcon(props) {
   return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="m2 9 10-5 10 5-10 5-10-5Z" />
-      <path d="M6 11v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5" />
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+      <path d="m6 9 6 6 6-6" />
     </svg>
   )
 }
@@ -598,6 +665,15 @@ function DatabaseIcon(props) {
       <ellipse cx="12" cy="5" rx="8" ry="3" />
       <path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5" />
       <path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" />
+    </svg>
+  )
+}
+
+function SyncMenuIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M21 12a9 9 0 0 1-15.3 6.4M3 12a9 9 0 0 1 15.3-6.4" />
+      <path d="M21 3v6h-6M3 21v-6h6" />
     </svg>
   )
 }

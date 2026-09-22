@@ -19,6 +19,10 @@ export default function PrestasiFormModal({ item, onClose, onSaved }) {
     tingkat: item?.tingkat || 'sekolah',
     tanggal: item?.tanggal?.slice(0, 10) || new Date().toISOString().slice(0, 10),
     keterangan: item?.keterangan || '',
+    bidang: item?.bidang || '',
+    jenis: item?.jenis || '',
+    penyelenggara: item?.penyelenggara || '',
+    peringkat: item?.peringkat || '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -107,6 +111,36 @@ export default function PrestasiFormModal({ item, onClose, onSaved }) {
                 onChange={(e) => update('tanggal', e.target.value)}
                 className="input"
               />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Bidang (opsional)">
+              <input
+                type="text"
+                list="bidang-prestasi"
+                value={form.bidang}
+                onChange={(e) => update('bidang', e.target.value)}
+                className="input"
+                placeholder="mis. Olahraga"
+              />
+              <datalist id="bidang-prestasi">
+                {['Akademik', 'Olahraga', 'Seni & Budaya', 'Keagamaan', 'Teknologi', 'Kepemimpinan', 'Lainnya'].map((k) => (
+                  <option key={k} value={k} />
+                ))}
+              </datalist>
+            </Field>
+            <Field label="Jenis prestasi">
+              <select value={form.jenis} onChange={(e) => update('jenis', e.target.value)} className="input">
+                <option value="">—</option>
+                <option value="individu">Individu</option>
+                <option value="kelompok">Kelompok</option>
+              </select>
+            </Field>
+            <Field label="Penyelenggara">
+              <input type="text" value={form.penyelenggara} onChange={(e) => update('penyelenggara', e.target.value)} className="input" />
+            </Field>
+            <Field label="Peringkat">
+              <input type="text" value={form.peringkat} onChange={(e) => update('peringkat', e.target.value)} className="input" placeholder="mis. Juara 1" />
             </Field>
           </div>
           <Field label="Keterangan">

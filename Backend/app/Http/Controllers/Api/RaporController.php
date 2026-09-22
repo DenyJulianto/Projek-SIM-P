@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\PenerbitanRapor;
 use App\Models\Siswa;
 use App\Settings\RaporTemplateSettings;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -22,6 +23,20 @@ class RaporController extends Controller
         ]);
 
         $this->authorizeAccess($request, $siswa);
+
+        // Siswa/orang tua hanya boleh mengunduh rapor yang sudah diterbitkan
+        // (Kurikulum > Penerbitan Rapor); yang diunduh adalah isi yang dibekukan.
+        if (! $this->isStaff($request)) {
+            $terbit = PenerbitanRapor::terbitUntuk($siswa->id, $data['tahun_ajaran'], $data['semester']);
+            abort_if(! $terbit || ! $terbit->konten, 403, 'Rapor belum diterbitkan.');
+
+            $konten = $terbit->konten;
+            $konten['nomor_rapor'] = $terbit->nomor_rapor;
+            $konten['tanggal_terbit'] = substr((string) $terbit->tanggal_terbit, 0, 10);
+
+            return Pdf::loadView('rapor.penerbitan', ['items' => [$konten]])->setPaper('a4')
+                ->download("rapor-{$siswa->nis}-{$data['semester']}-".str_replace('/', '-', $data['tahun_ajaran']).'.pdf');
+        }
 
         $nilai = $siswa->nilai()
             ->with('mataPelajaran')
@@ -60,11 +75,18 @@ class RaporController extends Controller
         return $pdf->download("rapor-{$siswa->nis}-{$data['semester']}-{$tahunAjaranSlug}.pdf");
     }
 
+    private function isStaff(Request $request): bool
+    {
+        $user = $request->user();
+
+        return $user->can('rapor.publish') || $user->can('rapor-kelas.manage') || $user->can('rapor.approve');
+    }
+
     private function authorizeAccess(Request $request, Siswa $siswa): void
     {
         $user = $request->user();
 
-        $isStaff = $user->can('rapor.publish') || $user->can('rapor-kelas.manage') || $user->can('rapor.approve');
+        $isStaff = $this->isStaff($request);
         $isOwnStudent = $siswa->user_id === $user->id;
         $isParent = $siswa->walis()->where('user_id', $user->id)->exists();
 

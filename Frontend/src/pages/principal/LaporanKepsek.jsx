@@ -27,12 +27,9 @@ export default function LaporanKepsek() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-extrabold text-navy mb-1">Laporan Sekolah</h1>
-          <p className="text-sm text-navy/50">
-            Ringkasan akademik, kesiswaan, dan kehadiran — {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
-          </p>
-        </div>
+        <p className="text-sm text-navy/50">
+          Ringkasan akademik, kesiswaan, dan kehadiran — {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+        </p>
         <button
           onClick={() => window.print()}
           className="text-sm font-semibold text-navy border border-navy/20 rounded-full px-5 py-2 hover:bg-navy hover:text-white transition-colors"

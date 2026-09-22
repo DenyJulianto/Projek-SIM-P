@@ -366,8 +366,8 @@ export default function AdminHome({ user, onNavigate }) {
               Akses Cepat
             </h2>
             <div className="grid grid-cols-3 gap-3">
-              {QUICK_ACCESS.map((item) => (
-                <QuickAccessTile key={item.key} {...item} onClick={() => onNavigate(item.key)} />
+              {QUICK_ACCESS.map(({ key, ...item }) => (
+                <QuickAccessTile key={key} {...item} onClick={() => onNavigate(key)} />
               ))}
             </div>
           </div>

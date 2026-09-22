@@ -1,17 +1,9 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../lib/api'
 
-const TITLES = {
-  guru: 'Data Guru',
-  pegawai: 'Data Pegawai',
-  pengajuan: 'Pengajuan Kepegawaian',
-  persetujuan: 'Persetujuan Kepegawaian',
-}
-
 export default function KepegawaianKepsekView({ tab }) {
   return (
     <div>
-      <h1 className="text-2xl font-extrabold text-navy mb-1">{TITLES[tab]}</h1>
       <p className="text-sm text-navy/50 mb-6">
         {tab === 'guru' || tab === 'pegawai'
           ? 'Tampilan baca saja — pengelolaan data dilakukan oleh Tata Usaha.'

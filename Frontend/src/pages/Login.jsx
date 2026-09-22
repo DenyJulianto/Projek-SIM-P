@@ -3,10 +3,11 @@ import { Link, useNavigate } from 'react-router-dom'
 import CompleteNameForm from '../components/CompleteNameForm'
 import PasswordInput from '../components/PasswordInput'
 import { useAuth } from '../lib/AuthContext'
-import { api } from '../lib/api'
+import { api, IS_CENTRAL_DOMAIN } from '../lib/api'
+import LogoStacked from '../components/LogoStacked'
 
 export default function Login() {
-  const { login, setUser } = useAuth()
+  const { login, verifyTwoFactor, setUser } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -15,8 +16,12 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [background, setBackground] = useState('')
   const [needsName, setNeedsName] = useState(false)
+  const [twoFactorChallenge, setTwoFactorChallenge] = useState(null)
+  const [twoFactorCode, setTwoFactorCode] = useState('')
 
   useEffect(() => {
+    // /public/profil khusus data satu sekolah, tidak ada artinya di domain central.
+    if (IS_CENTRAL_DOMAIN) return
     api.getProfil().then((p) => setBackground(p.auth_background || '')).catch(() => {})
   }, [])
 
@@ -25,12 +30,28 @@ export default function Login() {
     setLoading(true)
     setError('')
     try {
-      const loggedInUser = await login(email, password, remember)
-      if (!loggedInUser.name) {
+      const result = await login(email, password, remember)
+      if (result.requiresTwoFactor) {
+        setTwoFactorChallenge(result.challenge)
+      } else if (!result.name) {
         setNeedsName(true)
       } else {
         navigate('/dashboard')
       }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleTwoFactorSubmit(e) {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    try {
+      await verifyTwoFactor(twoFactorChallenge, twoFactorCode, remember)
+      navigate('/dashboard')
     } catch (err) {
       setError(err.message)
     } finally {
@@ -58,18 +79,7 @@ export default function Login() {
 
       <div className="relative w-full max-w-5xl bg-white rounded-[2rem] shadow-2xl shadow-navy/10 overflow-hidden grid md:grid-cols-2">
         <div className="relative bg-gradient-to-br from-emerald-500 via-emerald-700 to-navy text-white p-10 flex flex-col justify-between overflow-hidden">
-          <div>
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 flex-shrink-0 rounded-full bg-white flex items-center justify-center">
-                <CapIcon className="h-6 w-6 text-navy-light" />
-              </div>
-              <div>
-                <p className="font-bold tracking-wide leading-tight">SIM Pendidikan</p>
-                <p className="text-[11px] text-white/60 leading-tight">Sistem Informasi Manajemen Pendidikan</p>
-              </div>
-            </div>
-            <div className="h-1 w-10 rounded-full bg-emerald-300 mt-4" />
-          </div>
+          <LogoStacked />
 
           <div className="py-8">
             <h2 className="text-3xl font-extrabold leading-tight mb-3">
@@ -95,7 +105,54 @@ export default function Login() {
         </div>
 
         <div className="p-8 sm:p-10 flex flex-col justify-center">
-          {needsName ? (
+          {twoFactorChallenge ? (
+            <>
+              <h1 className="text-3xl font-extrabold text-navy uppercase">Verifikasi 2FA</h1>
+              <p className="text-navy/50 text-sm mt-1 mb-6">
+                Masukkan kode 6 digit dari aplikasi authenticator Anda, atau salah satu kode
+                pemulihan.
+              </p>
+
+              {error && (
+                <p className="text-red-600 bg-red-50 border border-red-200 rounded-lg text-sm text-center py-2 px-3 mb-4">
+                  {error}
+                </p>
+              )}
+
+              <form onSubmit={handleTwoFactorSubmit} className="space-y-4">
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  value={twoFactorCode}
+                  onChange={(e) => setTwoFactorCode(e.target.value)}
+                  placeholder="Kode 6 digit atau kode pemulihan"
+                  className="w-full bg-emerald-50 rounded-full px-5 py-3 text-sm text-navy placeholder-navy/40 focus:outline-none focus:ring-2 focus:ring-navy-light/50 text-center tracking-widest"
+                />
+
+                <div className="flex justify-center pt-2">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="bg-navy-light hover:bg-emerald-700 text-white font-bold tracking-wide px-10 py-2.5 rounded-full transition-colors disabled:opacity-50"
+                  >
+                    {loading ? 'MEMPROSES...' : 'VERIFIKASI'}
+                  </button>
+                </div>
+              </form>
+
+              <button
+                onClick={() => {
+                  setTwoFactorChallenge(null)
+                  setTwoFactorCode('')
+                  setError('')
+                }}
+                className="block text-center text-xs text-navy/40 hover:text-navy mt-4 mx-auto"
+              >
+                ← Kembali ke halaman login
+              </button>
+            </>
+          ) : needsName ? (
             <CompleteNameForm user={{ email }} onDone={handleNameCompleted} />
           ) : (
             <>
@@ -154,15 +211,9 @@ export default function Login() {
                     />
                     Ingat saya
                   </label>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      window.alert('Silakan hubungi admin sekolah untuk mereset password Anda.')
-                    }
-                    className="text-navy/60 hover:text-navy hover:underline"
-                  >
+                  <Link to="/forgot-password" className="text-navy/60 hover:text-navy hover:underline">
                     Lupa password?
-                  </button>
+                  </Link>
                 </div>
 
                 <div className="pt-2">
@@ -208,15 +259,6 @@ function Feature({ icon, label }) {
         <span className="block text-white/60">{label[1]}</span>
       </p>
     </div>
-  )
-}
-
-function CapIcon(props) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="m2 9 10-5 10 5-10 5-10-5Z" />
-      <path d="M6 11v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5" />
-    </svg>
   )
 }
 

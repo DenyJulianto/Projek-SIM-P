@@ -14,6 +14,7 @@ export default function SiswaFormModal({ siswa, kelasList, onClose, onSaved }) {
     tanggal_lahir: siswa?.tanggal_lahir?.slice(0, 10) || '',
     alamat: siswa?.alamat || '',
     kelas_id: siswa?.kelas_id || '',
+    tahun_masuk: siswa?.tahun_masuk || '',
     status: siswa?.status || 'aktif',
   })
   const [saving, setSaving] = useState(false)
@@ -28,7 +29,11 @@ export default function SiswaFormModal({ siswa, kelasList, onClose, onSaved }) {
     setSaving(true)
     setError('')
     try {
-      const payload = { ...form, kelas_id: form.kelas_id || null }
+      const payload = {
+        ...form,
+        kelas_id: form.kelas_id || null,
+        tahun_masuk: form.tahun_masuk ? Number(form.tahun_masuk) : null,
+      }
       if (isEdit) {
         await api.updateSiswa(siswa.id, payload)
       } else {
@@ -105,6 +110,15 @@ export default function SiswaFormModal({ siswa, kelasList, onClose, onSaved }) {
               </select>
             </Field>
           </div>
+          <Field label="Tahun Masuk">
+            <input
+              type="number"
+              value={form.tahun_masuk}
+              onChange={(e) => update('tahun_masuk', e.target.value)}
+              className="input"
+              placeholder="2024"
+            />
+          </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Tempat Lahir">
               <input

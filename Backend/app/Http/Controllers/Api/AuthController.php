@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Guru;
+use App\Models\Siswa;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -117,6 +119,67 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * Minta kode reset password. Selalu balas dengan pesan generik (tidak
+     * membocorkan apakah email terdaftar) — hanya benar-benar mengirim kode
+     * kalau akunnya ditemukan dan kolom password_reset_code tersedia
+     * (fitur ini saat ini hanya berlaku untuk akun per-sekolah, bukan akun
+     * Super Admin di database central).
+     */
+    public function forgotPassword(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'email' => ['required', 'email'],
+        ]);
+
+        if (Schema::hasColumn('users', 'password_reset_code')) {
+            $user = User::where('email', $data['email'])->first();
+
+            if ($user) {
+                $this->issueAndSendPasswordResetCode($user);
+            }
+        }
+
+        return response()->json([
+            'message' => 'Jika email terdaftar, kode reset password telah dikirim.',
+        ]);
+    }
+
+    public function resetPassword(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'email' => ['required', 'email'],
+            'code' => ['required', 'string'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $user = User::where('email', $data['email'])->first();
+
+        if (! $user || ! Schema::hasColumn('users', 'password_reset_code') || $user->password_reset_code !== $data['code']) {
+            throw ValidationException::withMessages([
+                'code' => ['Kode reset password salah.'],
+            ]);
+        }
+
+        if (! $user->password_reset_code_expires_at || $user->password_reset_code_expires_at->isPast()) {
+            throw ValidationException::withMessages([
+                'code' => ['Kode reset password sudah kedaluwarsa. Silakan minta kode baru.'],
+            ]);
+        }
+
+        $user->forceFill([
+            'password' => $data['password'],
+            'password_reset_code' => null,
+            'password_reset_code_expires_at' => null,
+        ])->save();
+
+        $user->tokens()->delete();
+
+        return response()->json([
+            'message' => 'Password berhasil diubah. Silakan masuk dengan password baru Anda.',
+        ]);
+    }
+
     public function login(Request $request): JsonResponse
     {
         $credentials = $request->validate([
@@ -132,6 +195,15 @@ class AuthController extends Controller
             ]);
         }
 
+        // tenant() bernilai null di domain central (Super Admin) — cek ini
+        // hanya relevan untuk login lewat domain sekolah, ditolak sebelum
+        // memeriksa apa pun tentang akun user itu sendiri.
+        if (tenant('status') !== null && tenant('status') !== 'active') {
+            throw ValidationException::withMessages([
+                'email' => ['Sekolah ini sedang dinonaktifkan. Hubungi Super Admin untuk informasi lebih lanjut.'],
+            ]);
+        }
+
         if (Schema::hasColumn('users', 'email_verified_at') && ! $user->email_verified_at) {
             throw ValidationException::withMessages([
                 'email' => ['Akun belum diverifikasi. Silakan cek email Anda untuk kode verifikasi.'],
@@ -141,6 +213,19 @@ class AuthController extends Controller
         if (Schema::hasColumn('users', 'is_active') && ! $user->is_active) {
             throw ValidationException::withMessages([
                 'email' => ['Akun ini telah dinonaktifkan.'],
+            ]);
+        }
+
+        // 2FA cuma pernah bisa aktif untuk akun Super Admin (kolomnya cuma
+        // ada di database central) — kalau aktif, belum langsung dapat
+        // token; harus lewat verifyTwoFactor() dulu dengan kode TOTP/
+        // pemulihan yang valid.
+        if (Schema::hasColumn('users', 'two_factor_confirmed_at') && $user->two_factor_confirmed_at) {
+            $challenge = encrypt(['user_id' => $user->id, 'expires' => now()->addMinutes(5)->timestamp]);
+
+            return response()->json([
+                'requires_2fa' => true,
+                'challenge' => $challenge,
             ]);
         }
 
@@ -154,6 +239,86 @@ class AuthController extends Controller
             'user' => $this->presentUser($user),
             'token' => $token,
         ]);
+    }
+
+    /**
+     * Langkah kedua login untuk akun dengan 2FA aktif — menyelesaikan
+     * "challenge" dari login() dengan kode TOTP dari aplikasi authenticator
+     * ATAU salah satu kode pemulihan (dipakai sekali, langsung dicoret dari
+     * daftar begitu terpakai).
+     */
+    public function verifyTwoFactor(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'challenge' => ['required', 'string'],
+            'code' => ['required', 'string'],
+        ]);
+
+        try {
+            $payload = decrypt($data['challenge']);
+        } catch (\Throwable) {
+            throw ValidationException::withMessages([
+                'code' => ['Sesi verifikasi tidak valid. Silakan login ulang.'],
+            ]);
+        }
+
+        if (! is_array($payload) || ($payload['expires'] ?? 0) < now()->timestamp) {
+            throw ValidationException::withMessages([
+                'code' => ['Sesi verifikasi sudah kedaluwarsa. Silakan login ulang.'],
+            ]);
+        }
+
+        $user = User::find($payload['user_id']);
+
+        if (! $user || ! $user->two_factor_confirmed_at) {
+            throw ValidationException::withMessages([
+                'code' => ['Akun tidak ditemukan.'],
+            ]);
+        }
+
+        if (! $this->verifyTwoFactorCode($user, $data['code'])) {
+            throw ValidationException::withMessages([
+                'code' => ['Kode verifikasi salah.'],
+            ]);
+        }
+
+        if (Schema::hasColumn('users', 'last_login_at')) {
+            $user->forceFill(['last_login_at' => now()])->save();
+        }
+
+        $token = $user->createToken('api-token')->plainTextToken;
+
+        return response()->json([
+            'user' => $this->presentUser($user),
+            'token' => $token,
+        ]);
+    }
+
+    /**
+     * Coba cocokkan kode 6-digit TOTP dulu; kalau tidak cocok, coba sebagai
+     * kode pemulihan (case-insensitive) — kalau cocok, kode itu langsung
+     * dihapus dari daftar supaya tidak bisa dipakai ulang.
+     */
+    private function verifyTwoFactorCode(User $user, string $code): bool
+    {
+        $google2fa = new \PragmaRX\Google2FA\Google2FA();
+
+        if ($google2fa->verifyKey($user->two_factor_secret, $code)) {
+            return true;
+        }
+
+        $recoveryCodes = $user->two_factor_recovery_codes ?? [];
+        $normalizedInput = strtoupper(trim($code));
+        $matchIndex = array_search($normalizedInput, array_map('strtoupper', $recoveryCodes), true);
+
+        if ($matchIndex === false) {
+            return false;
+        }
+
+        unset($recoveryCodes[$matchIndex]);
+        $user->forceFill(['two_factor_recovery_codes' => array_values($recoveryCodes)])->save();
+
+        return true;
     }
 
     /**
@@ -176,6 +341,25 @@ class AuthController extends Controller
             Mail::raw(
                 "Kode verifikasi akun SIM Pendidikan Anda: {$code}\n\nKode berlaku selama 15 menit. Jangan bagikan kode ini kepada siapa pun.",
                 fn ($message) => $message->to($user->email)->subject('Kode Verifikasi Akun SIM Pendidikan')
+            );
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
+
+    private function issueAndSendPasswordResetCode(User $user): void
+    {
+        $code = (string) random_int(100000, 999999);
+
+        $user->forceFill([
+            'password_reset_code' => $code,
+            'password_reset_code_expires_at' => now()->addMinutes(15),
+        ])->save();
+
+        try {
+            Mail::raw(
+                "Kode reset password akun SIM Pendidikan Anda: {$code}\n\nKode berlaku selama 15 menit. Jika Anda tidak meminta ini, abaikan email ini.",
+                fn ($message) => $message->to($user->email)->subject('Kode Reset Password SIM Pendidikan')
             );
         } catch (\Throwable $e) {
             report($e);
@@ -207,6 +391,8 @@ class AuthController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
             'phone' => ['nullable', 'string', 'max:30'],
+            'alamat' => ['nullable', 'string', 'max:1000'],
+            'jenis_kelamin' => ['nullable', 'in:L,P'],
             'current_password' => ['required_with:password', 'string'],
             'password' => ['nullable', 'string', 'min:8'],
         ]);
@@ -224,7 +410,21 @@ class AuthController extends Controller
         $user->name = $data['name'];
         $user->email = $data['email'];
         $user->phone = $data['phone'] ?? null;
+        $user->alamat = $data['alamat'] ?? null;
+        $user->jenis_kelamin = $data['jenis_kelamin'] ?? null;
         $user->save();
+
+        // Siswa/Guru punya kolom nama/alamat/jenis_kelamin sendiri yang
+        // terpisah dari users, jadi harus disinkronkan supaya nama yang
+        // tampil di dashboard (diambil dari siswa/guru) ikut berubah saat
+        // profil diedit lewat halaman ini.
+        $profileSync = [
+            'nama' => $data['name'],
+            'alamat' => $data['alamat'] ?? null,
+            'jenis_kelamin' => $data['jenis_kelamin'] ?? null,
+        ];
+        Siswa::where('user_id', $user->id)->update($profileSync);
+        Guru::where('user_id', $user->id)->update($profileSync);
 
         return response()->json($this->presentUser($user));
     }
@@ -267,6 +467,13 @@ class AuthController extends Controller
 
         if (Schema::hasColumn('users', 'avatar')) {
             $user->setAttribute('avatar_url', $user->avatar ? "/avatar/{$user->avatar}" : null);
+        }
+
+        // tenant() null di domain central (Super Admin) — modul opsional
+        // cuma relevan buat akun sekolah, dipakai frontend untuk
+        // menyembunyikan menu yang dinonaktifkan Super Admin.
+        if (tenant()) {
+            $user->setAttribute('enabled_modules', tenant()->resolvedModuleSettings());
         }
 
         return $user;
