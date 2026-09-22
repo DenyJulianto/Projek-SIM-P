@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\PembagianMapelController;
 use App\Http\Controllers\Api\RombelController;
 use App\Http\Controllers\Api\KkmKktpController;
 use App\Http\Controllers\Api\KompetensiIndikatorController;
+use App\Http\Controllers\Api\ModulAjarController;
 use App\Http\Controllers\Api\KonfirmasiPembayaranController;
 use App\Http\Controllers\Api\KonselingController;
 use App\Http\Controllers\Api\KurikulumDashboardController;
@@ -97,6 +98,7 @@ Route::middleware([
     Route::get('avatar/{path}', [AvatarController::class, 'show'])->where('path', '.*');
     Route::get('surat-file/{path}', [SuratController::class, 'showFile'])->where('path', '.*');
     Route::get('arsip-file/{path}', [ArsipDokumenController::class, 'showFile'])->where('path', '.*');
+    Route::get('sertifikat-file/{path}', [GuruSelfController::class, 'showSertifikatFile'])->where('path', '.*');
     Route::get('materi-file/{path}', [MateriController::class, 'showFile'])->where('path', '.*');
     Route::get('tugas-file/{path}', [TugasController::class, 'showFile'])->where('path', '.*');
     Route::get('tugas-jawaban-file/{path}', [TugasController::class, 'showJawabanFile'])->where('path', '.*');
@@ -155,6 +157,14 @@ Route::middleware([
         Route::get('/me/anak/{siswa}/tugas', [ParentSelfController::class, 'tugas']);
 
         Route::get('/me/guru', [GuruSelfController::class, 'profil']);
+        Route::get('/me/guru/modul-ajar', [ModulAjarController::class, 'index']);
+        Route::post('/me/guru/modul-ajar', [ModulAjarController::class, 'store']);
+        Route::put('/me/guru/modul-ajar/{modul}', [ModulAjarController::class, 'update']);
+        Route::delete('/me/guru/modul-ajar/{modul}', [ModulAjarController::class, 'destroy']);
+        Route::post('/me/guru/sertifikat', [GuruSelfController::class, 'storeSertifikat']);
+        Route::delete('/me/guru/sertifikat/{sertifikat}', [GuruSelfController::class, 'destroySertifikat']);
+        Route::put('/me/guru/profil-profesional', [GuruSelfController::class, 'updateProfilProfesional']);
+        Route::put('/me/guru/tugas-tambahan', [GuruSelfController::class, 'updateTugasTambahan']);
         Route::get('/me/guru/jadwal', [GuruSelfController::class, 'jadwal']);
         Route::get('/me/guru/kelas', [GuruSelfController::class, 'kelas']);
         Route::get('/me/guru/mata-pelajaran', [GuruSelfController::class, 'mataPelajaran']);
@@ -459,6 +469,8 @@ Route::middleware([
             Route::put('ujian-soal/{soal}', [UjianController::class, 'updateSoal']);
             Route::delete('ujian-soal/{soal}', [UjianController::class, 'destroySoal']);
             Route::get('ujian/{ujian}/attempts', [UjianController::class, 'attempts']);
+            Route::get('ujian/{ujian}/attempts/{attempt}', [UjianController::class, 'attemptDetail']);
+            Route::post('ujian-jawaban/{jawaban}/nilai', [UjianController::class, 'nilaiEssay']);
         });
 
         Route::middleware('permission:pengguna.manage')->group(function () {

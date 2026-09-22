@@ -16,6 +16,7 @@ use App\Models\TugasJawaban;
 use App\Models\Ujian;
 use App\Models\UjianAttempt;
 use App\Models\UjianJawaban;
+use App\Models\UjianSoal;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -289,13 +290,14 @@ class StudentSelfController extends Controller
 
         abort_if($attempt->finished_at, 422, 'Anda sudah menyelesaikan ujian ini.');
 
-        $soal = $ujian->soal()->get(['id', 'ujian_id', 'pertanyaan', 'pilihan_a', 'pilihan_b', 'pilihan_c', 'pilihan_d', 'urutan']);
+        $soal = $ujian->soal()->get(['id', 'ujian_id', 'tipe', 'bobot', 'pertanyaan', 'pilihan_a', 'pilihan_b', 'pilihan_c', 'pilihan_d', 'urutan']);
         $jawabanSaya = UjianJawaban::where('ujian_attempt_id', $attempt->id)->get()->keyBy('ujian_soal_id');
 
         return response()->json([
             'attempt' => $attempt,
             'soal' => $soal->map(function ($s) use ($jawabanSaya) {
                 $s->jawaban_dipilih = $jawabanSaya->get($s->id)?->jawaban_dipilih;
+                $s->jawaban_essay = $jawabanSaya->get($s->id)?->jawaban_essay;
 
                 return $s;
             }),
@@ -312,12 +314,22 @@ class StudentSelfController extends Controller
 
         $data = $request->validate([
             'ujian_soal_id' => ['required', 'exists:ujian_soal,id'],
-            'jawaban_dipilih' => ['required', 'in:a,b,c,d'],
+            'jawaban_dipilih' => ['nullable', 'in:a,b,c,d'],
+            'jawaban_essay' => ['nullable', 'string', 'max:10000'],
         ]);
+
+        $soal = $ujian->soal()->findOrFail($data['ujian_soal_id']);
+
+        if ($soal->tipe === UjianSoal::TIPE_ESSAY) {
+            $isi = ['jawaban_essay' => $data['jawaban_essay'] ?? null];
+        } else {
+            abort_if(empty($data['jawaban_dipilih']), 422, 'Pilih salah satu jawaban.');
+            $isi = ['jawaban_dipilih' => $data['jawaban_dipilih']];
+        }
 
         $jawaban = UjianJawaban::updateOrCreate(
             ['ujian_attempt_id' => $attempt->id, 'ujian_soal_id' => $data['ujian_soal_id']],
-            ['jawaban_dipilih' => $data['jawaban_dipilih']]
+            $isi
         );
 
         return response()->json($jawaban);
@@ -331,24 +343,19 @@ class StudentSelfController extends Controller
         abort_unless($attempt, 404, 'Anda belum memulai ujian ini.');
         abort_if($attempt->finished_at, 422, 'Ujian sudah diselesaikan.');
 
-        $soal = $ujian->soal()->get(['id', 'jawaban_benar']);
+        $soal = $ujian->soal()->get(['id', 'tipe', 'jawaban_benar']);
         $jawabanList = UjianJawaban::where('ujian_attempt_id', $attempt->id)->get()->keyBy('ujian_soal_id');
 
-        $benar = 0;
         foreach ($soal as $s) {
             $jawaban = $jawabanList->get($s->id);
-            $isBenar = $jawaban && $jawaban->jawaban_dipilih === $s->jawaban_benar;
 
-            if ($jawaban) {
-                $jawaban->update(['benar' => $isBenar]);
-            }
-
-            if ($isBenar) {
-                $benar++;
+            if ($jawaban && $s->tipe === UjianSoal::TIPE_PILIHAN_GANDA) {
+                $jawaban->update(['benar' => $jawaban->jawaban_dipilih === $s->jawaban_benar]);
             }
         }
 
-        $nilai = $soal->count() > 0 ? round(($benar / $soal->count()) * 100, 2) : 0;
+        $attempt->setRelation('ujian', $ujian);
+        $nilai = $attempt->hitungUlangNilai();
 
         $attempt->update(['finished_at' => now(), 'nilai' => $nilai]);
 
@@ -371,12 +378,19 @@ class StudentSelfController extends Controller
             return [
                 'soal' => $s,
                 'jawaban_dipilih' => $jawaban?->jawaban_dipilih,
+                'jawaban_essay' => $jawaban?->jawaban_essay,
+                'nilai_essay' => $jawaban?->nilai_essay,
                 'benar' => $jawaban?->benar,
             ];
         });
 
+        $attempt->setRelation('ujian', $ujian);
+
         return response()->json([
             'attempt' => $attempt,
+            'kkm' => $ujian->kkm,
+            'lulus' => $attempt->nilai !== null ? (float) $attempt->nilai >= (float) $ujian->kkm : null,
+            'essay_belum_dinilai' => $attempt->essayBelumDinilai(),
             'review' => $review,
         ]);
     }

@@ -2128,7 +2128,8 @@ function UjianSayaView({ onBack }) {
       const res = await api.mulaiMySiswaUjian(ujian.id)
       const jawaban = {}
       res.soal.forEach((s) => {
-        if (s.jawaban_dipilih) jawaban[s.id] = s.jawaban_dipilih
+        const isi = s.tipe === 'essay' ? s.jawaban_essay : s.jawaban_dipilih
+        if (isi) jawaban[s.id] = isi
       })
       setSession({ ujian, attempt: res.attempt, soal: res.soal, jawaban })
     } catch (err) {
@@ -2147,10 +2148,28 @@ function UjianSayaView({ onBack }) {
     }
   }
 
+  function handleEssayChange(soalId, teks) {
+    setSession((prev) => ({ ...prev, jawaban: { ...prev.jawaban, [soalId]: teks } }))
+  }
+
+  async function handleEssaySimpan(soalId) {
+    try {
+      await api.jawabMySiswaUjian(session.ujian.id, { ujian_soal_id: soalId, jawaban_essay: session.jawaban[soalId] || '' })
+    } catch {
+      // akan dicoba lagi saat kolom kehilangan fokus berikutnya / saat ujian diselesaikan
+    }
+  }
+
   async function handleSelesai() {
     if (!window.confirm('Selesaikan ujian sekarang? Jawaban tidak bisa diubah lagi setelah ini.')) return
     setBusy(true)
     try {
+      // pastikan semua jawaban essay yang masih di layar ikut tersimpan
+      await Promise.all(
+        session.soal
+          .filter((s) => s.tipe === 'essay' && session.jawaban[s.id])
+          .map((s) => api.jawabMySiswaUjian(session.ujian.id, { ujian_soal_id: s.id, jawaban_essay: session.jawaban[s.id] }))
+      )
       await api.selesaiMySiswaUjian(session.ujian.id)
       setSession(null)
       load()
@@ -2172,7 +2191,7 @@ function UjianSayaView({ onBack }) {
   }
 
   if (session) {
-    const terjawab = Object.keys(session.jawaban).length
+    const terjawab = Object.values(session.jawaban).filter((v) => v && String(v).trim() !== '').length
     return (
       <div>
         <p className="text-sm text-navy/50 mb-1">{session.ujian.mata_pelajaran?.nama_mapel}</p>
@@ -2184,9 +2203,24 @@ function UjianSayaView({ onBack }) {
         <div className="space-y-4">
           {session.soal.map((s, i) => (
             <div key={s.id} className="bg-white rounded-2xl border border-navy/10 p-5">
-              <p className="font-semibold text-navy mb-3">
+              <p className="font-semibold text-navy mb-3 whitespace-pre-line">
                 {i + 1}. {s.pertanyaan}
+                {s.tipe === 'essay' && (
+                  <span className="ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 align-middle">
+                    Essay
+                  </span>
+                )}
               </p>
+              {s.tipe === 'essay' ? (
+                <textarea
+                  rows={5}
+                  value={session.jawaban[s.id] || ''}
+                  onChange={(e) => handleEssayChange(s.id, e.target.value)}
+                  onBlur={() => handleEssaySimpan(s.id)}
+                  placeholder="Tulis jawaban Anda di sini..."
+                  className="w-full border border-navy/15 rounded-xl px-3.5 py-3 text-sm text-navy focus:outline-none focus:border-emerald-400"
+                />
+              ) : (
               <div className="space-y-2">
                 {['a', 'b', 'c', 'd'].map((opt) => (
                   <label
@@ -2209,6 +2243,7 @@ function UjianSayaView({ onBack }) {
                   </label>
                 ))}
               </div>
+              )}
             </div>
           ))}
         </div>
@@ -2231,14 +2266,44 @@ function UjianSayaView({ onBack }) {
       <PageShell title={`Hasil — ${hasil.ujian.judul}`} onBack={() => setHasil(null)}>
         <div className="bg-white rounded-2xl border border-navy/10 p-6 mb-5 text-center">
           <p className="text-4xl font-extrabold text-navy">{hasil.attempt.nilai}</p>
-          <p className="text-sm text-navy/50 mt-1">Nilai Ujian</p>
+          <p className="text-sm text-navy/50 mt-1">Nilai Ujian &middot; KKM {hasil.kkm}</p>
+          {hasil.lulus !== null && hasil.lulus !== undefined && (
+            <span
+              className={`inline-block mt-3 text-xs font-bold px-3 py-1 rounded-full ${
+                hasil.lulus ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'
+              }`}
+            >
+              {hasil.lulus ? 'Tuntas' : 'Belum Tuntas'}
+            </span>
+          )}
+          {hasil.essay_belum_dinilai > 0 && (
+            <p className="text-xs text-amber-700 mt-3">
+              {hasil.essay_belum_dinilai} jawaban essay Anda belum dinilai guru — nilai akhir bisa berubah.
+            </p>
+          )}
         </div>
         <div className="space-y-3">
           {hasil.review.map((r, i) => (
             <div key={r.soal.id} className="bg-white rounded-2xl border border-navy/10 p-4">
-              <p className="text-sm font-semibold text-navy mb-2">
+              <p className="text-sm font-semibold text-navy mb-2 whitespace-pre-line">
                 {i + 1}. {r.soal.pertanyaan}
               </p>
+              {r.soal.tipe === 'essay' ? (
+                <div>
+                  <div className="bg-navy/[0.03] rounded-lg px-3 py-2 text-sm text-navy/80 whitespace-pre-line">
+                    {r.jawaban_essay || <span className="text-navy/35 italic">Tidak dijawab.</span>}
+                  </div>
+                  <p className="text-xs mt-2">
+                    <span
+                      className={`px-2.5 py-1 rounded-full font-semibold ${
+                        r.nilai_essay != null ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                      }`}
+                    >
+                      {r.nilai_essay != null ? `Nilai: ${r.nilai_essay} / ${r.soal.bobot}` : 'Belum dinilai guru'}
+                    </span>
+                  </p>
+                </div>
+              ) : (
               <div className="flex flex-wrap gap-2 text-xs">
                 <span className={`px-2.5 py-1 rounded-full font-semibold ${r.benar ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
                   Jawabanmu: {r.jawaban_dipilih ? r.jawaban_dipilih.toUpperCase() : '-'}
@@ -2249,6 +2314,7 @@ function UjianSayaView({ onBack }) {
                   </span>
                 )}
               </div>
+              )}
             </div>
           ))}
         </div>

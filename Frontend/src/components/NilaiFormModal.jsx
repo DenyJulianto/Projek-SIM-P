@@ -8,15 +8,18 @@ const JENIS_OPTIONS = [
   { value: 'uas', label: 'UAS' },
 ]
 
-export default function NilaiFormModal({ item, guruId, onClose, onSaved }) {
+const fieldClass =
+  'w-full border border-emerald-100 rounded-xl px-3.5 py-2.5 text-sm text-navy bg-white/80 focus:outline-none focus:border-emerald-400 transition-colors'
+
+export default function NilaiFormModal({ item, guruId, defaults, onClose, onSaved }) {
   const isEdit = Boolean(item)
   const [kelasList, setKelasList] = useState([])
   const [mapelList, setMapelList] = useState([])
   const [siswaList, setSiswaList] = useState([])
-  const [selectedKelas, setSelectedKelas] = useState('')
+  const [selectedKelas, setSelectedKelas] = useState(defaults?.kelas_id ? String(defaults.kelas_id) : '')
   const [form, setForm] = useState({
     siswa_id: item?.siswa_id || '',
-    mata_pelajaran_id: item?.mata_pelajaran_id || '',
+    mata_pelajaran_id: item?.mata_pelajaran_id || defaults?.mata_pelajaran_id || '',
     jenis_nilai: item?.jenis_nilai || 'harian',
     nilai: item?.nilai || '',
     semester: item?.semester || 'Ganjil',
@@ -69,98 +72,126 @@ export default function NilaiFormModal({ item, guruId, onClose, onSaved }) {
 
   return (
     <div className="fixed inset-0 bg-navy/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6">
-        <h2 className="text-lg font-bold text-navy mb-4">{isEdit ? 'Edit Nilai' : 'Input Nilai'}</h2>
+      <div className="relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white rounded-3xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <LeafDecoration className="absolute -top-3 right-6 h-14 w-14 text-emerald-300/40 rotate-12 pointer-events-none" />
+        <LeafDecoration className="absolute top-9 right-1 h-7 w-7 text-emerald-400/30 -rotate-12 pointer-events-none" />
 
-        {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
+        <div className="relative p-6">
+          <button
+            onClick={onClose}
+            className="absolute top-5 right-5 h-8 w-8 rounded-full bg-white/70 hover:bg-white text-navy/50 hover:text-navy flex items-center justify-center transition-colors"
+          >
+            <CrossIcon className="h-4 w-4" />
+          </button>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {!isEdit && (
-            <Field label="Kelas">
-              <select value={selectedKelas} onChange={(e) => setSelectedKelas(e.target.value)} className="input">
-                <option value="">Pilih kelas...</option>
-                {kelasList.map((k) => (
-                  <option key={k.id} value={k.id}>
-                    {k.nama_kelas}
+          <div className="flex items-center gap-3 mb-5">
+            <span className="h-11 w-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+              <GradeIcon className="h-5.5 w-5.5" />
+            </span>
+            <h2 className="text-base font-extrabold text-navy">{isEdit ? 'Edit Nilai' : 'Input Nilai'}</h2>
+          </div>
+
+          {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {!isEdit && (
+              <Field label="Kelas">
+                <select value={selectedKelas} onChange={(e) => setSelectedKelas(e.target.value)} className={fieldClass}>
+                  <option value="">Pilih kelas...</option>
+                  {kelasList.map((k) => (
+                    <option key={k.id} value={k.id}>
+                      {k.nama_kelas}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
+            <Field label="Siswa">
+              <select
+                required
+                value={form.siswa_id}
+                onChange={(e) => update('siswa_id', e.target.value)}
+                className={fieldClass}
+                disabled={isEdit}
+              >
+                <option value="">Pilih siswa...</option>
+                {(isEdit ? [item.siswa] : siswaList).filter(Boolean).map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.nama}
                   </option>
                 ))}
               </select>
             </Field>
-          )}
-          <Field label="Siswa">
-            <select required value={form.siswa_id} onChange={(e) => update('siswa_id', e.target.value)} className="input" disabled={isEdit}>
-              <option value="">Pilih siswa...</option>
-              {(isEdit ? [item.siswa] : siswaList).filter(Boolean).map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.nama}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Mata Pelajaran">
-            <select required value={form.mata_pelajaran_id} onChange={(e) => update('mata_pelajaran_id', e.target.value)} className="input">
-              <option value="">Pilih mata pelajaran...</option>
-              {mapelList.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.nama_mapel}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Jenis Nilai">
-              <select value={form.jenis_nilai} onChange={(e) => update('jenis_nilai', e.target.value)} className="input">
-                {JENIS_OPTIONS.map((j) => (
-                  <option key={j.value} value={j.value}>
-                    {j.label}
+            <Field label="Mata Pelajaran">
+              <select
+                required
+                value={form.mata_pelajaran_id}
+                onChange={(e) => update('mata_pelajaran_id', e.target.value)}
+                className={fieldClass}
+              >
+                <option value="">Pilih mata pelajaran...</option>
+                {mapelList.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.nama_mapel}
                   </option>
                 ))}
               </select>
             </Field>
-            <Field label="Nilai (0-100)">
-              <input
-                type="number"
-                required
-                min="0"
-                max="100"
-                value={form.nilai}
-                onChange={(e) => update('nilai', e.target.value)}
-                className="input"
-              />
-            </Field>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Semester">
-              <select value={form.semester} onChange={(e) => update('semester', e.target.value)} className="input">
-                <option value="Ganjil">Ganjil</option>
-                <option value="Genap">Genap</option>
-              </select>
-            </Field>
-            <Field label="Tahun Ajaran">
-              <input
-                type="text"
-                required
-                value={form.tahun_ajaran}
-                onChange={(e) => update('tahun_ajaran', e.target.value)}
-                className="input"
-                placeholder="2025/2026"
-              />
-            </Field>
-          </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Jenis Nilai">
+                <select value={form.jenis_nilai} onChange={(e) => update('jenis_nilai', e.target.value)} className={fieldClass}>
+                  {JENIS_OPTIONS.map((j) => (
+                    <option key={j.value} value={j.value}>
+                      {j.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Nilai (0-100)">
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  max="100"
+                  value={form.nilai}
+                  onChange={(e) => update('nilai', e.target.value)}
+                  className={fieldClass}
+                />
+              </Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Semester">
+                <select value={form.semester} onChange={(e) => update('semester', e.target.value)} className={fieldClass}>
+                  <option value="Ganjil">Ganjil</option>
+                  <option value="Genap">Genap</option>
+                </select>
+              </Field>
+              <Field label="Tahun Ajaran">
+                <input
+                  type="text"
+                  required
+                  value={form.tahun_ajaran}
+                  onChange={(e) => update('tahun_ajaran', e.target.value)}
+                  className={fieldClass}
+                  placeholder="2025/2026"
+                />
+              </Field>
+            </div>
 
-          <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-navy/70 hover:text-navy">
-              Batal
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="bg-navy hover:bg-navy-light text-white text-sm font-semibold px-5 py-2 rounded-md disabled:opacity-50"
-            >
-              {saving ? 'Menyimpan...' : 'Simpan'}
-            </button>
-          </div>
-        </form>
+            <div className="flex items-center justify-between gap-3 pt-3 mt-2 border-t border-emerald-100">
+              <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-semibold text-navy/60 hover:text-navy">
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-6 py-2.5 rounded-full transition-colors disabled:opacity-50"
+              >
+                {saving ? 'Menyimpan...' : 'Simpan'}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   )
@@ -169,8 +200,34 @@ export default function NilaiFormModal({ item, guruId, onClose, onSaved }) {
 function Field({ label, children }) {
   return (
     <label className="block">
-      <span className="block text-xs font-semibold text-navy/70 mb-1">{label}</span>
+      <span className="block text-xs font-semibold text-navy/60 mb-1">{label}</span>
       {children}
     </label>
+  )
+}
+
+function LeafDecoration(props) {
+  return (
+    <svg {...props} viewBox="0 0 64 64" fill="currentColor">
+      <path d="M8 56C8 30 26 10 56 8c-1 28-16 46-40 48l-6 4-2-4Z" />
+    </svg>
+  )
+}
+
+function GradeIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 2h9l3 3v17H6Z" />
+      <path d="M15 2v3h3" />
+      <path d="m9 13 2 2 4-4" />
+    </svg>
+  )
+}
+
+function CrossIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 6l12 12M18 6 6 18" />
+    </svg>
   )
 }

@@ -829,6 +829,19 @@ export const api = {
   deleteSiswa: (id) => request(`/siswa/${id}`, { method: 'DELETE' }),
 
   getMyGuruProfil: () => request('/me/guru'),
+  listModulAjar: () => request('/me/guru/modul-ajar'),
+  createModulAjar: (data) => request('/me/guru/modul-ajar', { method: 'POST', body: JSON.stringify(data) }),
+  updateModulAjar: (id, data) => request(`/me/guru/modul-ajar/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteModulAjar: (id) => request(`/me/guru/modul-ajar/${id}`, { method: 'DELETE' }),
+  uploadMyGuruSertifikat: (files) => {
+    const formData = new FormData()
+    files.forEach((f) => formData.append('files[]', f))
+    return requestForm('/me/guru/sertifikat', formData)
+  },
+  deleteMyGuruSertifikat: (id) => request(`/me/guru/sertifikat/${id}`, { method: 'DELETE' }),
+  updateMyGuruProfilProfesional: (data) => request('/me/guru/profil-profesional', { method: 'PUT', body: JSON.stringify(data) }),
+  updateMyGuruTugasTambahan: (tugasTambahan) =>
+    request('/me/guru/tugas-tambahan', { method: 'PUT', body: JSON.stringify({ tugas_tambahan: tugasTambahan }) }),
   getMyGuruJadwal: () => request('/me/guru/jadwal'),
   getMyGuruKelas: () => request('/me/guru/kelas'),
   getMyGuruMataPelajaran: () => request('/me/guru/mata-pelajaran'),
@@ -1232,4 +1245,7 @@ export const api = {
     request(`/ujian-soal/${soalId}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteUjianSoal: (soalId) => request(`/ujian-soal/${soalId}`, { method: 'DELETE' }),
   listUjianAttempts: (ujianId) => request(`/ujian/${ujianId}/attempts`),
+  getUjianAttemptDetail: (ujianId, attemptId) => request(`/ujian/${ujianId}/attempts/${attemptId}`),
+  nilaiUjianEssay: (jawabanId, data) =>
+    request(`/ujian-jawaban/${jawabanId}/nilai`, { method: 'POST', body: JSON.stringify(data) }),
 }
