@@ -1,3 +1,4 @@
+import logoLambang from '../assets/logo-sim-lambang.png'
 import { useEffect, useState } from 'react'
 import ComingSoon from '../components/ComingSoon'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
@@ -7,7 +8,6 @@ import KehadiranGuruMapel from './KehadiranGuruMapel'
 import MyProfile from './MyProfile'
 import NilaiManagement from './NilaiManagement'
 import NilaiSikapManagement from './NilaiSikapManagement'
-import LogoHorizontal from '../components/LogoHorizontal'
 import ModulAjarManagement from './ModulAjarManagement'
 import MiniCalendar from '../components/MiniCalendar'
 import { ThemedInfoModal, ThemedModalShell, useThemedConfirm } from '../components/ThemedModal'
@@ -79,22 +79,23 @@ export default function GuruMapelDashboard() {
         <div className="absolute -bottom-10 -left-8 h-40 w-40 rounded-full bg-amber-200/30 blur-3xl pointer-events-none" />
         <div className="absolute top-1/3 -right-10 h-32 w-32 rounded-full bg-white/10 blur-3xl pointer-events-none" />
 
-        <div className="relative px-2 mb-6">
+        <div className="relative px-2 mb-8">
           <button
             type="button"
             onClick={() => setView('home')}
             title="Ke Dashboard"
-            className="flex items-center gap-2 w-full text-left rounded-full hover:opacity-90 transition-opacity"
+            className="flex items-center gap-2.5 w-full min-w-0 text-left hover:opacity-90 transition-opacity"
           >
-            <LogoHorizontal />
+            <div className="h-16 w-16 rounded-full bg-white ring-2 ring-white/40 shadow-md overflow-hidden shrink-0">
+              <img src={logoLambang} alt="Logo SIM Pendidikan" className="h-full w-full object-cover" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-bold tracking-wide text-sm">SIM Pendidikan</p>
+              <p className="text-[11px] leading-snug mt-1 text-white/60">
+                Membimbing dengan Hati, Membentuk Generasi Berprestasi
+              </p>
+            </div>
           </button>
-          <div className="mt-4 pt-3 border-t border-white/20 text-center">
-            <p className="text-[11px] font-semibold leading-relaxed tracking-wide text-white/90">
-              Membimbing dengan Hati,
-              <br />
-              Membentuk Generasi Berprestasi
-            </p>
-          </div>
         </div>
 
         <nav className="relative flex-1 space-y-1.5 overflow-y-auto">
@@ -174,7 +175,10 @@ export default function GuruMapelDashboard() {
         </button>
       </aside>
 
-      <main className="flex-1 p-6 sm:p-8 overflow-y-auto">
+      <main className="relative flex-1 overflow-y-auto">
+        <GuruMapelDoodleBackground />
+
+        <div className="relative p-6 sm:p-8">
         {view === 'home' && <GuruMapelHome user={user} onNavigate={setView} />}
         {view === 'jadwal-mengajar' && <JadwalMengajarView onBack={() => setView('home')} />}
         {view === 'kelas-saya' && <KelasSayaView onBack={() => setView('home')} />}
@@ -198,6 +202,7 @@ export default function GuruMapelDashboard() {
             <ComingSoon title={COMING_SOON_LABEL[view][0]} description={COMING_SOON_LABEL[view][1]} />
           </div>
         )}
+        </div>
       </main>
 
       {confirmingLogout && (
@@ -226,10 +231,25 @@ function GuruMapelHome({ user, onNavigate }) {
 
   return (
     <div>
-      <div className="bg-gradient-to-r from-emerald-800 via-emerald-700 to-emerald-500 rounded-2xl p-6 mb-6">
-        <h1 className="text-xl font-extrabold text-white mb-1.5">Selamat datang, {user?.name}!</h1>
-        <p className="text-white/75 text-sm max-w-md">
-          Kelola jadwal, materi, absensi, dan nilai mata pelajaran Anda dengan mudah dan efisien.
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-800 via-emerald-700 to-emerald-500 p-6 sm:p-7 min-h-[150px] mb-6">
+        <div className="relative z-10 flex items-center gap-5 max-w-xl">
+          <div className="h-20 w-20 rounded-full bg-white/95 flex items-center justify-center shrink-0 shadow-lg">
+            <UsersGroupIcon className="h-10 w-10 text-emerald-700" />
+          </div>
+          <div>
+            <p className="text-white/80 text-sm">Selamat datang,</p>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white leading-tight">{user?.name || 'Guru Mata Pelajaran'}!</h1>
+            <span className="inline-flex items-center gap-2 mt-2 rounded-full bg-white/20 backdrop-blur px-3.5 py-1 text-sm font-bold text-white">
+              Guru Mata Pelajaran
+            </span>
+            <p className="text-white/75 text-sm mt-1.5">
+              Kelola jadwal, materi, absensi, dan nilai mata pelajaran Anda dengan mudah dan efisien.
+            </p>
+          </div>
+        </div>
+        <SchoolIllustration className="hidden md:block absolute right-0 bottom-0 h-full w-[46%] pointer-events-none" />
+        <p className="hidden lg:block absolute right-[27%] top-5 text-white/90 italic font-semibold text-center leading-snug -rotate-6 text-sm">
+          Bersama<br />Membentuk Generasi<br />Berprestasi
         </p>
       </div>
 
@@ -260,7 +280,7 @@ function GuruMapelHome({ user, onNavigate }) {
         />
       </div>
 
-      <div className="bg-white rounded-2xl border border-navy/10 p-5 mb-6">
+      <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5 mb-6">
         <h2 className="text-sm font-bold text-navy mb-4">Pintasan Cepat</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <ShortcutTile eyebrow="Guru Mapel" label="Input Nilai (Mata Pelajaran)" icon={ChartIcon} onClick={() => onNavigate('nilai')} />
@@ -271,7 +291,7 @@ function GuruMapelHome({ user, onNavigate }) {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-        <div className="bg-white rounded-2xl border border-navy/10 p-5">
+        <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5">
           <h2 className="text-sm font-bold text-navy mb-4">Jadwal Mengajar Mapel Minggu Ini</h2>
           {jadwal === null && <EmptyState text="Memuat..." />}
           {jadwal !== null && jadwalMingguIni.length === 0 && <EmptyState text="Belum ada jadwal mengajar." />}
@@ -303,7 +323,7 @@ function GuruMapelHome({ user, onNavigate }) {
           )}
         </div>
 
-        <div className="bg-white rounded-2xl border border-navy/10 p-5">
+        <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5">
           <h2 className="text-sm font-bold text-navy mb-4">Rata-rata Nilai per Mata Pelajaran</h2>
           {rekap === null && <EmptyState text="Memuat..." />}
           {rekap !== null && rekap.length === 0 && <EmptyState text="Belum ada nilai yang diinput." />}
@@ -490,7 +510,7 @@ export function JadwalMengajarView({ onBack }) {
             {sorted.map((j) => {
               const tone = toneFor(j.mata_pelajaran?.nama_mapel)
               return (
-                <div key={j.id} className="bg-white rounded-2xl border border-navy/10 p-4">
+                <div key={j.id} className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-4">
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <span className={`h-11 w-11 rounded-xl flex items-center justify-center shrink-0 ${tone.icon}`}>
                       <tone.Icon className="h-7 w-7" />
@@ -532,7 +552,7 @@ export function KelasSayaView({ onBack, title = 'Kelas Saya' }) {
     <PageShell title={title} onBack={onBack}>
       <div className="grid sm:grid-cols-3 gap-4">
         {(kelas || []).map((k) => (
-          <div key={k.id} className="bg-white rounded-2xl border border-navy/10 p-5">
+          <div key={k.id} className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5">
             <p className="font-bold text-navy text-lg">{k.nama_kelas}</p>
             <p className="text-xs text-navy/50 mt-1">{k.tahun_ajaran}</p>
             <p className="text-sm text-navy/60 mt-3">{k.jumlah_siswa} siswa</p>
@@ -556,7 +576,7 @@ function MapelSayaView({ onBack }) {
     <PageShell title="Mata Pelajaran Saya" onBack={onBack}>
       <div className="grid sm:grid-cols-3 gap-4">
         {(mapel || []).map((m) => (
-          <div key={m.id} className="bg-white rounded-2xl border border-navy/10 p-5">
+          <div key={m.id} className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5">
             <p className="font-bold text-navy">{m.nama_mapel}</p>
           </div>
         ))}
@@ -576,7 +596,7 @@ function RekapNilaiView({ onBack }) {
 
   return (
     <PageShell title="Rekap Nilai" onBack={onBack}>
-      <div className="bg-white rounded-2xl border border-navy/10 overflow-hidden">
+      <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-navy/5 text-navy/60 text-xs uppercase tracking-wide">
             <tr>
@@ -717,7 +737,7 @@ function PengumumanView({ onBack }) {
         {filtered.map((p) => {
           const kat = kategoriInfoGuru(p.kategori)
           return (
-            <div key={p.id} className="bg-white rounded-2xl border border-navy/10 p-4">
+            <div key={p.id} className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-4">
               <div className="flex items-start gap-3.5">
                 <span className={`h-11 w-11 rounded-xl flex items-center justify-center shrink-0 ${kat.tone}`}>
                   <kat.icon className="h-5 w-5" />
@@ -1151,7 +1171,7 @@ export function MateriManagement({ onBack, bare }) {
       />
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-navy/10 p-5 mb-5 space-y-3">
+        <form onSubmit={handleSubmit} className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5 mb-5 space-y-3">
           <KelasMapelSelect pilihan={pilihan || []} value={kelasMapel} onChange={setKelasMapel} />
           <input
             type="text"
@@ -1637,7 +1657,7 @@ export function TugasManagement({ onBack, bare, scope }) {
       />
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-navy/10 p-5 mb-5 space-y-3">
+        <form onSubmit={handleSubmit} className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5 mb-5 space-y-3">
           {!scope && <KelasMapelSelect pilihan={pilihan || []} value={kelasMapel} onChange={setKelasMapel} />}
           <input
             type="text"
@@ -2081,7 +2101,7 @@ function UjianManagement({ onBack, bare, scope }) {
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-navy/10 p-5 mb-5 space-y-3">
+        <form onSubmit={handleSubmit} className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5 mb-5 space-y-3">
           {!scope && <KelasMapelSelect pilihan={pilihan || []} value={kelasMapel} onChange={setKelasMapel} />}
           <input
             type="text"
@@ -2242,7 +2262,7 @@ function UjianManagement({ onBack, bare, scope }) {
         {(items || [])
           .filter((u) => !scope || (u.kelas_id === scope.kelas_id && u.mata_pelajaran_id === scope.mata_pelajaran_id))
           .map((u) => (
-          <div key={u.id} className="bg-white rounded-2xl border border-navy/10 p-4">
+          <div key={u.id} className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-4">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="font-bold text-navy">{u.judul}</p>
@@ -3105,8 +3125,8 @@ function StatIllustrationCard({ label, value, icon: Icon, iconTone, illustration
   return (
     <Wrapper
       onClick={onClick}
-      className={`bg-white rounded-2xl border border-navy/10 p-5 text-left transition-colors flex items-center justify-between gap-3 overflow-hidden ${
-        onClick ? 'hover:border-navy/20' : ''
+      className={`bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5 text-left transition-colors flex items-center justify-between gap-3 overflow-hidden ${
+        onClick ? 'hover:shadow-md' : ''
       }`}
     >
       <div className="min-w-0">
@@ -3493,6 +3513,102 @@ function LogoutIcon(props) {
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
       <path d="M16 17l5-5-5-5M21 12H9" />
+    </svg>
+  )
+}
+
+function GuruMapelDoodleBackground() {
+  const doodles = [
+    { Icon: DoodleBookIcon, className: 'top-8 right-[22%] h-14 w-14 -rotate-6' },
+    { Icon: DoodlePencilIcon, className: 'top-4 right-[10%] h-16 w-16 rotate-12' },
+    { Icon: DoodleBulbIcon, className: 'top-24 right-[4%] h-14 w-14 -rotate-6' },
+    { Icon: DoodleCapIcon, className: 'top-40 right-[16%] h-14 w-14 rotate-6' },
+    { Icon: DoodlePencilIcon, className: 'top-16 right-[32%] h-10 w-10 -rotate-45' },
+  ]
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-white/20 blur-3xl" />
+      <div className="absolute top-32 right-10 h-56 w-56 rounded-full bg-cyan-200/20 blur-3xl" />
+      {doodles.map((d, i) => (
+        <d.Icon key={i} className={`absolute text-white/50 ${d.className}`} />
+      ))}
+    </div>
+  )
+}
+
+function DoodleBookIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" />
+    </svg>
+  )
+}
+
+function DoodlePencilIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  )
+}
+
+function DoodleBulbIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 18h6M10 21h4" />
+      <path d="M12 3a6 6 0 0 0-4 10.5c.6.5 1 1.3 1 2.1V16h6v-.4c0-.8.4-1.6 1-2.1A6 6 0 0 0 12 3Z" />
+    </svg>
+  )
+}
+
+function DoodleCapIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m2 8 10-5 10 5-10 5-10-5Z" />
+      <path d="M6 10.5V16c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5v-5.5" />
+    </svg>
+  )
+}
+
+function SchoolIllustration(props) {
+  return (
+    <svg {...props} viewBox="0 0 320 150" preserveAspectRatio="xMaxYMax meet" fill="none">
+      <ellipse cx="160" cy="146" rx="150" ry="8" fill="#0b4a35" opacity=".35" />
+      <g fill="#0f6b48" opacity=".9">
+        <path d="M18 146V96l16-30 16 30v50z" />
+        <path d="M262 146V88l18-34 18 34v58z" />
+      </g>
+      <rect x="70" y="80" width="180" height="66" fill="#e8f5ee" />
+      <rect x="120" y="58" width="80" height="88" fill="#f3faf6" />
+      <path d="M112 60 160 30l48 30z" fill="#1f9d6a" />
+      <path d="M62 82 160 62l98 20z" fill="#178a5c" />
+      <circle cx="160" cy="46" r="9" fill="#fff" stroke="#0f6b48" strokeWidth="2" />
+      <path d="M160 40v6l4 2" stroke="#0f6b48" strokeWidth="1.5" strokeLinecap="round" />
+      <rect x="148" y="112" width="24" height="34" rx="2" fill="#1f9d6a" />
+      <g fill="#8fd4b0">
+        <rect x="82" y="96" width="14" height="16" rx="1.5" />
+        <rect x="104" y="96" width="14" height="16" rx="1.5" />
+        <rect x="202" y="96" width="14" height="16" rx="1.5" />
+        <rect x="224" y="96" width="14" height="16" rx="1.5" />
+        <rect x="82" y="120" width="14" height="16" rx="1.5" />
+        <rect x="104" y="120" width="14" height="16" rx="1.5" />
+        <rect x="202" y="120" width="14" height="16" rx="1.5" />
+        <rect x="224" y="120" width="14" height="16" rx="1.5" />
+      </g>
+    </svg>
+  )
+}
+
+function UsersGroupIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="3" />
+      <path d="M6.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" />
+      <circle cx="5" cy="10" r="2" />
+      <circle cx="19" cy="10" r="2" />
+      <path d="M1.5 18c0-2 1.5-3.5 3.5-3.5M22.5 18c0-2-1.5-3.5-3.5-3.5" />
     </svg>
   )
 }
