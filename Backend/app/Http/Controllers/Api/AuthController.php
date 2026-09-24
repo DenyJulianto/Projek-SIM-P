@@ -410,8 +410,14 @@ class AuthController extends Controller
         $user->name = $data['name'];
         $user->email = $data['email'];
         $user->phone = $data['phone'] ?? null;
-        $user->alamat = $data['alamat'] ?? null;
-        $user->jenis_kelamin = $data['jenis_kelamin'] ?? null;
+
+        // Alamat & jenis kelamin hanya diubah kalau dikirim — form ganti password tidak menyertakannya.
+        if (array_key_exists('alamat', $data)) {
+            $user->alamat = $data['alamat'];
+        }
+        if (array_key_exists('jenis_kelamin', $data)) {
+            $user->jenis_kelamin = $data['jenis_kelamin'];
+        }
         $user->save();
 
         // Siswa/Guru punya kolom nama/alamat/jenis_kelamin sendiri yang
