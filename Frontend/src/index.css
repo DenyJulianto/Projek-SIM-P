@@ -7,6 +7,14 @@
   --color-gold-light: #f0c078;
 }
 
+/* Tailwind v4 membuat tombol berkursor panah; kembalikan ke tangan agar terlihat bisa diklik. */
+@layer base {
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
 body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
@@ -30,4 +38,22 @@ body {
 
 .modal-pop {
   animation: modal-pop 0.18s ease-out;
+}
+
+@media print {
+  body:has(.print-report) * {
+    visibility: hidden;
+  }
+
+  body:has(.print-report) .print-report,
+  body:has(.print-report) .print-report * {
+    visibility: visible;
+  }
+
+  .print-report {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
 }

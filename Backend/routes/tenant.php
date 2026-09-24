@@ -49,6 +49,7 @@ use App\Http\Controllers\Api\SystemSettingsController;
 use App\Http\Controllers\Api\TagihanController;
 use App\Http\Controllers\Api\TahunAjaranController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\WakasekController;
 use App\Http\Controllers\Api\WaliKelasSelfController;
 use Illuminate\Support\Facades\Route;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
@@ -329,6 +330,15 @@ Route::middleware([
             Route::get('rekap-kasus', [BkMonitoringController::class, 'rekapKasus']);
             Route::get('statistik', [BkMonitoringController::class, 'statistik']);
             Route::get('laporan', [BkMonitoringController::class, 'laporan']);
+        });
+
+        Route::middleware('permission:laporan.dashboard|dashboard.view-all')->prefix('wakasek')->group(function () {
+            foreach ([
+                'dashboard', 'kurikulum', 'pembelajaran', 'nilai-rapor', 'siswa', 'pelanggaran', 'prestasi',
+                'guru', 'beban-mengajar', 'aktivitas-guru', 'kehadiran', 'jadwal', 'jam-pelajaran', 'persetujuan',
+            ] as $endpoint) {
+                Route::get($endpoint, [WakasekController::class, \Illuminate\Support\Str::camel($endpoint)]);
+            }
         });
 
         Route::middleware('permission:dashboard.view-all')->prefix('principal')->group(function () {

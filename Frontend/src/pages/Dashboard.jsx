@@ -27,6 +27,7 @@ import SuratArsipManagement from './SuratArsipManagement'
 import SystemConfig from './SystemConfig'
 import TataUsahaDashboard from './TataUsahaDashboard'
 import UserManagement from './UserManagement'
+import WakasekDashboard from './WakasekDashboard'
 import WaliKelasDashboard from './WaliKelasDashboard'
 
 const MENU_GROUPS = [
@@ -169,6 +170,11 @@ export default function Dashboard() {
   const isGuruMapel = user?.roles?.some((r) => r.name === 'Guru Mata Pelajaran') && !isAdmin
   if (isGuruMapel) {
     return <GuruMapelDashboard />
+  }
+
+  const isWakasek = user?.roles?.some((r) => r.name === 'Wakil Kepala Sekolah') && !isAdmin
+  if (isWakasek) {
+    return <WakasekDashboard />
   }
 
   const isWaliKelas = user?.roles?.some((r) => r.name === 'Wali Kelas') && !isAdmin
