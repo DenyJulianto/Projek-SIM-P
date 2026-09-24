@@ -132,6 +132,7 @@ function PersonalInformationForm({ user, onSaved }) {
   const [lastName, setLastName] = useState(initialLast)
   const [phone, setPhone] = useState(user?.phone || '')
   const [email, setEmail] = useState(user?.email || '')
+  const [jenisKelamin, setJenisKelamin] = useState(user?.jenis_kelamin || '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -141,6 +142,7 @@ function PersonalInformationForm({ user, onSaved }) {
     setLastName(initialLast)
     setPhone(user?.phone || '')
     setEmail(user?.email || '')
+    setJenisKelamin(user?.jenis_kelamin || '')
     setError('')
     setSuccess('')
   }
@@ -155,6 +157,7 @@ function PersonalInformationForm({ user, onSaved }) {
         name: [firstName, lastName].filter(Boolean).join(' '),
         email,
         phone,
+        jenis_kelamin: jenisKelamin || null,
       })
       onSaved(updated)
       setSuccess('Profil berhasil diperbarui.')
@@ -212,15 +215,24 @@ function PersonalInformationForm({ user, onSaved }) {
           />
         </Field>
 
-        <Field label="Phone Number">
-          <input
-            type="text"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="input"
-            placeholder="+62..."
-          />
-        </Field>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <Field label="Phone Number">
+            <input
+              type="text"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="input"
+              placeholder="+62..."
+            />
+          </Field>
+          <Field label="Gender">
+            <select value={jenisKelamin} onChange={(e) => setJenisKelamin(e.target.value)} className="input">
+              <option value="">Pilih jenis kelamin</option>
+              <option value="P">Perempuan</option>
+              <option value="L">Laki-laki</option>
+            </select>
+          </Field>
+        </div>
 
         <div className="flex gap-3 pt-2">
           <button

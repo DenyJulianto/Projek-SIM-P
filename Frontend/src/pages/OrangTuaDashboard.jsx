@@ -1,9 +1,10 @@
+import logoLambang from '../assets/logo-sim-lambang.png'
 import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
+import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import { useAuth } from '../lib/AuthContext'
 import { api, BASE_URL } from '../lib/api'
 import MyProfile from './MyProfile'
-import LogoHorizontal from '../components/LogoHorizontal'
 
 const MENU_GROUPS = [
   { section: null, items: [{ key: 'home', label: 'Dashboard', icon: GridIcon }] },
@@ -88,12 +89,15 @@ export default function OrangTuaDashboard() {
     <div className="h-screen w-screen bg-gradient-to-br from-emerald-100 via-emerald-50 to-emerald-100 flex flex-col overflow-hidden">
       <header className="relative z-30 shrink-0 bg-gradient-to-r from-emerald-700 via-emerald-600 to-navy-light shadow-lg flex items-center gap-4 px-6 py-3 min-h-20">
         <div className="flex items-center min-w-0 shrink-0">
-          <LogoHorizontal
-            subtitle="Selangkah Lebih Dekat dengan Perkembangan Anak"
-            badgeClassName="h-10 w-10"
-            iconClassName="h-5 w-5"
-            textClassName="text-base"
-          />
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="h-14 w-14 rounded-full bg-white ring-2 ring-white/40 shadow-md overflow-hidden shrink-0">
+              <img src={logoLambang} alt="Logo SIM Pendidikan" className="h-full w-full object-cover" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-bold tracking-wide text-sm text-white">SIM Pendidikan</p>
+              <p className="text-[11px] leading-snug mt-0.5 text-white/60 whitespace-nowrap">Selangkah Lebih Dekat dengan Perkembangan Anak</p>
+            </div>
+          </div>
         </div>
 
         <div className="flex-1 flex justify-center min-w-0">
@@ -238,7 +242,7 @@ export default function OrangTuaDashboard() {
                   onNavigate={setView}
                 />
               )}
-              {view === 'profil-anak' && <ProfilAnakView onBack={() => setView('home')} anak={anak} />}
+              {view === 'profil-anak' && <ProfilAnakView onBack={() => setView('home')} anak={anak} onNavigate={setView} />}
               {view === 'jadwal' && <JadwalAnakView onBack={() => setView('home')} anak={anak} />}
               {view === 'absensi' && <AbsensiAnakView onBack={() => setView('home')} anak={anak} />}
               {view === 'nilai' && <NilaiAnakView onBack={() => setView('home')} anak={anak} />}
@@ -269,49 +273,8 @@ export default function OrangTuaDashboard() {
       </main>
 
       {confirmingLogout && (
-        <OrangTuaLogoutModal onClose={() => setConfirmingLogout(false)} onConfirm={logout} />
+        <LogoutConfirmModal onClose={() => setConfirmingLogout(false)} onConfirm={logout} />
       )}
-    </div>
-  )
-}
-
-function DoorExitIllustration(props) {
-  return (
-    <svg {...props} viewBox="0 0 100 100" fill="none">
-      <g transform="skewX(-6)">
-        <rect x="20" y="15" width="34" height="68" rx="2" stroke="#111827" strokeWidth="3" />
-        <rect x="27" y="20" width="22" height="58" rx="1.5" fill="#14a673" />
-      </g>
-      <path d="M58 49h30" stroke="#111827" strokeWidth="3.5" strokeLinecap="round" />
-      <path d="M78 37l12 12-12 12" stroke="#111827" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-    </svg>
-  )
-}
-
-function OrangTuaLogoutModal({ onConfirm, onClose }) {
-  return (
-    <div className="fixed inset-0 bg-navy/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-sm w-full p-8 text-center">
-        <DoorExitIllustration className="h-24 w-24 mx-auto mb-5" />
-        <h2 className="text-lg font-bold text-navy mb-1">Yah, mau keluar nih?</h2>
-        <p className="text-sm text-navy/50 mb-6">Yakin mau logout dari akun Orang Tua?</p>
-        <div className="space-y-2.5">
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full bg-navy hover:bg-navy/90 text-white font-bold py-3 rounded-full transition-colors"
-          >
-            Nggak Jadi, Deh
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            className="w-full border border-navy-light text-navy-light hover:bg-emerald-50 font-bold py-3 rounded-full transition-colors"
-          >
-            Ya, Keluar Aja
-          </button>
-        </div>
-      </div>
     </div>
   )
 }
@@ -495,17 +458,34 @@ function OrangTuaHome({ user, anak, anakList, selectedAnakId, onSelectAnak, onNa
 
   return (
     <div>
-      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5 mb-6">
-        <div className="max-w-md">
-          <h1 className="text-xl sm:text-2xl font-extrabold text-navy mb-1.5">{sapaanWaktu()}, {user?.name}! 👋</h1>
-          <p className="text-navy/50 text-sm">
-            {anakList.length > 1
-              ? `Anda memantau ${anakList.length} anak: ${anakList.map((a) => a.nama).join(', ')}.`
-              : 'Pantau perkembangan putra/putri Anda dengan mudah dan cepat.'}
-          </p>
+      <div
+        className="relative overflow-hidden rounded-2xl p-6 mb-6 shadow-lg shadow-emerald-700/20 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5"
+        style={{ backgroundImage: 'linear-gradient(135deg, #059669 0%, #0D9488 100%)' }}
+      >
+        <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-white/10" />
+        <div className="pointer-events-none absolute right-40 -bottom-14 h-28 w-28 rounded-full bg-white/10" />
+
+        <div className="relative flex items-center gap-4 min-w-0">
+          <div className="h-16 w-16 rounded-full shadow-lg overflow-hidden shrink-0 bg-white/95 text-emerald-700 text-xl font-bold flex items-center justify-center">
+            {user?.avatar_url ? (
+              <img src={`${BASE_URL}${user.avatar_url}`} alt="Foto profil" className="h-full w-full object-cover" />
+            ) : (
+              user?.name?.[0]?.toUpperCase() || '?'
+            )}
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-white mb-1">{sapaanWaktu()}, {user?.name}! 👋</h1>
+            <p className="text-white/85 text-sm max-w-md">
+              {anakList.length > 1
+                ? `Anda memantau ${anakList.length} anak: ${anakList.map((a) => a.nama).join(', ')}.`
+                : 'Pantau perkembangan putra/putri Anda dengan mudah dan cepat.'}
+            </p>
+          </div>
         </div>
 
-        <AnakPickerCard anak={anak} anakList={anakList} selectedAnakId={selectedAnakId} onSelectAnak={onSelectAnak} />
+        <div className="relative">
+          <AnakPickerCard anak={anak} anakList={anakList} selectedAnakId={selectedAnakId} onSelectAnak={onSelectAnak} />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -769,7 +749,28 @@ function StatusPill({ status }) {
   )
 }
 
-function ProfilAnakView({ onBack, anak }) {
+function ProfilAnakView({ onBack, anak, onNavigate }) {
+  const { user } = useAuth()
+  const [nilaiList, setNilaiList] = useState(null)
+  const [absensiList, setAbsensiList] = useState(null)
+  const [tagihanList, setTagihanList] = useState(null)
+  const [prestasiList, setPrestasiList] = useState(null)
+  const [jadwalList, setJadwalList] = useState(null)
+
+  useEffect(() => {
+    if (!anak) return
+    setNilaiList(null)
+    setAbsensiList(null)
+    setTagihanList(null)
+    setPrestasiList(null)
+    setJadwalList(null)
+    api.getAnakNilai(anak.id).then(setNilaiList).catch(() => setNilaiList([]))
+    api.getAnakAbsensi(anak.id).then((r) => setAbsensiList(r.data ?? r)).catch(() => setAbsensiList([]))
+    api.getAnakTagihan(anak.id).then(setTagihanList).catch(() => setTagihanList([]))
+    api.getAnakPrestasi(anak.id).then(setPrestasiList).catch(() => setPrestasiList([]))
+    api.getAnakJadwal(anak.id).then(setJadwalList).catch(() => setJadwalList([]))
+  }, [anak?.id])
+
   if (!anak) {
     return (
       <div>
@@ -789,52 +790,235 @@ function ProfilAnakView({ onBack, anak }) {
     ['Wali Kelas', anak.kelas?.wali_kelas?.nama ?? '-', UsersIcon],
   ]
 
+  const rataNilai = averageNilai(nilaiList)
+  const kehadiran = persenKehadiran(absensiList)
+  const mapel = ringkasanMapel(nilaiList)
+  const belumLunas = (tagihanList || []).filter((t) => t.status !== 'lunas')
+  const hitungAbsen = (status) => (absensiList || []).filter((a) => a.status === status).length
+  const rekapAbsen = [
+    ['Hadir', 'hadir', 'bg-emerald-500'],
+    ['Izin', 'izin', 'bg-sky-500'],
+    ['Sakit', 'sakit', 'bg-amber-500'],
+    ['Alpha', 'alpha', 'bg-rose-400'],
+  ]
+  const namaHariIni = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][new Date().getDay()]
+  const jadwalHariIni = (jadwalList || [])
+    .filter((j) => j.hari === namaHariIni)
+    .sort((a, b) => String(a.jam_mulai).localeCompare(String(b.jam_mulai)))
+  const prestasiTerbaru = [...(prestasiList || [])]
+    .sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
+    .slice(0, 3)
+
   return (
     <div>
       <ProfilAnakHeader onBack={onBack} />
-      <div className="relative overflow-hidden bg-white rounded-2xl border border-emerald-100 shadow-sm p-6 max-w-lg">
-        <LeafIcon className="absolute -bottom-4 -right-4 h-20 w-20 text-emerald-600/10 rotate-12" />
 
-        <div className="relative flex items-center gap-4 mb-5">
-          {anak.user?.avatar_url ? (
-            <img
-              src={`${BASE_URL}${anak.user.avatar_url}`}
-              alt={anak.nama}
-              className="h-16 w-16 rounded-full object-cover shrink-0"
-            />
-          ) : (
-            <div className="h-16 w-16 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-200 flex items-center justify-center text-navy font-bold text-xl shrink-0">
-              {anak.nama?.[0]?.toUpperCase()}
-            </div>
-          )}
-          <div>
-            <h2 className="text-lg font-bold text-navy mb-1">{anak.nama}</h2>
+      <div
+        className="relative overflow-hidden rounded-2xl p-6 mb-5 shadow-lg shadow-emerald-700/20 flex flex-col sm:flex-row sm:items-center gap-5"
+        style={{ backgroundImage: 'linear-gradient(135deg, #059669 0%, #0D9488 100%)' }}
+      >
+        <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-white/10" />
+        <div className="pointer-events-none absolute right-40 -bottom-14 h-28 w-28 rounded-full bg-white/10" />
+        {anak.user?.avatar_url ? (
+          <img src={`${BASE_URL}${anak.user.avatar_url}`} alt={anak.nama} className="relative h-20 w-20 rounded-full object-cover shadow-lg shrink-0" />
+        ) : (
+          <div className="relative h-20 w-20 rounded-full bg-white/95 text-emerald-700 flex items-center justify-center text-3xl font-bold shadow-lg shrink-0">
+            {anak.nama?.[0]?.toUpperCase()}
+          </div>
+        )}
+        <div className="relative min-w-0">
+          <p className="text-white/80 text-sm">Putra/putri Anda</p>
+          <h2 className="text-2xl font-extrabold text-white leading-tight">{anak.nama}</h2>
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <span className="rounded-full bg-white/20 backdrop-blur px-3 py-1 text-xs font-bold text-white">Kelas {anak.kelas?.nama_kelas ?? '-'}</span>
+            <span className="rounded-full bg-white/20 backdrop-blur px-3 py-1 text-xs font-bold text-white">NIS {anak.nis}</span>
             <StatusPill status={anak.status} />
           </div>
         </div>
+      </div>
 
-        <dl className="relative divide-y divide-navy/5">
-          {rows.map(([label, value, Icon]) => (
-            <div key={label} className="flex items-center justify-between py-3 text-sm gap-4">
-              <dt className="flex items-center gap-2.5 text-navy/50 shrink-0">
-                <Icon className="h-4 w-4 text-navy-light shrink-0" />
-                {label}
-              </dt>
-              <dd className="font-semibold text-navy text-right">{value}</dd>
-            </div>
-          ))}
-          <div className="flex items-center justify-between py-3 text-sm">
-            <dt className="flex items-center gap-2.5 text-navy/50">
-              <ClipboardIcon className="h-4 w-4 text-navy-light shrink-0" />
-              Status
-            </dt>
-            <dd>
-              <StatusPill status={anak.status} />
-            </dd>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+        <ProfilStat
+          icon={ChartIcon}
+          tone="bg-emerald-500"
+          label="Nilai Rata-rata"
+          value={rataNilai !== null ? rataNilai.toFixed(1) : '-'}
+          note={rataNilai !== null ? `Kategori: ${kategoriNilai(rataNilai)}` : nilaiList === null ? 'Memuat...' : 'Belum ada nilai'}
+          onClick={() => onNavigate?.('nilai')}
+        />
+        <ProfilStat
+          icon={AttendanceIcon}
+          tone="bg-teal-500"
+          label="Kehadiran"
+          value={kehadiran !== null ? `${kehadiran.toFixed(1)}%` : '-'}
+          note={absensiList ? `${hitungAbsen('hadir')} dari ${absensiList.length} hari hadir` : 'Memuat...'}
+          onClick={() => onNavigate?.('absensi')}
+        />
+        <ProfilStat
+          icon={BillIcon}
+          tone="bg-amber-500"
+          label="Tagihan Belum Lunas"
+          value={tagihanList ? belumLunas.length : '-'}
+          note={tagihanList ? `Dari ${tagihanList.length} tagihan` : 'Memuat...'}
+          onClick={() => onNavigate?.('tagihan')}
+        />
+        <ProfilStat
+          icon={TrophyIcon}
+          tone="bg-violet-500"
+          label="Prestasi"
+          value={prestasiList ? prestasiList.length : '-'}
+          note="Prestasi tercatat"
+          onClick={() => onNavigate?.('prestasi')}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,420px)_1fr] gap-5">
+        <div className="space-y-5">
+          <div className="relative overflow-hidden bg-white rounded-2xl border border-emerald-100 shadow-sm p-6">
+            <LeafIcon className="absolute -bottom-4 -right-4 h-20 w-20 text-emerald-600/10 rotate-12" />
+            <p className="relative text-sm font-bold text-navy mb-2">Data Diri</p>
+            <dl className="relative divide-y divide-navy/5">
+              {rows.map(([label, value, Icon]) => (
+                <div key={label} className="flex items-center justify-between py-3 text-sm gap-4">
+                  <dt className="flex items-center gap-2.5 text-navy/50 shrink-0">
+                    <Icon className="h-4 w-4 text-navy-light shrink-0" />
+                    {label}
+                  </dt>
+                  <dd className="font-semibold text-navy text-right">{value}</dd>
+                </div>
+              ))}
+              <div className="flex items-center justify-between py-3 text-sm">
+                <dt className="flex items-center gap-2.5 text-navy/50">
+                  <ClipboardIcon className="h-4 w-4 text-navy-light shrink-0" />
+                  Status
+                </dt>
+                <dd>
+                  <StatusPill status={anak.status} />
+                </dd>
+              </div>
+            </dl>
           </div>
-        </dl>
+
+          <div className="bg-white rounded-2xl border border-emerald-100 shadow-sm p-6">
+            <p className="text-sm font-bold text-navy mb-3">Orang Tua / Wali</p>
+            <div className="flex items-center gap-3">
+              <div className="h-11 w-11 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-200 text-emerald-800 flex items-center justify-center font-bold shrink-0">
+                {user?.name?.[0]?.toUpperCase() || '?'}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-navy truncate">{user?.name || '-'}</p>
+                <p className="text-xs text-navy/50 truncate">{user?.email || '-'}</p>
+                <p className="text-xs text-navy/50">{user?.phone || 'Nomor telepon belum diisi'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-5 min-w-0">
+          <div className="bg-white rounded-2xl border border-emerald-100 shadow-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-bold text-navy">Ringkasan Mata Pelajaran</p>
+              <span className="text-[11px] text-navy/40">Nilai tertinggi</span>
+            </div>
+            {mapel.length === 0 ? (
+              <p className="text-xs text-navy/40 py-3">{nilaiList === null ? 'Memuat...' : 'Belum ada nilai yang tercatat.'}</p>
+            ) : (
+              <div className="space-y-3">
+                {mapel.map((m) => (
+                  <div key={m.nama}>
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span className="font-medium text-navy truncate">{m.nama}</span>
+                      <span className="font-bold text-navy">{m.rata}</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-emerald-100 overflow-hidden">
+                      <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500" style={{ width: `${Math.min(m.rata, 100)}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white rounded-2xl border border-emerald-100 shadow-sm p-6">
+            <p className="text-sm font-bold text-navy mb-4">Rekap Kehadiran</p>
+            {absensiList === null ? (
+              <p className="text-xs text-navy/40 py-3">Memuat...</p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {rekapAbsen.map(([label, key, dot]) => (
+                  <div key={key} className="rounded-xl bg-emerald-50/60 border border-emerald-100 px-4 py-3">
+                    <p className="text-2xl font-extrabold text-navy leading-none">{hitungAbsen(key)}</p>
+                    <p className="flex items-center gap-1.5 text-[11px] text-navy/50 mt-1.5">
+                      <span className={`h-2 w-2 rounded-full ${dot}`} />
+                      {label}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="bg-white rounded-2xl border border-emerald-100 shadow-sm p-6">
+              <p className="text-sm font-bold text-navy mb-3">Jadwal Hari Ini · {namaHariIni}</p>
+              {jadwalHariIni.length === 0 ? (
+                <p className="text-xs text-navy/40 py-2">{jadwalList === null ? 'Memuat...' : 'Tidak ada jadwal pelajaran hari ini.'}</p>
+              ) : (
+                <ul className="space-y-2">
+                  {jadwalHariIni.slice(0, 5).map((j) => (
+                    <li key={j.id} className="flex items-center justify-between gap-3 rounded-xl bg-emerald-50/60 px-3 py-2 text-sm">
+                      <span className="font-medium text-navy truncate">{j.mata_pelajaran?.nama_mapel ?? '-'}</span>
+                      <span className="text-[11px] text-navy/50 whitespace-nowrap">
+                        {String(j.jam_mulai).slice(0, 5)} - {String(j.jam_selesai).slice(0, 5)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="bg-white rounded-2xl border border-emerald-100 shadow-sm p-6">
+              <p className="text-sm font-bold text-navy mb-3">Prestasi Terbaru</p>
+              {prestasiTerbaru.length === 0 ? (
+                <p className="text-xs text-navy/40 py-2">{prestasiList === null ? 'Memuat...' : 'Belum ada prestasi tercatat.'}</p>
+              ) : (
+                <ul className="space-y-2">
+                  {prestasiTerbaru.map((p) => (
+                    <li key={p.id} className="flex items-center gap-3 rounded-xl bg-amber-50/70 px-3 py-2">
+                      <span className="h-8 w-8 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+                        <TrophyIcon className="h-4 w-4 text-amber-600" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-sm font-semibold text-navy truncate">{p.judul}</span>
+                        <span className="block text-[11px] text-navy/40">{formatTanggal(p.tanggal)}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
+  )
+}
+
+function ProfilStat({ icon: Icon, tone, label, value, note, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className="bg-white rounded-2xl border border-emerald-100 shadow-sm p-4 flex items-center gap-4 text-left hover:shadow-md transition-shadow"
+    >
+      <span className={`h-12 w-12 rounded-full ${tone} text-white flex items-center justify-center shrink-0 shadow-md`}>
+        <Icon className="h-6 w-6" />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-xs text-navy/50">{label}</span>
+        <span className="block text-2xl font-extrabold text-navy leading-tight">{value}</span>
+        <span className="block text-[11px] text-navy/40 truncate">{note}</span>
+      </span>
+    </button>
   )
 }
 
