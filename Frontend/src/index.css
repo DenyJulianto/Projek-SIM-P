@@ -16,3 +16,36 @@ body {
     @apply w-full rounded-md border border-navy/20 px-3 py-2 text-sm text-navy focus:outline-none focus:ring-2 focus:ring-gold/50;
   }
 }
+
+@media print {
+  body:has(.print-report) * {
+    visibility: hidden;
+  }
+
+  body:has(.print-report) .print-report,
+  body:has(.print-report) .print-report * {
+    visibility: visible;
+  }
+
+  .print-report {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+}
+
+@keyframes modal-pop {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.modal-pop {
+  animation: modal-pop 0.18s ease-out;
+}

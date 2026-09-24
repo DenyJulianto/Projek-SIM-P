@@ -131,14 +131,14 @@ function KehadiranSection() {
     <div className="grid lg:grid-cols-2 gap-6">
       <div>
         <h2 className="text-sm font-bold text-navy/60 uppercase tracking-wide mb-2">Kehadiran Siswa (Bulan Ini)</h2>
-        <div className="bg-white rounded-2xl border border-navy/10 p-5">
+        <div className="bg-emerald-50/70 rounded-2xl border border-emerald-100 p-5">
           <p className="text-3xl font-extrabold text-navy mb-3">{data.siswa.persen_hadir}%</p>
           <RekapBadges rekap={data.siswa.rekap} />
         </div>
       </div>
       <div>
         <h2 className="text-sm font-bold text-navy/60 uppercase tracking-wide mb-2">Kehadiran Guru (Bulan Ini)</h2>
-        <div className="bg-white rounded-2xl border border-navy/10 p-5">
+        <div className="bg-emerald-50/70 rounded-2xl border border-emerald-100 p-5">
           <p className="text-3xl font-extrabold text-navy mb-3">{data.guru.persen_hadir}%</p>
           <RekapBadges rekap={data.guru.rekap} />
         </div>
@@ -220,7 +220,7 @@ function SarprasSection() {
 
 function StatBox({ label, value }) {
   return (
-    <div className="bg-white rounded-2xl border border-navy/10 p-5">
+    <div className="bg-emerald-50/70 rounded-2xl border border-emerald-100 p-5">
       <p className="text-2xl font-extrabold text-navy">{value}</p>
       <p className="text-xs text-navy/50 uppercase tracking-wide mt-1">{label}</p>
     </div>
@@ -229,10 +229,10 @@ function StatBox({ label, value }) {
 
 function Table({ columns, rows, render, emptyText }) {
   return (
-    <div className="bg-white rounded-2xl border border-navy/10 overflow-hidden">
+    <div className="bg-emerald-50/70 rounded-2xl border border-emerald-100 overflow-hidden">
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-navy/5 text-navy/60 text-xs uppercase text-left">
+          <tr className="bg-gradient-to-r from-navy-light to-emerald-600 text-white text-xs uppercase text-left">
             {columns.map((c) => (
               <th key={c} className="px-4 py-3">{c}</th>
             ))}
@@ -245,7 +245,7 @@ function Table({ columns, rows, render, emptyText }) {
             </tr>
           ) : (
             rows.map((r, i) => (
-              <tr key={i} className="border-t border-navy/5">
+              <tr key={i} className="border-t border-emerald-100 odd:bg-white/80 even:bg-emerald-100/50 hover:bg-emerald-200/50 transition-colors">
                 {render(r).map((cell, j) => (
                   <td key={j} className="px-4 py-3 text-navy/70">{cell}</td>
                 ))}
@@ -260,7 +260,7 @@ function Table({ columns, rows, render, emptyText }) {
 
 function ListCard({ items, render, emptyText }) {
   return (
-    <div className="bg-white rounded-2xl border border-navy/10 divide-y divide-navy/5">
+    <div className="bg-emerald-50/70 rounded-2xl border border-emerald-100 divide-y divide-emerald-100">
       {!items || items.length === 0 ? (
         <p className="text-sm text-navy/40 text-center py-6">{emptyText}</p>
       ) : (
@@ -293,11 +293,11 @@ function RekapBadges({ rekap }) {
 function BreakdownList({ data }) {
   const entries = Object.entries(data || {})
   if (entries.length === 0) {
-    return <p className="text-sm text-navy/40 bg-white rounded-2xl border border-navy/10 p-5">Belum ada data.</p>
+    return <p className="text-sm text-navy/40 bg-emerald-50/70 rounded-2xl border border-emerald-100 p-5">Belum ada data.</p>
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-navy/10 divide-y divide-navy/5">
+    <div className="bg-emerald-50/70 rounded-2xl border border-emerald-100 divide-y divide-emerald-100">
       {entries.map(([key, value]) => (
         <div key={key} className="px-4 py-3 flex items-center justify-between">
           <span className="text-sm text-navy/70 capitalize">{key.replace(/_/g, ' ')}</span>

@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Absensi;
+use App\Models\AnggaranPos;
 use App\Models\AbsensiGuru;
 use App\Models\Guru;
 use App\Models\Inventaris;
@@ -43,6 +44,14 @@ class PrincipalController extends Controller
             'anggaran' => $this->serapanAnggaran(),
             'spp' => $this->persentaseSpp(),
             'grafik_akademik' => $this->trendNilai(),
+            'nilai_per_kelas' => $this->nilaiPerKelas(),
+            'tren_siswa' => $this->trenSiswa(),
+            'tren_kehadiran' => $this->trenKehadiran(),
+            'prestasi_per_tingkat' => Prestasi::select('tingkat', DB::raw('count(*) as total'))
+                ->groupBy('tingkat')
+                ->orderByDesc('total')
+                ->pluck('total', 'tingkat'),
+            'kasus_hari_ini' => $this->kasusHariIni(),
         ]);
     }
 
@@ -137,7 +146,25 @@ class PrincipalController extends Controller
             'total' => Guru::count(),
             'aktif' => Guru::where('status', 'aktif')->count(),
             'nonaktif' => Guru::where('status', 'nonaktif')->count(),
-            'daftar' => Guru::orderBy('nama')->get(['id', 'nama', 'nip', 'jabatan', 'status']),
+            'daftar' => Guru::with('user:id,email,avatar')
+                ->orderBy('nama')
+                ->get()
+                ->map(fn (Guru $g) => [
+                    'id' => $g->id,
+                    'nama' => $g->nama,
+                    'gelar' => $g->gelar,
+                    'nip' => $g->nip,
+                    'nuptk' => $g->nuptk,
+                    'jabatan' => $g->jabatan,
+                    'mata_pelajaran' => $g->mata_pelajaran,
+                    'status_kepegawaian' => $g->status_kepegawaian,
+                    'pendidikan_terakhir' => $g->pendidikan_terakhir,
+                    'tahun_mulai_mengajar' => $g->tahun_mulai_mengajar,
+                    'no_telepon' => $g->no_telepon,
+                    'status' => $g->status,
+                    'email' => $g->user?->email,
+                    'avatar_url' => $g->user?->avatar ? "/avatar/{$g->user->avatar}" : null,
+                ]),
         ]);
     }
 
@@ -198,6 +225,7 @@ class PrincipalController extends Controller
             'total_anggaran' => $totalAnggaran,
             'total_realisasi' => $totalRealisasi,
             'persen_serapan' => $totalAnggaran > 0 ? round(($totalRealisasi / $totalAnggaran) * 100, 1) : 0,
+            'per_bidang' => $this->serapanPerBidang(),
         ];
     }
 
@@ -215,6 +243,86 @@ class PrincipalController extends Controller
             'tersedia' => true,
             'persen_lunas' => round(($lunas / $total) * 100, 1),
         ];
+    }
+
+    /** Rata-rata nilai tiap kelas (kelas tanpa nilai tidak ditampilkan). */
+    private function nilaiPerKelas(): array
+    {
+        return Kelas::query()
+            ->orderBy('nama_kelas')
+            ->get()
+            ->map(function (Kelas $kelas) {
+                $rata = Nilai::whereHas('siswa', fn ($q) => $q->where('kelas_id', $kelas->id))->avg('nilai');
+
+                return ['kelas' => $kelas->nama_kelas, 'rata_rata' => $rata ? round((float) $rata, 2) : null];
+            })
+            ->filter(fn ($row) => $row['rata_rata'] !== null)
+            ->values()
+            ->all();
+    }
+
+    /** Jumlah siswa aktif pada akhir tiap bulan selama 6 bulan terakhir (berdasarkan tanggal data dibuat). */
+    private function trenSiswa(): array
+    {
+        return collect(range(5, 0))->map(function (int $mundur) {
+            $akhir = now()->startOfMonth()->subMonths($mundur)->endOfMonth();
+
+            return [
+                'bulan' => $akhir->format('Y-m'),
+                'total' => Siswa::where('status', 'aktif')->where('created_at', '<=', $akhir)->count(),
+            ];
+        })->all();
+    }
+
+    /** Persentase kehadiran siswa per bulan sepanjang tahun ini (null = belum ada data absensi bulan itu). */
+    private function trenKehadiran(): array
+    {
+        return collect(range(1, 12))->map(function (int $bulan) {
+            $query = Absensi::whereMonth('tanggal', $bulan)->whereYear('tanggal', now()->year);
+            $total = (clone $query)->count();
+
+            return [
+                'bulan' => $bulan,
+                'persen' => $total > 0 ? round(((clone $query)->where('status', 'hadir')->count() / $total) * 100, 1) : null,
+            ];
+        })->all();
+    }
+
+    /** Kasus pembinaan yang dicatat hari ini, dirinci per jenis pelanggaran. */
+    private function kasusHariIni(): array
+    {
+        $hariIni = Pelanggaran::whereDate('tanggal', now()->toDateString());
+
+        return [
+            'total' => (clone $hariIni)->count(),
+            'rincian' => (clone $hariIni)
+                ->select('jenis', DB::raw('count(*) as total'))
+                ->groupBy('jenis')
+                ->orderByDesc('total')
+                ->limit(3)
+                ->pluck('total', 'jenis'),
+            'berat' => (clone $hariIni)->where('tingkat', 'berat')->count(),
+        ];
+    }
+
+    /** Serapan anggaran per bidang (realisasi / anggaran, dalam persen). */
+    private function serapanPerBidang(): array
+    {
+        return AnggaranPos::with('pengajuan.realisasi')
+            ->get()
+            ->groupBy('bidang')
+            ->map(function ($pos, $bidang) {
+                $anggaran = (float) $pos->sum('jumlah_anggaran');
+                $realisasi = (float) $pos->flatMap->pengajuan->flatMap->realisasi->sum('jumlah');
+
+                return [
+                    'bidang' => $bidang,
+                    'persen' => $anggaran > 0 ? round(($realisasi / $anggaran) * 100, 1) : 0,
+                ];
+            })
+            ->values()
+            ->take(6)
+            ->all();
     }
 
     private function trendNilai()

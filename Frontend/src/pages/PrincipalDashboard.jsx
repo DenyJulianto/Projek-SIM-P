@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import logoLambang from '../assets/logo-sim-lambang.png'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import { useAuth } from '../lib/AuthContext'
+import { api, BASE_URL } from '../lib/api'
 import AnggaranView from './principal/AnggaranView'
 import ERaporView from './principal/ERaporView'
 import KepegawaianKepsekView from './principal/KepegawaianKepsekView'
@@ -55,52 +57,93 @@ export default function PrincipalDashboard() {
   const { user, logout } = useAuth()
   const [view, setView] = useState('home')
   const [confirmingLogout, setConfirmingLogout] = useState(false)
+  const [sekolah, setSekolah] = useState(null)
+
+  useEffect(() => {
+    api.getProfil().then(setSekolah).catch(() => {})
+  }, [])
+
+  // Sapaan mengikuti jenis kelamin di profil; kalau belum diisi, dipakai "Bapak/Ibu".
+  const sapaan = { L: 'Bapak', P: 'Ibu' }[user?.jenis_kelamin] || 'Bapak/Ibu'
+  const namaLengkap = [user?.name, user?.gelar].filter(Boolean).join(', ')
+  const namaSapaan = [sapaan, namaLengkap].filter(Boolean).join(' ')
+  const avatarSrc = user?.avatar_url ? `${BASE_URL}${user.avatar_url}` : null
+  const [openSection, setOpenSection] = useState(null)
+
+  useEffect(() => {
+    const activeGroup = MENU_GROUPS.find((group) => group.section && group.items.some((item) => item.key === view))
+    if (activeGroup) setOpenSection(activeGroup.section)
+  }, [view])
+
+  function toggleSection(section) {
+    setOpenSection((prev) => (prev === section ? null : section))
+  }
 
   return (
-    <div className="h-screen bg-white flex overflow-hidden">
-      <aside className="w-64 shrink-0 bg-navy text-white flex flex-col py-6 px-4 h-screen">
-        <div className="flex items-center gap-2 px-2 mb-8">
-          <div className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-            <CapIcon className="h-5 w-5 text-white" />
+    <div className="h-screen bg-gradient-to-br from-emerald-200 via-teal-100 to-emerald-300 flex overflow-hidden">
+      <aside className="w-64 shrink-0 bg-gradient-to-b from-emerald-500 via-emerald-700 to-emerald-900 text-white flex flex-col py-6 px-4 h-screen">
+        <div className="flex items-center gap-2.5 px-2 mb-8 min-w-0">
+          <div className="h-16 w-16 rounded-full bg-white ring-2 ring-white/40 shadow-md overflow-hidden shrink-0">
+            <img src={logoLambang} alt="Logo SIM Pendidikan" className="h-full w-full object-cover" />
           </div>
-          <p className="font-bold tracking-wide text-sm">SIM Pendidikan</p>
+          <div className="min-w-0">
+            <p className="font-bold tracking-wide text-sm">SIM Pendidikan</p>
+            <p className="text-[11px] leading-snug mt-1 text-white/60">
+              Mewujudkan Sekolah Unggul, Berkarakter, dan Berprestasi.
+            </p>
+          </div>
         </div>
 
-        <nav className="flex-1 space-y-4 overflow-y-auto">
-          {MENU_GROUPS.map((group, gi) => (
-            <div key={gi} className="space-y-1.5">
-              {group.section && (
-                <p className="px-4 text-[10px] font-bold text-white/40 uppercase tracking-wider">
-                  {group.section}
-                </p>
-              )}
-              {group.items.map((item) => {
-                const Icon = item.icon
-                const active = view === item.key
-                return (
+        <nav className="flex-1 space-y-1.5 overflow-y-auto">
+          {MENU_GROUPS.map((group, gi) => {
+            const isOpen = !group.section || openSection === group.section
+            const hasActiveItem = group.items.some((item) => item.key === view)
+
+            return (
+              <div key={gi} className="space-y-1.5">
+                {group.section && (
                   <button
-                    key={item.key}
-                    onClick={() => setView(item.key)}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors text-left ${
-                      active
-                        ? 'bg-white text-navy shadow-sm'
-                        : 'text-white/75 hover:bg-white/10 hover:text-white'
+                    onClick={() => toggleSection(group.section)}
+                    className={`w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-colors ${
+                      hasActiveItem ? 'text-white' : 'text-white/75 hover:bg-white/10 hover:text-white'
                     }`}
                   >
-                    <Icon className="h-4.5 w-4.5 shrink-0" />
-                    <span className="truncate min-w-0">{item.label}</span>
+                    <span className="truncate min-w-0">{group.section}</span>
+                    <ChevronIcon className={`h-4 w-4 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                   </button>
-                )
-              })}
-            </div>
-          ))}
+                )}
+                {isOpen && (
+                  <div className={`space-y-1.5 ${group.section ? 'pl-2' : ''}`}>
+                    {group.items.map((item) => {
+                      const Icon = item.icon
+                      const active = view === item.key
+                      return (
+                        <button
+                          key={item.key}
+                          onClick={() => setView(item.key)}
+                          className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium transition-colors text-left ${
+                            active
+                              ? 'bg-lime-400 text-navy shadow-sm'
+                              : 'text-white/75 hover:bg-white/10 hover:text-white'
+                          }`}
+                        >
+                          <Icon className="h-4.5 w-4.5 shrink-0" />
+                          <span className="min-w-0 leading-snug">{item.label}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </nav>
 
         <button
           onClick={() => setView('profile')}
           className={`flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors text-left mt-2 ${
             view === 'profile'
-              ? 'bg-white text-navy shadow-sm'
+              ? 'bg-lime-400 text-navy shadow-sm'
               : 'text-white/75 hover:bg-white/10 hover:text-white'
           }`}
         >
@@ -118,9 +161,24 @@ export default function PrincipalDashboard() {
       </aside>
 
       <main className="flex-1 p-6 sm:p-8 overflow-y-auto">
-        <div className="mb-6">
-          <h1 className="text-xl font-extrabold text-navy">Selamat datang, {user?.name}!</h1>
-          <p className="text-sm text-navy/50">Kepala Sekolah — pantau kinerja sekolah dari sini.</p>
+        <div className="-mx-6 -mt-6 sm:-mx-8 sm:-mt-8 mb-[1cm] flex items-center gap-5 bg-gradient-to-r from-emerald-600 via-sky-400 to-white px-6 sm:px-8 py-8 shadow-sm shadow-emerald-900/10">
+          <button
+            onClick={() => setView('profile')}
+            title="Buka profil"
+            className="h-16 w-16 rounded-full shadow-lg overflow-hidden shrink-0 bg-gradient-to-br from-navy to-navy-light text-white text-xl font-bold flex items-center justify-center"
+          >
+            {avatarSrc ? (
+              <img src={avatarSrc} alt="Foto profil" className="h-full w-full object-cover" />
+            ) : (
+              user?.name?.[0]?.toUpperCase() || '?'
+            )}
+          </button>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-extrabold text-white drop-shadow-sm">Selamat Datang, {namaSapaan}</h1>
+            <p className="text-sm text-white/90">
+              Anda adalah kepala sekolah{sekolah?.nama_sekolah ? ` di ${sekolah.nama_sekolah}` : ''}
+            </p>
+          </div>
         </div>
 
         {view === 'home' && <PrincipalHome />}
@@ -129,7 +187,7 @@ export default function PrincipalDashboard() {
         {view.startsWith('anggaran-') && <AnggaranView tab={view.replace('anggaran-', '')} />}
         {view.startsWith('kepeg-') && <KepegawaianKepsekView tab={view.replace('kepeg-', '')} />}
         {view === 'laporan' && <LaporanKepsek />}
-        {view === 'profile' && <MyProfile onBack={() => setView('home')} />}
+        {view === 'profile' && <MyProfile onBack={() => setView('home')} staffProfile />}
       </main>
 
       {confirmingLogout && (
@@ -139,11 +197,10 @@ export default function PrincipalDashboard() {
   )
 }
 
-function CapIcon(props) {
+function ChevronIcon(props) {
   return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="m2 9 10-5 10 5-10 5-10-5Z" />
-      <path d="M6 11v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5" />
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m6 9 6 6 6-6" />
     </svg>
   )
 }

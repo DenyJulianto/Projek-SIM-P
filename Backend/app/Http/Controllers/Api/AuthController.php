@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Guru;
+use App\Models\Siswa;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -207,6 +209,8 @@ class AuthController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
             'phone' => ['nullable', 'string', 'max:30'],
+            'alamat' => ['nullable', 'string', 'max:1000'],
+            'jenis_kelamin' => ['nullable', 'in:L,P'],
             'current_password' => ['required_with:password', 'string'],
             'password' => ['nullable', 'string', 'min:8'],
         ]);
@@ -224,7 +228,27 @@ class AuthController extends Controller
         $user->name = $data['name'];
         $user->email = $data['email'];
         $user->phone = $data['phone'] ?? null;
+
+        // Alamat & jenis kelamin hanya diubah kalau memang dikirim — form ganti
+        // password tidak menyertakannya dan tidak boleh mengosongkannya.
+        if (array_key_exists('alamat', $data)) {
+            $user->alamat = $data['alamat'];
+        }
+        if (array_key_exists('jenis_kelamin', $data)) {
+            $user->jenis_kelamin = $data['jenis_kelamin'];
+        }
         $user->save();
+
+        // Siswa/Guru punya kolom nama/alamat/jenis_kelamin sendiri yang terpisah
+        // dari users; sinkronkan supaya nama di dashboard ikut berubah.
+        $profileSync = ['nama' => $data['name']];
+        foreach (['alamat', 'jenis_kelamin'] as $field) {
+            if (array_key_exists($field, $data)) {
+                $profileSync[$field] = $data[$field];
+            }
+        }
+        Siswa::where('user_id', $user->id)->update($profileSync);
+        Guru::where('user_id', $user->id)->update($profileSync);
 
         return response()->json($this->presentUser($user));
     }

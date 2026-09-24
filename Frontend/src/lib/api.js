@@ -354,6 +354,15 @@ export const api = {
     return requestForm('/me/avatar', formData)
   },
 
+  getMyStaffProfil: () => request('/me/profil-staf'),
+  updateMyStaffProfil: (data) => request('/me/profil-staf', { method: 'PUT', body: JSON.stringify(data) }),
+  uploadMyStaffSertifikat: (files) => {
+    const formData = new FormData()
+    files.forEach((f) => formData.append('files[]', f))
+    return requestForm('/me/profil-staf/sertifikat', formData)
+  },
+  deleteMyStaffSertifikat: (id) => request(`/me/profil-staf/sertifikat/${id}`, { method: 'DELETE' }),
+
   getMySiswaProfil: () => request('/me/siswa'),
   getMySiswaJadwal: () => request('/me/siswa/jadwal'),
   getMySiswaNilai: () => request('/me/siswa/nilai'),
