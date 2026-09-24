@@ -1,8 +1,17 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import PasswordInput from '../components/PasswordInput'
 import { api, IS_CENTRAL_DOMAIN } from '../lib/api'
-import LogoStacked from '../components/LogoStacked'
+import {
+  WavyBackground,
+  AuthHeroPanel,
+  AuthTagline,
+  MailIcon,
+  LockIcon,
+  AlertIcon,
+  CheckIcon,
+  ArrowRightIcon,
+} from '../components/AuthVisuals'
 
 export default function ForgotPassword() {
   const navigate = useNavigate()
@@ -66,66 +75,67 @@ export default function ForgotPassword() {
 
   return (
     <div
-      className={`min-h-screen flex items-center justify-center px-4 py-12 ${
-        background ? 'bg-cover bg-center' : 'bg-gradient-to-br from-teal-300 via-emerald-600 to-navy'
+      className={`min-h-screen relative flex items-center justify-center px-4 py-12 overflow-hidden ${
+        background ? 'bg-cover bg-center' : 'bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100'
       }`}
       style={background ? { backgroundImage: `url(${background})` } : undefined}
     >
-      <div className="w-full max-w-3xl bg-white rounded-[2rem] shadow-2xl shadow-navy/10 overflow-hidden grid md:grid-cols-2">
-        <div className="bg-gradient-to-br from-navy via-navy to-navy-light text-white p-10 flex flex-col items-center text-center justify-between">
-          <LogoStacked />
-
-          <div>
-            <h2 className="text-2xl font-extrabold mb-3">Lupa Password?</h2>
-            <p className="text-white/70 text-sm leading-relaxed">
-              Tenang, kami kirimkan kode reset ke email akun Anda supaya bisa masuk lagi.
-            </p>
-          </div>
-
-          <Link
-            to="/login"
-            className="border border-white/70 rounded-full px-8 py-2.5 text-sm font-semibold hover:bg-white hover:text-navy transition-colors"
-          >
-            MASUK
-          </Link>
+      {!background && (
+        <div className="pointer-events-none absolute inset-0">
+          <WavyBackground className="h-full w-full" />
         </div>
+      )}
 
-        <div className="p-8 sm:p-10 flex flex-col justify-center">
+      <div className="relative w-full max-w-5xl bg-white rounded-[2rem] shadow-2xl shadow-navy/10 overflow-hidden grid md:grid-cols-2">
+        <div className="order-2 md:order-1 p-8 sm:p-10 flex flex-col justify-center">
           {step === 'request' ? (
             <>
-              <h1 className="text-3xl font-extrabold text-navy uppercase">Lupa Password</h1>
+              <AuthTagline />
+
+              <h1 className="text-4xl font-extrabold text-navy">Lupa Password</h1>
               <p className="text-navy/50 text-sm mt-1 mb-6">
                 Masukkan email akun Anda, kami kirimkan kode reset password.
               </p>
 
               {error && (
-                <p className="text-red-600 bg-red-50 border border-red-200 rounded-lg text-sm text-center py-2 px-3 mb-4">
-                  {error}
-                </p>
+                <div className="flex items-start gap-3 text-red-600 bg-red-50 border border-red-200 rounded-xl text-sm py-3 px-4 mb-4">
+                  <span className="flex-shrink-0 h-7 w-7 rounded-full bg-red-100 flex items-center justify-center mt-0.5">
+                    <AlertIcon className="h-4 w-4" />
+                  </span>
+                  <span>{error}</span>
+                </div>
               )}
 
               <form onSubmit={handleRequest} className="space-y-4">
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Email..............."
-                  className="w-full bg-emerald-50 rounded-full px-5 py-3 text-sm text-navy placeholder-navy/40 focus:outline-none focus:ring-2 focus:ring-navy-light/50"
-                />
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-navy-light">
+                    <MailIcon className="h-4.5 w-4.5" />
+                  </span>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Email"
+                    className="w-full bg-emerald-50 rounded-full pl-11 pr-5 py-3 text-sm text-navy placeholder-navy/40 focus:outline-none focus:ring-2 focus:ring-navy-light/50"
+                  />
+                </div>
 
-                <div className="flex justify-center pt-2">
+                <div className="pt-2">
                   <button
                     type="submit"
                     disabled={loading}
-                    className="bg-navy-light hover:bg-emerald-700 text-white font-bold tracking-wide px-10 py-2.5 rounded-full transition-colors disabled:opacity-50"
+                    className="w-full inline-flex items-center justify-center gap-2 bg-navy-light hover:bg-emerald-700 text-white font-bold tracking-wide py-3 rounded-full transition-colors disabled:opacity-50"
                   >
                     {loading ? 'MENGIRIM...' : 'KIRIM KODE'}
+                    {!loading && <ArrowRightIcon className="h-4 w-4" />}
                   </button>
                 </div>
               </form>
 
-              <a href="/login" className="block text-center text-xs text-navy/40 hover:text-navy mt-6">
+              <hr className="border-navy/10 mt-6" />
+
+              <a href="/login" className="block text-center text-xs text-navy/40 hover:text-navy mt-4">
                 ← Kembali ke Login
               </a>
             </>
@@ -141,14 +151,20 @@ export default function ForgotPassword() {
               </p>
 
               {error && (
-                <p className="text-red-600 bg-red-50 border border-red-200 rounded-lg text-sm text-center py-2 px-3 mb-4">
-                  {error}
-                </p>
+                <div className="flex items-start gap-3 text-red-600 bg-red-50 border border-red-200 rounded-xl text-sm py-3 px-4 mb-4">
+                  <span className="flex-shrink-0 h-7 w-7 rounded-full bg-red-100 flex items-center justify-center mt-0.5">
+                    <AlertIcon className="h-4 w-4" />
+                  </span>
+                  <span>{error}</span>
+                </div>
               )}
               {info && (
-                <p className="text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-center py-2 px-3 mb-4">
-                  {info}
-                </p>
+                <div className="flex items-start gap-3 text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl text-sm py-3 px-4 mb-4">
+                  <span className="flex-shrink-0 h-7 w-7 rounded-full bg-emerald-100 flex items-center justify-center mt-0.5">
+                    <CheckIcon className="h-4 w-4" />
+                  </span>
+                  <span>{info}</span>
+                </div>
               )}
 
               <form onSubmit={handleReset} className="space-y-4">
@@ -167,23 +183,26 @@ export default function ForgotPassword() {
                   minLength={8}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Password Baru (min. 8)..............."
+                  placeholder="Password Baru (min. 8)"
+                  leftIcon={<LockIcon className="h-4.5 w-4.5" />}
                 />
                 <PasswordInput
                   required
                   minLength={8}
                   value={passwordConfirmation}
                   onChange={(e) => setPasswordConfirmation(e.target.value)}
-                  placeholder="Konfirmasi Password Baru..............."
+                  placeholder="Konfirmasi Password Baru"
+                  leftIcon={<LockIcon className="h-4.5 w-4.5" />}
                 />
 
-                <div className="flex justify-center pt-2">
+                <div className="pt-2">
                   <button
                     type="submit"
                     disabled={loading || code.length !== 6}
-                    className="bg-navy-light hover:bg-emerald-700 text-white font-bold tracking-wide px-10 py-2.5 rounded-full transition-colors disabled:opacity-50"
+                    className="w-full inline-flex items-center justify-center gap-2 bg-navy-light hover:bg-emerald-700 text-white font-bold tracking-wide py-3 rounded-full transition-colors disabled:opacity-50"
                   >
                     {loading ? 'MENYIMPAN...' : 'GANTI PASSWORD'}
+                    {!loading && <ArrowRightIcon className="h-4 w-4" />}
                   </button>
                 </div>
               </form>
@@ -210,17 +229,14 @@ export default function ForgotPassword() {
             </>
           )}
         </div>
+
+        <AuthHeroPanel
+          className="order-1 md:order-2"
+          titleLine1="Lupa"
+          titleLine2="Password?"
+          description="Tenang, kami kirimkan kode reset ke email akun Anda supaya bisa masuk lagi."
+        />
       </div>
     </div>
-  )
-}
-
-
-function MailIcon(props) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="3" y="5" width="18" height="14" rx="2" />
-      <path d="m3 7 9 6 9-6" />
-    </svg>
   )
 }
