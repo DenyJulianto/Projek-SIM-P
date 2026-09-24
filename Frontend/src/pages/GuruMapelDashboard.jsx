@@ -9,6 +9,7 @@ import MyProfile from './MyProfile'
 import NilaiManagement from './NilaiManagement'
 import NilaiSikapManagement from './NilaiSikapManagement'
 import LogoHorizontal from '../components/LogoHorizontal'
+import NotifBell from '../components/NotifBell'
 
 const MENU_GROUPS = [
   { section: null, items: [{ key: 'home', label: 'Dashboard', icon: GridIcon }] },
@@ -70,31 +71,28 @@ export default function GuruMapelDashboard() {
     setOpenSection((prev) => (prev === section ? null : section))
   }
 
+  const itemClass = (active) =>
+    `w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors text-left ${
+      active ? 'bg-emerald-50 text-navy font-semibold shadow-sm' : 'text-white/80 hover:bg-white/10 hover:text-white'
+    }`
+
   return (
-    <div className="h-screen bg-white flex overflow-hidden">
-      <aside className="w-64 shrink-0 bg-navy text-white flex flex-col py-6 px-4 h-screen">
-        <div className="flex items-center gap-2 px-2 mb-6">
+    <div className="h-screen bg-[#f4faf7] flex overflow-hidden">
+      <aside className="w-64 shrink-0 bg-gradient-to-b from-[#0d5c40] to-[#0a3f2c] text-white flex flex-col pt-6 h-screen">
+        <div className="flex items-center gap-2 px-6 mb-5">
           <LogoHorizontal />
         </div>
 
-        <nav className="flex-1 space-y-1.5 overflow-y-auto">
+        <nav className="flex-1 space-y-1.5 overflow-y-auto px-3">
+          <p className="px-4 pb-1 text-[11px] font-bold uppercase tracking-wider text-white/55">Menu</p>
           {MENU_GROUPS.map((group, gi) => {
             if (!group.section) {
               return (
                 <div key={gi} className="space-y-1.5 pb-1.5">
                   {group.items.map((item) => {
                     const Icon = item.icon
-                    const active = view === item.key
                     return (
-                      <button
-                        key={item.key}
-                        onClick={() => setView(item.key)}
-                        className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors text-left ${
-                          active
-                            ? 'bg-white text-navy shadow-sm'
-                            : 'text-white/75 hover:bg-white/10 hover:text-white'
-                        }`}
-                      >
+                      <button key={item.key} onClick={() => setView(item.key)} className={itemClass(view === item.key)}>
                         <Icon className="h-4.5 w-4.5 shrink-0" />
                         <span className="truncate min-w-0">{item.label}</span>
                       </button>
@@ -112,7 +110,7 @@ export default function GuruMapelDashboard() {
                 <button
                   onClick={() => toggleSection(group.section)}
                   className={`w-full flex items-center justify-between gap-2 px-4 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider transition-colors ${
-                    hasActiveItem ? 'text-white' : 'text-white/40 hover:text-white/70'
+                    hasActiveItem ? 'text-white' : 'text-white/55 hover:text-white/85'
                   }`}
                 >
                   <span className="truncate min-w-0">{group.section}</span>
@@ -122,17 +120,8 @@ export default function GuruMapelDashboard() {
                   <div className="space-y-1.5 mt-1">
                     {group.items.map((item) => {
                       const Icon = item.icon
-                      const active = view === item.key
                       return (
-                        <button
-                          key={item.key}
-                          onClick={() => setView(item.key)}
-                          className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors text-left ${
-                            active
-                              ? 'bg-white text-navy shadow-sm'
-                              : 'text-white/75 hover:bg-white/10 hover:text-white'
-                          }`}
-                        >
+                        <button key={item.key} onClick={() => setView(item.key)} className={itemClass(view === item.key)}>
                           <Icon className="h-4.5 w-4.5 shrink-0" />
                           <span className="truncate min-w-0">{item.label}</span>
                         </button>
@@ -145,16 +134,20 @@ export default function GuruMapelDashboard() {
           })}
         </nav>
 
-        <button
-          onClick={() => setConfirmingLogout(true)}
-          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium text-white/60 hover:bg-white/10 hover:text-white transition-colors mt-2"
-        >
-          <LogoutIcon className="h-4.5 w-4.5 shrink-0" />
-          Keluar
-        </button>
+        <div className="mt-2 px-4 py-4 border-t border-white/10 flex items-center gap-3">
+          <Avatar user={user} className="h-10 w-10" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold truncate">{user?.name}</p>
+            <p className="text-xs text-white/60 truncate">Guru Mata Pelajaran</p>
+          </div>
+          <button onClick={() => setConfirmingLogout(true)} title="Keluar" className="p-2 rounded-full text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+            <LogoutIcon className="h-5 w-5" />
+          </button>
+        </div>
       </aside>
 
       <main className="flex-1 p-6 sm:p-8 overflow-y-auto">
+        <TopBar user={user} onNavigate={setView} />
         {view === 'home' && <GuruMapelHome user={user} onNavigate={setView} />}
         {view === 'jadwal-mengajar' && <JadwalMengajarView onBack={() => setView('home')} />}
         {view === 'kelas-saya' && <KelasSayaView onBack={() => setView('home')} />}
@@ -192,44 +185,215 @@ export default function GuruMapelDashboard() {
   )
 }
 
+function Avatar({ user, className = 'h-10 w-10' }) {
+  return user?.avatar_url ? (
+    <img src={`${BASE_URL}${user.avatar_url}`} alt={user.name} className={`${className} rounded-full object-cover shrink-0 bg-white`} />
+  ) : (
+    <div className={`${className} rounded-full bg-emerald-100 text-navy font-bold flex items-center justify-center shrink-0`}>
+      {(user?.name ?? '?').trim().charAt(0).toUpperCase()}
+    </div>
+  )
+}
+
+/** Bilah atas: pencarian menu, notifikasi, dan profil pengguna. */
+function TopBar({ user, onNavigate }) {
+  const [q, setQ] = useState('')
+  const [fokus, setFokus] = useState(false)
+  const semua = MENU_GROUPS.flatMap((g) => g.items.map((i) => ({ ...i, grup: g.section })))
+  const hasil = q.trim() ? semua.filter((i) => `${i.label} ${i.grup ?? ''}`.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 6) : []
+
+  return (
+    <header className="flex items-center gap-4 mb-5">
+      <div className="relative flex-1 max-w-xl">
+        <div className="flex items-center gap-3 bg-white rounded-full shadow-sm px-5 py-3">
+          <SearchIcon className="h-5 w-5 text-navy/50 shrink-0" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onFocus={() => setFokus(true)}
+            onBlur={() => setTimeout(() => setFokus(false), 150)}
+            placeholder="Cari menu atau fitur…"
+            className="flex-1 min-w-0 bg-transparent text-sm text-navy placeholder:text-navy/40 outline-none"
+          />
+        </div>
+        {fokus && q.trim() && (
+          <div className="absolute left-0 right-0 mt-2 bg-white rounded-2xl shadow-lg border border-navy/10 z-30 overflow-hidden">
+            {hasil.length === 0 ? (
+              <p className="px-4 py-4 text-xs text-navy/40 text-center">Tidak ada menu yang cocok.</p>
+            ) : (
+              hasil.map((i) => {
+                const Icon = i.icon
+                return (
+                  <button
+                    key={i.key}
+                    onMouseDown={() => {
+                      onNavigate(i.key)
+                      setQ('')
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-emerald-50"
+                  >
+                    <Icon className="h-4.5 w-4.5 text-navy" />
+                    <span className="text-sm font-semibold text-navy">{i.label}</span>
+                    {i.grup && <span className="text-[11px] text-navy/40">{i.grup}</span>}
+                  </button>
+                )
+              })
+            )}
+          </div>
+        )}
+      </div>
+      <span className="flex-1" />
+      <NotifBell />
+      <button onClick={() => onNavigate('profile')} title="Profil Saya" className="flex items-center gap-3 bg-white rounded-full shadow-sm pl-2 pr-5 py-2 hover:bg-emerald-50">
+        <Avatar user={user} className="h-9 w-9" />
+        <span className="text-sm font-bold text-navy max-w-40 truncate">{user?.name}</span>
+      </button>
+    </header>
+  )
+}
+
+const HARI = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
+
+function salam() {
+  const jam = new Date().getHours()
+  return jam < 11 ? 'Selamat Pagi' : jam < 15 ? 'Selamat Siang' : jam < 18 ? 'Selamat Sore' : 'Selamat Malam'
+}
+
 function GuruMapelHome({ user, onNavigate }) {
   const [kelas, setKelas] = useState(null)
   const [mapel, setMapel] = useState(null)
   const [jadwal, setJadwal] = useState(null)
+  const [rekapNilai, setRekapNilai] = useState(null)
+  const [pengumuman, setPengumuman] = useState(null)
+  const [absensi, setAbsensi] = useState(null)
 
   useEffect(() => {
-    api.getMyGuruKelas().then(setKelas).catch(() => {})
-    api.getMyGuruMataPelajaran().then(setMapel).catch(() => {})
-    api.getMyGuruJadwal().then(setJadwal).catch(() => {})
+    api.getMyGuruKelas().then(setKelas).catch(() => setKelas([]))
+    api.getMyGuruMataPelajaran().then(setMapel).catch(() => setMapel([]))
+    api.getMyGuruJadwal().then(setJadwal).catch(() => setJadwal([]))
+    api.getMyGuruRekapNilai().then(setRekapNilai).catch(() => setRekapNilai([]))
+    api.getPengumuman().then((r) => setPengumuman(r.data ?? r)).catch(() => setPengumuman([]))
   }, [])
 
+  // Absensi hari ini per kelas yang diampu: berapa kelas yang sudah diisi dan persentase hadir.
+  useEffect(() => {
+    if (!kelas) return
+    const hariIni = new Date().toISOString().slice(0, 10)
+    Promise.all(kelas.map((k) => api.getRekapAbsensiSiswa(hariIni, k.id).catch(() => null))).then((hasil) => {
+      const ada = hasil.filter((r) => r && r.total > 0)
+      const hadir = ada.reduce((n, r) => n + r.hadir, 0)
+      const total = ada.reduce((n, r) => n + r.total, 0)
+      setAbsensi({ terisi: ada.length, persen: total ? Math.round((hadir / total) * 100) : null })
+    })
+  }, [kelas])
+
+  const hariIni = HARI[new Date().getDay()]
+  const jadwalHariIni = (jadwal ?? []).filter((j) => j.hari === hariIni).sort((a, b) => a.jam_mulai.localeCompare(b.jam_mulai))
+  const rentang = jadwalHariIni.length ? `${jadwalHariIni[0].jam_mulai.slice(0, 5)} - ${jadwalHariIni.at(-1).jam_selesai.slice(0, 5)}` : null
+  const jumlahNilai = (rekapNilai ?? []).reduce((n, r) => n + (r.jumlah_nilai ?? 0), 0)
+  const tanggal = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+
   return (
-    <div>
-      <div className="bg-gradient-to-r from-navy via-navy to-navy-light rounded-2xl p-6 mb-6">
-        <h1 className="text-xl font-extrabold text-white mb-1.5">Selamat datang, {user?.name}!</h1>
-        <p className="text-white/60 text-sm max-w-md">
-          Kelola jadwal mengajar, absensi, nilai, dan penilaian sikap siswa dari sini.
-        </p>
+    <div className="space-y-5">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-100 via-emerald-50 to-white border border-emerald-100 p-7">
+        <BookIcon className="absolute -right-6 -bottom-8 h-56 w-56 text-emerald-200/50" />
+        <div className="relative flex items-center gap-5">
+          <div className="h-16 w-16 rounded-2xl bg-emerald-200/70 text-emerald-800 flex items-center justify-center shrink-0">
+            <ProfileIcon className="h-8 w-8" />
+          </div>
+          <div>
+            <p className="text-sm text-navy/70">{salam()},</p>
+            <h1 className="text-3xl font-extrabold text-navy leading-tight">Selamat datang, {user?.name}!</h1>
+            <p className="text-sm text-navy/60 mt-1 max-w-lg">Kelola jadwal mengajar, absensi, nilai, dan penilaian sikap siswa dari sini.</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <StatCard label="Kelas Diampu" value={kelas?.length} icon={ClassIcon} sub={kelas?.length ? kelas.map((k) => k.nama_kelas).join(', ') : 'Belum ada kelas'} onClick={() => onNavigate('kelas-saya')} />
+        <StatCard label="Mata Pelajaran" value={mapel?.length} icon={BookIcon} sub={mapel?.length ? mapel.map((m) => m.nama_mapel).join(', ') : 'Belum ada mata pelajaran'} onClick={() => onNavigate('mapel-saya')} />
+        <StatCard label="Jam Mengajar / Minggu" value={jadwal?.length} icon={ClockIcon} sub={jadwal ? `${jadwal.length} sesi terjadwal per minggu` : ''} onClick={() => onNavigate('jadwal-mengajar')} />
       </div>
 
       <NotifikasiPanel />
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
-        <StatCard label="Kelas Diampu" value={kelas?.length} icon={ClassIcon} onClick={() => onNavigate('kelas-saya')} />
-        <StatCard label="Mata Pelajaran" value={mapel?.length} icon={BookIcon} onClick={() => onNavigate('mapel-saya')} />
-        <StatCard label="Jam Mengajar / Minggu" value={jadwal?.length} icon={CalendarIcon} onClick={() => onNavigate('jadwal-mengajar')} />
-      </div>
+      <section className="bg-white rounded-3xl border border-emerald-100 shadow-sm p-5">
+        <div className="flex items-center gap-3 mb-4 flex-wrap">
+          <CalendarIcon className="h-6 w-6 text-navy" />
+          <h2 className="text-lg font-extrabold text-navy">Aktivitas Hari Ini</h2>
+          <span className="text-sm text-navy-light">{tanggal}</span>
+          <span className="flex-1" />
+          <button onClick={() => onNavigate('jadwal-mengajar')} className="flex items-center gap-1 text-xs font-semibold text-navy bg-emerald-50 hover:bg-emerald-100 rounded-full px-4 py-2">
+            Lihat Semua <ChevronRightIcon className="h-3.5 w-3.5" />
+          </button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          <AktivitasCard
+            tone="hijau" icon={CalendarIcon} judul="Jadwal Mengajar" onClick={() => onNavigate('jadwal-mengajar')}
+            teks={jadwal === null ? 'Memuat…' : jadwalHariIni.length ? `${jadwalHariIni.length} sesi mengajar hari ini` : `Tidak ada jadwal hari ${hariIni}`}
+            chip={rentang}
+          />
+          <AktivitasCard
+            tone="teal" icon={AttendanceIcon} judul="Absensi Siswa" onClick={() => onNavigate('absensi-siswa')}
+            teks={absensi === null ? 'Memuat…' : `${absensi.terisi} dari ${kelas?.length ?? 0} kelas sudah diisi`}
+            chip={absensi?.persen !== null && absensi?.persen !== undefined ? `${absensi.persen}% hadir` : 'Belum ada data hari ini'}
+          />
+          <AktivitasCard
+            tone="kuning" icon={DocIcon} judul="Input Nilai" onClick={() => onNavigate('nilai')}
+            teks={rekapNilai === null ? 'Memuat…' : `${jumlahNilai} nilai sudah diinput`}
+            chip={rekapNilai ? `Dari ${rekapNilai.length} mata pelajaran` : null}
+          />
+          <AktivitasCard
+            tone="biru" icon={MegaphoneIcon} judul="Pengumuman" onClick={() => onNavigate('pengumuman')}
+            teks={pengumuman === null ? 'Memuat…' : pengumuman.length ? `${pengumuman.length} pengumuman tersedia` : 'Belum ada pengumuman'}
+            chip={pengumuman?.length ? 'Lihat detail' : null}
+          />
+        </div>
+      </section>
 
-      <div className="bg-white rounded-2xl border border-navy/10 p-5">
-        <h2 className="text-sm font-bold text-navy mb-3">Pintasan Cepat</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <ShortcutTile label="Input Nilai" icon={ChartIcon} onClick={() => onNavigate('nilai')} />
-          <ShortcutTile label="Penilaian Sikap" icon={HeartIcon} onClick={() => onNavigate('sikap')} />
-          <ShortcutTile label="Absensi Siswa" icon={AttendanceIcon} onClick={() => onNavigate('absensi-siswa')} />
-          <ShortcutTile label="Pengumuman" icon={MegaphoneIcon} onClick={() => onNavigate('pengumuman')} />
+      <section className="bg-white rounded-3xl border border-emerald-100 shadow-sm p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <BoltIcon className="h-5 w-5 text-navy" />
+          <h2 className="text-lg font-extrabold text-navy">Pintasan Cepat</h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <ShortcutTile label="Input Nilai" sub="Masukkan dan kelola nilai siswa" icon={DocIcon} onClick={() => onNavigate('nilai')} />
+          <ShortcutTile label="Penilaian Sikap" sub="Kelola penilaian sikap siswa" icon={HeartIcon} onClick={() => onNavigate('sikap')} />
+          <ShortcutTile label="Absensi Siswa" sub="Lihat dan kelola kehadiran siswa" icon={AttendanceIcon} onClick={() => onNavigate('absensi-siswa')} />
+          <ShortcutTile label="Pengumuman" sub="Lihat pengumuman terbaru" icon={MegaphoneIcon} onClick={() => onNavigate('pengumuman')} />
+        </div>
+      </section>
+    </div>
+  )
+}
+
+const TONE_AKTIVITAS = {
+  hijau: { kotak: 'from-emerald-50 to-white border-emerald-100', ikon: 'bg-emerald-100 text-emerald-700', chip: 'bg-emerald-100 text-emerald-800' },
+  teal: { kotak: 'from-teal-50 to-white border-teal-100', ikon: 'bg-teal-100 text-teal-700', chip: 'bg-teal-100 text-teal-800' },
+  kuning: { kotak: 'from-amber-50 to-white border-amber-100', ikon: 'bg-amber-100 text-amber-600', chip: 'bg-amber-100 text-amber-800' },
+  biru: { kotak: 'from-sky-50 to-white border-sky-100', ikon: 'bg-sky-100 text-sky-700', chip: 'bg-sky-100 text-sky-800' },
+}
+
+function AktivitasCard({ tone, icon: Icon, judul, teks, chip, onClick }) {
+  const t = TONE_AKTIVITAS[tone]
+  return (
+    <button onClick={onClick} className={`relative text-left rounded-2xl border bg-gradient-to-br ${t.kotak} p-4 hover:shadow-md transition-shadow`}>
+      <div className="flex items-start gap-3">
+        <span className={`h-11 w-11 rounded-xl flex items-center justify-center shrink-0 ${t.ikon}`}>
+          <Icon className="h-5.5 w-5.5" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-extrabold text-navy">{judul}</p>
+          <p className="text-xs text-navy/60 mt-0.5">{teks}</p>
         </div>
       </div>
-    </div>
+      <div className="flex items-center justify-between mt-3 min-h-7">
+        {chip ? <span className={`text-[11px] font-semibold rounded-full px-3 py-1 ${t.chip}`}>{chip}</span> : <span />}
+        <span className="h-7 w-7 rounded-full bg-white/80 flex items-center justify-center text-navy">
+          <ChevronRightIcon className="h-4 w-4" />
+        </span>
+      </div>
+    </button>
   )
 }
 
@@ -1247,27 +1411,76 @@ function UjianDetail({ ujian, onChanged }) {
   )
 }
 
-function StatCard({ label, value, icon: Icon, onClick }) {
+function StatCard({ label, value, sub, icon: Icon, onClick }) {
   return (
-    <button onClick={onClick} className="bg-white rounded-2xl border border-navy/10 p-5 text-left hover:border-navy/20 transition-colors">
-      <div className="h-11 w-11 rounded-xl bg-navy-light/15 flex items-center justify-center mb-3">
-        <Icon className="h-5.5 w-5.5 text-navy" />
+    <button onClick={onClick} className="relative overflow-hidden text-left rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-5 hover:shadow-md transition-shadow">
+      <div className="flex items-center gap-4">
+        <span className="h-16 w-16 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+          <Icon className="h-8 w-8" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-4xl font-extrabold text-navy leading-none">{value ?? '-'}</p>
+          <p className="text-sm font-bold text-navy uppercase mt-2">{label}</p>
+          {sub && <p className="text-xs text-navy/50 mt-0.5 truncate">{sub}</p>}
+        </div>
+        <span className="h-8 w-8 rounded-full bg-white shadow-sm flex items-center justify-center text-navy shrink-0">
+          <ChevronRightIcon className="h-4 w-4" />
+        </span>
       </div>
-      <p className="text-2xl font-extrabold text-navy leading-none">{value ?? '-'}</p>
-      <p className="text-xs text-navy/50 mt-1.5 uppercase tracking-wide">{label}</p>
     </button>
   )
 }
 
-function ShortcutTile({ label, icon: Icon, onClick }) {
+function ShortcutTile({ label, sub, icon: Icon, onClick }) {
   return (
-    <button onClick={onClick} className="bg-navy/5 hover:bg-navy/10 rounded-xl p-3.5 text-left transition-colors">
-      <Icon className="h-5 w-5 text-navy mb-2" />
-      <p className="text-xs font-semibold text-navy leading-snug">{label}</p>
+    <button onClick={onClick} className="text-left rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-4 hover:shadow-md transition-shadow">
+      <span className="h-12 w-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+        <Icon className="h-6 w-6" />
+      </span>
+      <p className="text-sm font-extrabold text-navy mt-3">{label}</p>
+      <div className="flex items-end justify-between gap-2 mt-0.5">
+        <p className="text-xs text-navy/50">{sub}</p>
+        <span className="h-7 w-7 rounded-full bg-white shadow-sm flex items-center justify-center text-navy shrink-0">
+          <ChevronRightIcon className="h-4 w-4" />
+        </span>
+      </div>
     </button>
   )
 }
 
+function ChevronRightIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+      <path d="m9 6 6 6-6 6" />
+    </svg>
+  )
+}
+
+function SearchIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </svg>
+  )
+}
+
+function ClockIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  )
+}
+
+function BoltIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M13 2 4 14h7l-1 8 9-12h-7z" />
+    </svg>
+  )
+}
 
 function ChevronIcon(props) {
   return (

@@ -1039,6 +1039,17 @@ export const api = {
     downloadFile(`/rekap-pembinaan/siswa/${siswaId}/laporan/export?${new URLSearchParams({ ...params, format }).toString()}`, `rekap-pembinaan.${format}`),
   rpCatatCetak: (siswaId, params) => request(`/rekap-pembinaan/siswa/${siswaId}/laporan/cetak?${new URLSearchParams(params).toString()}`, { method: 'POST' }),
 
+  // Wakil Kepala Sekolah
+  wakDashboard: () => request('/wakasek/dashboard'),
+  wakGuruTendik: (params = {}) => request(`/wakasek/guru-tendik?${new URLSearchParams(params).toString()}`),
+  wakAktivitasGuru: (params = {}) => request(`/wakasek/aktivitas-guru?${new URLSearchParams(params).toString()}`),
+  wakRekapKehadiran: (params = {}) => request(`/wakasek/rekap-kehadiran?${new URLSearchParams(params).toString()}`),
+  wakPersetujuan: (params = {}) => request(`/wakasek/persetujuan?${new URLSearchParams(params).toString()}`),
+  wakLaporan: (jenis, params = {}) => request(`/wakasek/laporan/${jenis}?${new URLSearchParams(params).toString()}`),
+  wakExport: (jenis, params, format) =>
+    downloadFile(`/wakasek/laporan/${jenis}/export?${new URLSearchParams({ ...params, format }).toString()}`, `laporan-${jenis}.${format}`),
+  wakCatatCetak: (jenis, params = {}) => request(`/wakasek/laporan/${jenis}/cetak?${new URLSearchParams(params).toString()}`, { method: 'POST' }),
+
   // Ekstrakurikuler
   ekskulOpsi: () => request('/ekskul/opsi'),
   ekskulList: (params) => request(`/ekskul?${new URLSearchParams(params).toString()}`),

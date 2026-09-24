@@ -37,6 +37,8 @@ use App\Http\Controllers\Api\LaporanKesiswaanController;
 use App\Http\Controllers\Api\MutasiSiswaController;
 use App\Http\Controllers\Api\PembinaanTindakLanjutController;
 use App\Http\Controllers\Api\RekapPembinaanController;
+use App\Http\Controllers\Api\WakasekController;
+use App\Http\Controllers\Api\WakasekLaporanController;
 use App\Http\Controllers\Api\PpdbPemantauController;
 use App\Http\Controllers\Api\PpdbPendaftarController;
 use App\Http\Controllers\Api\PpdbPenerimaanController;
@@ -542,6 +544,28 @@ Route::middleware([
             });
         });
 
+        // Dashboard Wakil Kepala Sekolah: ringkasan, guru & tendik, kehadiran, persetujuan, dan laporan. Baca saja; keputusan
+        // persetujuan diambil lewat endpoint asli tiap modul (perubahan jadwal / guru pengganti).
+        Route::prefix('wakasek')->group(function () {
+            Route::middleware('permission:laporan.dashboard')->group(function () {
+                Route::get('dashboard', [WakasekController::class, 'dashboard']);
+                Route::get('rekap-kehadiran', [WakasekController::class, 'rekapKehadiran']);
+                Route::get('laporan/sekolah', fn (\Illuminate\Http\Request $r) => app(WakasekLaporanController::class)->tampil($r, 'sekolah'));
+                Route::get('laporan/sekolah/export', fn (\Illuminate\Http\Request $r) => app(WakasekLaporanController::class)->export($r, 'sekolah'));
+                Route::post('laporan/sekolah/cetak', fn (\Illuminate\Http\Request $r) => app(WakasekLaporanController::class)->catatCetak($r, 'sekolah'));
+            });
+            Route::middleware('permission:monitoring-guru.laporan')->group(function () {
+                Route::get('guru-tendik', [WakasekController::class, 'guruTendik']);
+                Route::get('aktivitas-guru', [WakasekController::class, 'aktivitasGuru']);
+                Route::get('laporan/guru-tendik', fn (\Illuminate\Http\Request $r) => app(WakasekLaporanController::class)->tampil($r, 'guru-tendik'));
+                Route::get('laporan/guru-tendik/export', fn (\Illuminate\Http\Request $r) => app(WakasekLaporanController::class)->export($r, 'guru-tendik'));
+                Route::post('laporan/guru-tendik/cetak', fn (\Illuminate\Http\Request $r) => app(WakasekLaporanController::class)->catatCetak($r, 'guru-tendik'));
+            });
+            Route::middleware('permission:persetujuan.approval')->group(function () {
+                Route::get('persetujuan', [WakasekController::class, 'persetujuan']);
+            });
+        });
+
         Route::middleware('permission:ppdb.manage')->prefix('ppdb')->group(function () {
             Route::get('opsi', [PpdbPeriodeController::class, 'opsi']);
             Route::get('dashboard', [PpdbPeriodeController::class, 'dashboard']);
@@ -604,7 +628,13 @@ Route::middleware([
         Route::get('guru/export', [GuruController::class, 'export'])
             ->middleware('permission:pegawai.manage');
 
+        // Daftar & detail guru juga dibaca pemantau kehadiran guru (mis. Wakil Kepala Sekolah); perubahan tetap khusus pegawai.manage.
         Route::apiResource('guru', GuruController::class)
+            ->only(['index', 'show'])
+            ->middleware('permission:pegawai.manage|monitoring-guru.absensi-guru');
+
+        Route::apiResource('guru', GuruController::class)
+            ->except(['index', 'show'])
             ->middleware('permission:pegawai.manage');
 
         Route::apiResource('siswa', SiswaController::class)

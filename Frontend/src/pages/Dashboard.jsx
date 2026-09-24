@@ -20,6 +20,7 @@ import KurikulumDashboard from './KurikulumDashboard'
 import MyProfile from './MyProfile'
 import OrangTuaDashboard from './OrangTuaDashboard'
 import PrincipalDashboard from './PrincipalDashboard'
+import WakilKepalaSekolahDashboard from './WakilKepalaSekolahDashboard'
 import RoleManagement from './RoleManagement'
 import SiswaDashboard from './SiswaDashboard'
 import SiswaManagement from './SiswaManagement'
@@ -155,6 +156,11 @@ export default function Dashboard() {
   const isPrincipal = user?.roles?.some((r) => r.name === 'Kepala Sekolah') && !isAdmin
   if (isPrincipal) {
     return <PrincipalDashboard />
+  }
+
+  const isWakasek = user?.roles?.some((r) => r.name === 'Wakil Kepala Sekolah') && !isAdmin
+  if (isWakasek) {
+    return <WakilKepalaSekolahDashboard />
   }
 
   const isTataUsaha = user?.roles?.some((r) => r.name === 'Tata Usaha') && !isAdmin

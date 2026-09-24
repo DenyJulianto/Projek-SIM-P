@@ -37,6 +37,17 @@ class RolePermissionSeeder extends Seeder
         'laporan.dashboard',
         'laporan.evaluasi',
         'persetujuan.approval',
+        // Halaman kurikulum, jadwal, nilai/rapor, kesiswaan, dan pemantauan yang dipakai dari dashboard Wakil Kepala Sekolah.
+        'dashboard.view-all',
+        'kurikulum.manage',
+        'jadwal.manage',
+        'nilai.lock',
+        'nilai.verify',
+        'rapor.publish',
+        'siswa.manage',
+        'ppdb.manage',
+        'ekstrakurikuler.manage',
+        'laporan-kesiswaan.manage',
     ];
 
     private array $guruMapelPermissions = [
