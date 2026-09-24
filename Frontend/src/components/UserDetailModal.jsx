@@ -1,3 +1,4 @@
+import ModalCloseButton from './ModalCloseButton'
 import { useState } from 'react'
 import { api, BASE_URL } from '../lib/api'
 import { roleBadgeClass } from '../lib/roleColors'
@@ -42,8 +43,9 @@ export default function UserDetailModal({
   const isSelf = user.id === currentUserId
 
   return (
-    <div className="fixed inset-0 bg-navy/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-[100] bg-teal-950/50 backdrop-blur-[2px] flex items-center justify-center p-4">
+      <div className="tm-panel relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white rounded-3xl max-w-lg w-full shadow-2xl shadow-teal-900/20 max-h-[90vh] overflow-y-auto">
+<ModalCloseButton onClose={onClose} />
         <div className="p-6 pb-0">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">

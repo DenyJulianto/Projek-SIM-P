@@ -1,3 +1,4 @@
+import ModalCloseButton from './ModalCloseButton'
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 import { ThemedModalShell } from './ThemedModal'
@@ -62,7 +63,8 @@ export default function NilaiSikapFormModal({ item, onClose, onSaved }) {
 
   return (
     <ThemedModalShell onClose={onClose}>
-      <div className="p-7">
+      <div className="relative p-7">
+        <ModalCloseButton onClose={onClose} />
         <h2 className="text-xl font-bold text-teal-900 mb-4">{isEdit ? 'Edit Penilaian Sikap' : 'Input Penilaian Sikap'}</h2>
 
         {error && <p className="text-red-600 text-sm mb-3">{error}</p>}

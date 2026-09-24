@@ -1,3 +1,4 @@
+import ModalCloseButton from './ModalCloseButton'
 export default function ConfirmActionModal({
   title = 'Apakah Anda yakin?',
   message,
@@ -11,8 +12,9 @@ export default function ConfirmActionModal({
   const isDanger = tone === 'danger'
 
   return (
-    <div className="fixed inset-0 bg-navy/50 flex items-center justify-center z-50 p-4">
-      <div className="relative bg-white rounded-2xl max-w-sm w-full p-8 text-center">
+    <div className="fixed inset-0 z-[100] bg-teal-950/50 backdrop-blur-[2px] flex items-center justify-center p-4">
+      <div className="tm-panel relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white rounded-3xl max-w-sm w-full shadow-2xl shadow-teal-900/20 p-8 text-center">
+<ModalCloseButton onClose={onClose} />
         <button
           type="button"
           onClick={onClose}

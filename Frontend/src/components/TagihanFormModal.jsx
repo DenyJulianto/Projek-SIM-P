@@ -1,3 +1,4 @@
+import ModalCloseButton from './ModalCloseButton'
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 import { TAGIHAN_JENIS, jenisLabel } from '../lib/tagihanJenis'
@@ -5,10 +6,7 @@ import {
   CalendarIcon,
   CardIcon,
   MoneyIcon,
-  ModalActions,
-  ModalError,
   ModalField,
-  ModalShell,
   PencilIcon,
   PillToggle,
   RupiahInput,
@@ -97,8 +95,11 @@ export default function TagihanFormModal({ item, onClose, onSaved }) {
   }
 
   return (
-    <ModalShell title={isEdit ? 'Edit Tagihan' : 'Buat Tagihan Baru'} size="lg">
-      {error && <ModalError>{error}</ModalError>}
+    <div className="fixed inset-0 z-[100] bg-teal-950/50 backdrop-blur-[2px] flex items-center justify-center p-4">
+      <div className="tm-panel relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white rounded-3xl max-w-lg w-full shadow-2xl shadow-teal-900/20 max-h-[90vh] overflow-y-auto p-6">
+        <ModalCloseButton onClose={onClose} />
+        <h2 className="text-lg font-bold text-navy mb-4">{isEdit ? 'Edit Tagihan' : 'Buat Tagihan Baru'}</h2>
+        {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {isEdit ? (
@@ -201,8 +202,20 @@ export default function TagihanFormModal({ item, onClose, onSaved }) {
           </ModalField>
         </div>
 
-        <ModalActions onCancel={onClose} saving={saving} />
-      </form>
-    </ModalShell>
+        <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-navy/70 hover:text-navy">
+              Batal
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="bg-gradient-to-r from-teal-600 to-emerald-500 hover:from-teal-700 hover:to-emerald-600 shadow-md shadow-teal-600/30 text-white text-sm font-semibold px-5 py-2 rounded-md disabled:opacity-50"
+            >
+              {saving ? 'Menyimpan...' : 'Simpan'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   )
 }

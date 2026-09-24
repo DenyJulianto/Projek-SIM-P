@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import QRCode from 'qrcode'
 import ComingSoon from '../components/ComingSoon'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
+import ModalCloseButton from '../components/ModalCloseButton'
 import { useAuth } from '../lib/AuthContext'
 import { api, BASE_URL } from '../lib/api'
 import AnggaranPosManagement from './AnggaranPosManagement'
@@ -34,10 +35,7 @@ import {
   CardIcon,
   HashIcon,
   MapPinIcon,
-  ModalActions,
-  ModalError,
   ModalField,
-  ModalShell,
   MoneyIcon,
   NoteIcon,
   QrIcon as QrFieldIcon,
@@ -810,12 +808,17 @@ function PengaturanPembayaranOnlineModal({ pengaturan, onClose, onSaved }) {
   }
 
   return (
-    <ModalShell
-      title="Pengaturan Pembayaran Online"
-      subtitle="Isi dari bank/penyedia QRIS sekolah sendiri — tidak ada payment gateway pihak ketiga yang dihubungkan di sini."
-      size="lg"
-    >
-      {error && <ModalError>{error}</ModalError>}
+    <div className="fixed inset-0 z-[100] bg-teal-950/50 backdrop-blur-[2px] flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className="tm-panel relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white rounded-3xl max-w-lg w-full shadow-2xl shadow-teal-900/20 max-h-[85vh] overflow-auto p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <ModalCloseButton onClose={onClose} />
+        <h2 className="text-lg font-extrabold text-navy mb-1">Pengaturan Pembayaran Online</h2>
+        <p className="text-xs text-navy/50 mb-4">
+          Isi dari bank/penyedia QRIS sekolah sendiri — tidak ada payment gateway pihak ketiga yang dihubungkan di sini.
+        </p>
+        {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
 
       <form onSubmit={handleSubmit} className="space-y-3">
         <ModalField label="Nama Bank" icon={BankFieldIcon}>
@@ -846,9 +849,21 @@ function PengaturanPembayaranOnlineModal({ pengaturan, onClose, onSaved }) {
           />
         </ModalField>
 
-        <ModalActions onCancel={onClose} saving={saving} />
+        <div className="flex justify-end gap-3 pt-2">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-navy/70 hover:text-navy">
+            Batal
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="bg-gradient-to-r from-teal-600 to-emerald-500 hover:from-teal-700 hover:to-emerald-600 shadow-md shadow-teal-600/30 text-white text-sm font-semibold px-5 py-2 rounded-md disabled:opacity-50"
+          >
+            {saving ? 'Menyimpan...' : 'Simpan'}
+          </button>
+        </div>
       </form>
-    </ModalShell>
+      </div>
+    </div>
   )
 }
 
@@ -1765,8 +1780,11 @@ function MutasiFormModal({ onClose, onSaved }) {
   }
 
   return (
-    <ModalShell title="Catat Mutasi Bank Masuk">
-      {error && <ModalError>{error}</ModalError>}
+    <div className="fixed inset-0 z-[100] bg-teal-950/50 backdrop-blur-[2px] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="tm-panel relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white rounded-3xl max-w-md w-full shadow-2xl shadow-teal-900/20 p-6" onClick={(e) => e.stopPropagation()}>
+        <ModalCloseButton onClose={onClose} />
+        <h2 className="text-lg font-extrabold text-navy mb-4">Catat Mutasi Bank Masuk</h2>
+        {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
 
       <form onSubmit={handleSubmit} className="space-y-3">
         <ModalField label="Tanggal" icon={CalendarFieldIcon}>
@@ -1789,9 +1807,21 @@ function MutasiFormModal({ onClose, onSaved }) {
           <input type="text" value={form.keterangan} onChange={(e) => update('keterangan', e.target.value)} className="modal-input" placeholder="Salin dari keterangan di rekening koran" />
         </ModalField>
 
-        <ModalActions onCancel={onClose} saving={saving} />
+        <div className="flex justify-end gap-3 pt-2">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-navy/70 hover:text-navy">
+            Batal
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="bg-gradient-to-r from-teal-600 to-emerald-500 hover:from-teal-700 hover:to-emerald-600 shadow-md shadow-teal-600/30 text-white text-sm font-semibold px-5 py-2 rounded-md disabled:opacity-50"
+          >
+            {saving ? 'Menyimpan...' : 'Simpan'}
+          </button>
+        </div>
       </form>
-    </ModalShell>
+      </div>
+    </div>
   )
 }
 

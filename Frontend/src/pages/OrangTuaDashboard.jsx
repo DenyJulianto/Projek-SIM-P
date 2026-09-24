@@ -1,7 +1,7 @@
 import logoLambang from '../assets/logo-sim-lambang.png'
+import ModalCloseButton from '../components/ModalCloseButton'
 import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
-import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import { useAuth } from '../lib/AuthContext'
 import { api, BASE_URL } from '../lib/api'
 import MyProfile from './MyProfile'
@@ -273,8 +273,50 @@ export default function OrangTuaDashboard() {
       </main>
 
       {confirmingLogout && (
-        <LogoutConfirmModal onClose={() => setConfirmingLogout(false)} onConfirm={logout} />
+        <OrangTuaLogoutModal onClose={() => setConfirmingLogout(false)} onConfirm={logout} />
       )}
+    </div>
+  )
+}
+
+function DoorExitIllustration(props) {
+  return (
+    <svg {...props} viewBox="0 0 100 100" fill="none">
+      <g transform="skewX(-6)">
+        <rect x="20" y="15" width="34" height="68" rx="2" stroke="#111827" strokeWidth="3" />
+        <rect x="27" y="20" width="22" height="58" rx="1.5" fill="#14a673" />
+      </g>
+      <path d="M58 49h30" stroke="#111827" strokeWidth="3.5" strokeLinecap="round" />
+      <path d="M78 37l12 12-12 12" stroke="#111827" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </svg>
+  )
+}
+
+function OrangTuaLogoutModal({ onConfirm, onClose }) {
+  return (
+    <div className="fixed inset-0 z-[100] bg-teal-950/50 backdrop-blur-[2px] flex items-center justify-center p-4">
+      <div className="tm-panel relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white rounded-3xl max-w-sm w-full shadow-2xl shadow-teal-900/20 p-8 text-center">
+<ModalCloseButton onClose={onClose} />
+        <DoorExitIllustration className="h-24 w-24 mx-auto mb-5" />
+        <h2 className="text-lg font-bold text-navy mb-1">Yah, mau keluar nih?</h2>
+        <p className="text-sm text-navy/50 mb-6">Yakin mau logout dari akun Orang Tua?</p>
+        <div className="space-y-2.5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full bg-navy hover:bg-navy/90 text-white font-bold py-3 rounded-full transition-colors"
+          >
+            Nggak Jadi, Deh
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="w-full border border-navy-light text-navy-light hover:bg-emerald-50 font-bold py-3 rounded-full transition-colors"
+          >
+            Ya, Keluar Aja
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -1899,8 +1941,9 @@ function QrisPembayaranModal({ anak, tagihan, onClose }) {
   }, [anak?.id, tagihan?.id])
 
   return (
-    <div className="fixed inset-0 bg-navy/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] bg-teal-950/50 backdrop-blur-[2px] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="tm-panel relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white rounded-3xl max-w-sm w-full shadow-2xl shadow-teal-900/20 p-6 text-center" onClick={(e) => e.stopPropagation()}>
+<ModalCloseButton onClose={onClose} />
         <div className="flex justify-end mb-1">
           <button onClick={onClose} className="text-navy/40 hover:text-navy text-xl leading-none">
             &times;
@@ -1976,8 +2019,9 @@ function KonfirmasiPembayaranModal({ tagihan, metode, virtualAccount, onClose, o
   }
 
   return (
-    <div className="fixed inset-0 bg-navy/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl max-w-sm w-full p-6 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-[100] bg-teal-950/50 backdrop-blur-[2px] flex items-center justify-center p-4">
+      <div className="tm-panel relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white rounded-3xl max-w-sm w-full shadow-2xl shadow-teal-900/20 p-6 max-h-[90vh] overflow-y-auto">
+<ModalCloseButton onClose={onClose} />
         <h2 className="text-lg font-bold text-navy mb-1">Konfirmasi Pembayaran</h2>
         <p className="text-xs text-navy/50 mb-4">{tagihan.judul}</p>
 

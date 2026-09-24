@@ -1,3 +1,4 @@
+import ModalCloseButton from './ModalCloseButton'
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 
@@ -71,19 +72,11 @@ export default function NilaiFormModal({ item, guruId, defaults, onClose, onSave
   }
 
   return (
-    <div className="fixed inset-0 bg-navy/50 flex items-center justify-center z-50 p-4">
-      <div className="relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white rounded-3xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-        <LeafDecoration className="absolute -top-3 right-6 h-14 w-14 text-emerald-300/40 rotate-12 pointer-events-none" />
-        <LeafDecoration className="absolute top-9 right-1 h-7 w-7 text-emerald-400/30 -rotate-12 pointer-events-none" />
+    <div className="fixed inset-0 z-[100] bg-teal-950/50 backdrop-blur-[2px] flex items-center justify-center p-4">
+      <div className="tm-panel relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white rounded-3xl max-w-md w-full shadow-2xl shadow-teal-900/20 max-h-[90vh] overflow-y-auto p-6">
+        <ModalCloseButton onClose={onClose} />
 
-        <div className="relative p-6">
-          <button
-            onClick={onClose}
-            className="absolute top-5 right-5 h-8 w-8 rounded-full bg-white/70 hover:bg-white text-navy/50 hover:text-navy flex items-center justify-center transition-colors"
-          >
-            <CrossIcon className="h-4 w-4" />
-          </button>
-
+        <div>
           <div className="flex items-center gap-3 mb-5">
             <span className="h-11 w-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
               <GradeIcon className="h-5.5 w-5.5" />
@@ -206,28 +199,12 @@ function Field({ label, children }) {
   )
 }
 
-function LeafDecoration(props) {
-  return (
-    <svg {...props} viewBox="0 0 64 64" fill="currentColor">
-      <path d="M8 56C8 30 26 10 56 8c-1 28-16 46-40 48l-6 4-2-4Z" />
-    </svg>
-  )
-}
-
 function GradeIcon(props) {
   return (
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M6 2h9l3 3v17H6Z" />
       <path d="M15 2v3h3" />
       <path d="m9 13 2 2 4-4" />
-    </svg>
-  )
-}
-
-function CrossIcon(props) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 6l12 12M18 6 6 18" />
     </svg>
   )
 }

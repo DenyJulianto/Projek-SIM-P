@@ -1,10 +1,12 @@
+import ModalCloseButton from './ModalCloseButton'
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 
 function Shell({ title, onClose, children }) {
   return (
-    <div className="fixed inset-0 bg-navy/50 flex items-center justify-center z-[60] p-4">
-      <div className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6">
+    <div className="fixed inset-0 z-[100] bg-teal-950/50 backdrop-blur-[2px] flex items-center justify-center p-4">
+      <div className="tm-panel relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white rounded-3xl max-w-lg w-full shadow-2xl shadow-teal-900/20 max-h-[90vh] overflow-y-auto p-6">
+<ModalCloseButton onClose={onClose} />
         <h2 className="text-lg font-bold text-navy mb-3">{title}</h2>
         {children}
         <div className="flex justify-end mt-4">
@@ -17,7 +19,7 @@ function Shell({ title, onClose, children }) {
   )
 }
 
-const primaryBtn = 'bg-navy hover:bg-navy-light text-white text-sm font-semibold px-5 py-2 rounded-md disabled:opacity-50'
+const primaryBtn = 'bg-gradient-to-r from-teal-600 to-emerald-500 hover:from-teal-700 hover:to-emerald-600 shadow-md shadow-teal-600/30 text-white text-sm font-semibold px-5 py-2 rounded-md disabled:opacity-50'
 
 /** Pilih siswa aktif yang belum punya rombel. */
 export function TambahSiswaModal({ rombel, sisa, onClose, onSaved }) {
