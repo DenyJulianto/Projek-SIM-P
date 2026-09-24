@@ -411,7 +411,8 @@ class AuthController extends Controller
         $user->email = $data['email'];
         $user->phone = $data['phone'] ?? null;
 
-        // Alamat & jenis kelamin hanya diubah kalau dikirim — form ganti password tidak menyertakannya.
+        // Alamat & jenis kelamin hanya diubah kalau memang dikirim — form ganti
+        // password tidak menyertakannya dan tidak boleh mengosongkannya.
         if (array_key_exists('alamat', $data)) {
             $user->alamat = $data['alamat'];
         }
@@ -420,15 +421,15 @@ class AuthController extends Controller
         }
         $user->save();
 
-        // Siswa/Guru punya kolom nama/alamat/jenis_kelamin sendiri yang
-        // terpisah dari users, jadi harus disinkronkan supaya nama yang
-        // tampil di dashboard (diambil dari siswa/guru) ikut berubah saat
-        // profil diedit lewat halaman ini.
-        $profileSync = [
-            'nama' => $data['name'],
-            'alamat' => $data['alamat'] ?? null,
-            'jenis_kelamin' => $data['jenis_kelamin'] ?? null,
-        ];
+        // Siswa/Guru punya kolom nama/alamat/jenis_kelamin sendiri yang terpisah
+        // dari users; sinkronkan supaya nama di dashboard ikut berubah. Sama
+        // seperti di atas, alamat/jenis_kelamin hanya ikut disinkron kalau dikirim.
+        $profileSync = ['nama' => $data['name']];
+        foreach (['alamat', 'jenis_kelamin'] as $field) {
+            if (array_key_exists($field, $data)) {
+                $profileSync[$field] = $data[$field];
+            }
+        }
         Siswa::where('user_id', $user->id)->update($profileSync);
         Guru::where('user_id', $user->id)->update($profileSync);
 

@@ -20,7 +20,7 @@ class RaporPengesahanController extends Controller
     public function index(Request $request): JsonResponse
     {
         $rapor = Rapor::query()
-            ->with(['siswa:id,nama,nis,kelas_id', 'diajukanOleh:id,name', 'disahkanOleh:id,name'])
+            ->with(['siswa:id,nama,nis,kelas_id', 'siswa.kelas:id,nama_kelas', 'diajukanOleh:id,name', 'disahkanOleh:id,name'])
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
             ->orderByDesc('created_at')
             ->get();
