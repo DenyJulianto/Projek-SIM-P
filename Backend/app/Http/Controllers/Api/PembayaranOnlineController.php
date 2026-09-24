@@ -13,6 +13,7 @@ use App\Services\PembayaranOnlineService;
 use App\Services\QrisService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -62,12 +63,28 @@ class PembayaranOnlineController extends Controller
         $prefix = $this->service->config()['va_prefix'] ?? null;
         abort_if(! $prefix, 422, 'Atur prefix Virtual Account terlebih dahulu di Pengaturan.');
 
+        $request->validate([
+            'periode' => ['nullable', 'date_format:Y-m'],
+            'status' => ['nullable', 'in:lunas,belum_bayar'],
+        ]);
+
+        $belumLunas = function ($q) use ($request) {
+            $q->where('status', 'belum_lunas');
+
+            if ($request->filled('periode')) {
+                $awal = Carbon::createFromFormat('Y-m', $request->string('periode')->value())->startOfMonth();
+                $q->whereBetween('jatuh_tempo', [$awal->toDateString(), $awal->copy()->endOfMonth()->toDateString()]);
+            }
+        };
+
         $siswa = Siswa::query()
             ->where('status', 'aktif')
             ->when($request->filled('kelas_id'), fn ($q) => $q->where('kelas_id', $request->integer('kelas_id')))
             ->when($request->filled('cari'), fn ($q) => $q->where('nama', 'like', '%'.$request->string('cari').'%'))
+            ->when($request->string('status')->value() === 'belum_bayar', fn ($q) => $q->whereHas('tagihan', $belumLunas))
+            ->when($request->string('status')->value() === 'lunas', fn ($q) => $q->whereDoesntHave('tagihan', $belumLunas))
             ->with('kelas:id,nama_kelas')
-            ->withSum(['tagihan as tunggakan' => fn ($q) => $q->where('status', 'belum_lunas')], 'jumlah')
+            ->withSum(['tagihan as tunggakan' => $belumLunas], 'jumlah')
             ->orderBy('nama')
             ->paginate($request->integer('per_page', 20));
 
@@ -75,6 +92,7 @@ class PembayaranOnlineController extends Controller
             'id' => $s->id,
             'nama' => $s->nama,
             'nis' => $s->nis,
+            'nisn' => $s->nisn,
             'kelas' => $s->kelas?->nama_kelas,
             'nomor_va' => $this->service->nomorVa($s, $prefix),
             'tunggakan' => (float) ($s->tunggakan ?? 0),
@@ -87,6 +105,12 @@ class PembayaranOnlineController extends Controller
     {
         $config = $this->service->config();
         abort_if(empty($config['qris_statis']), 422, 'Atur QRIS statis sekolah terlebih dahulu di Pengaturan.');
+
+        if ($tagihan->status === 'dibatalkan') {
+            throw ValidationException::withMessages([
+                'tagihan_id' => ['Tagihan ini sudah dibatalkan.'],
+            ]);
+        }
 
         if ($tagihan->status === 'lunas') {
             throw ValidationException::withMessages([
@@ -153,6 +177,12 @@ class PembayaranOnlineController extends Controller
         ]);
 
         $tagihan = Tagihan::findOrFail($data['tagihan_id']);
+
+        if ($tagihan->status === 'dibatalkan') {
+            throw ValidationException::withMessages([
+                'tagihan_id' => ['Tagihan ini sudah dibatalkan.'],
+            ]);
+        }
 
         if ($tagihan->status === 'lunas') {
             throw ValidationException::withMessages([

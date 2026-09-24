@@ -51,7 +51,7 @@ class AnggaranPosController extends Controller
 
         activity()->causedBy($request->user())->log("Memperbarui pos RKAS \"{$anggaranPos->uraian}\".");
 
-        return response()->json($anggaranPo);
+        return response()->json($anggaranPos);
     }
 
     public function destroy(Request $request, AnggaranPos $anggaranPos): JsonResponse

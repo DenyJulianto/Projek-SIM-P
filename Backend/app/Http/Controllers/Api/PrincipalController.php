@@ -71,9 +71,9 @@ class PrincipalController extends Controller
 
     public function keuangan(): JsonResponse
     {
-        $total = Tagihan::count();
+        $total = Tagihan::aktif()->count();
         $lunas = Tagihan::where('status', 'lunas')->count();
-        $totalTagihan = (float) Tagihan::sum('jumlah');
+        $totalTagihan = (float) Tagihan::aktif()->sum('jumlah');
         $totalTerbayar = (float) DB::table('pembayaran')->sum('jumlah');
 
         return response()->json([
@@ -273,7 +273,7 @@ class PrincipalController extends Controller
 
     private function persentaseSpp(): array
     {
-        $total = Tagihan::count();
+        $total = Tagihan::aktif()->count();
 
         if ($total === 0) {
             return ['tersedia' => false, 'catatan' => 'Belum ada data tagihan/SPP yang dicatat.'];

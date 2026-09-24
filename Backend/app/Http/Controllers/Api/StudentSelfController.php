@@ -116,7 +116,7 @@ class StudentSelfController extends Controller
     {
         $siswa = $this->siswaFor($request);
 
-        $tagihan = Tagihan::where('siswa_id', $siswa->id)
+        $tagihan = Tagihan::aktif()->where('siswa_id', $siswa->id)
             ->with('pembayaran')
             ->orderByDesc('created_at')
             ->get();

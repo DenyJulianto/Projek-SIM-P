@@ -45,6 +45,12 @@ class KonfirmasiPembayaranController extends Controller
         $isAnak = $tagihan->siswa()->first()?->walis()->where('user_id', $request->user()->id)->exists();
         abort_unless($isAnak, 403, 'Tagihan ini bukan milik anak yang tertaut ke akun Anda.');
 
+        if ($tagihan->status === 'dibatalkan') {
+            throw ValidationException::withMessages([
+                'tagihan_id' => ['Tagihan ini sudah dibatalkan.'],
+            ]);
+        }
+
         if ($tagihan->status === 'lunas') {
             throw ValidationException::withMessages([
                 'tagihan_id' => ['Tagihan ini sudah lunas.'],
@@ -89,7 +95,7 @@ class KonfirmasiPembayaranController extends Controller
     public function index(Request $request): JsonResponse
     {
         $konfirmasi = KonfirmasiPembayaran::query()
-            ->with(['tagihan.siswa:id,nama,kelas_id', 'diajukanOleh:id,name'])
+            ->with(['tagihan.siswa:id,nama,nis,nisn,kelas_id', 'diajukanOleh:id,name'])
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
             ->orderByDesc('created_at')
             ->get();

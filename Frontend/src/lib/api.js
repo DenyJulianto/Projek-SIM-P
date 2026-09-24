@@ -1393,13 +1393,15 @@ export const api = {
   },
   createTagihan: (data) => request('/tagihan', { method: 'POST', body: JSON.stringify(data) }),
   updateTagihan: (id, data) => request(`/tagihan/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  deleteTagihan: (id) => request(`/tagihan/${id}`, { method: 'DELETE' }),
+  getTagihanRingkasan: () => request('/tagihan-ringkasan'),
+  batalkanTagihan: (id, alasan) =>
+    request(`/tagihan/${id}/batalkan`, { method: 'POST', body: JSON.stringify({ alasan }) }),
   listPembayaran: (params = {}) => {
     const query = new URLSearchParams(params).toString()
     return request(`/pembayaran${query ? `?${query}` : ''}`)
   },
-  createPembayaran: (tagihanId, data) =>
-    request(`/tagihan/${tagihanId}/pembayaran`, { method: 'POST', body: JSON.stringify(data) }),
+  downloadKuitansi: (id, nomor) =>
+    downloadFile(`/pembayaran/${id}/kuitansi`, `kuitansi-${nomor.replaceAll('/', '-')}.pdf`),
   deletePembayaran: (tagihanId, pembayaranId) =>
     request(`/tagihan/${tagihanId}/pembayaran/${pembayaranId}`, { method: 'DELETE' }),
 
@@ -1427,6 +1429,14 @@ export const api = {
   getRealisasiAnggaran: () => request('/realisasi-anggaran'),
 
   // Laporan Keuangan (Bendahara)
+  getMyStaffProfil: () => request('/me/profil-staf'),
+  updateMyStaffProfil: (data) => request('/me/profil-staf', { method: 'PUT', body: JSON.stringify(data) }),
+  uploadMyStaffSertifikat: (files) => {
+    const formData = new FormData()
+    files.forEach((f) => formData.append('files[]', f))
+    return requestForm('/me/profil-staf/sertifikat', formData)
+  },
+  deleteMyStaffSertifikat: (id) => request(`/me/profil-staf/sertifikat/${id}`, { method: 'DELETE' }),
   getLaporanPenerimaan: (params = {}) => {
     const query = new URLSearchParams(params).toString()
     return request(`/laporan-keuangan/penerimaan${query ? `?${query}` : ''}`)
