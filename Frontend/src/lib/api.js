@@ -741,6 +741,7 @@ export const api = {
     request('/me/siswa/absensi/ajukan', { method: 'POST', body: JSON.stringify(data) }),
   updateKeteranganAbsensiSaya: (absensiId, keterangan) =>
     request(`/me/siswa/absensi/${absensiId}/keterangan`, { method: 'PUT', body: JSON.stringify({ keterangan }) }),
+  getMySiswaSaldo: () => request('/me/siswa/saldo'),
   getMySiswaTagihan: () => request('/me/siswa/tagihan'),
   getMySiswaPrestasi: () => request('/me/siswa/prestasi'),
   submitPrestasiSaya: ({ judul, tingkat, tanggal, keterangan, file }) => {
