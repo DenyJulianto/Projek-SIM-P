@@ -415,48 +415,173 @@ function EmptyState({ text }) {
 
 const HARI_ORDER = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']
 
-function JadwalMengajarView({ onBack }) {
+const JADWAL_TONES = [
+  { icon: 'bg-gradient-to-br from-rose-400 to-pink-500', badge: 'bg-rose-50 text-rose-600', ring: 'border-rose-100' },
+  { icon: 'bg-gradient-to-br from-emerald-400 to-teal-500', badge: 'bg-emerald-50 text-emerald-700', ring: 'border-emerald-100' },
+  { icon: 'bg-gradient-to-br from-blue-400 to-indigo-500', badge: 'bg-blue-50 text-blue-700', ring: 'border-blue-100' },
+  { icon: 'bg-gradient-to-br from-amber-400 to-orange-500', badge: 'bg-amber-50 text-amber-700', ring: 'border-amber-100' },
+  { icon: 'bg-gradient-to-br from-violet-400 to-purple-500', badge: 'bg-violet-50 text-violet-700', ring: 'border-violet-100' },
+  { icon: 'bg-gradient-to-br from-cyan-400 to-sky-500', badge: 'bg-cyan-50 text-cyan-700', ring: 'border-cyan-100' },
+]
+
+const MAPEL_ICON_MAP = [
+  { match: /matemat/i, Icon: MathIcon, icon: 'bg-blue-50', ring: 'border-blue-100' },
+  { match: /bahasa\s*indonesia|b\.?\s*indo/i, Icon: IndonesianIcon, icon: 'bg-rose-50', ring: 'border-rose-100' },
+  { match: /bahasa\s*inggris|english/i, Icon: EnglishIcon, icon: 'bg-cyan-50', ring: 'border-cyan-100' },
+  { match: /ipa|biolog|fisik|kimia|sains/i, Icon: ScienceIcon, icon: 'bg-emerald-50', ring: 'border-emerald-100' },
+  { match: /sejarah|geograf|ips|sosiolog/i, Icon: MapIcon, icon: 'bg-amber-50', ring: 'border-amber-100' },
+  { match: /ekonom/i, Icon: EconomyIcon, icon: 'bg-amber-50', ring: 'border-amber-100' },
+  { match: /agama|akhlak|pai\b/i, Icon: FaithIcon, icon: 'bg-violet-50', ring: 'border-violet-100' },
+  { match: /olahraga|penjas|pjok/i, Icon: SportIcon, icon: 'bg-orange-50', ring: 'border-orange-100' },
+  { match: /seni|budaya|prakarya|kerajinan/i, Icon: ArtIcon, icon: 'bg-fuchsia-50', ring: 'border-fuchsia-100' },
+  { match: /komputer|informatika|\btik\b|koding/i, Icon: ComputerIcon, icon: 'bg-slate-100', ring: 'border-slate-200' },
+  { match: /pkn|kewarganegaraan|ppkn/i, Icon: PknIcon, icon: 'bg-teal-50', ring: 'border-teal-100' },
+]
+
+const FALLBACK_ICON_BG = ['bg-blue-50 border-blue-100', 'bg-emerald-50 border-emerald-100', 'bg-amber-50 border-amber-100', 'bg-violet-50 border-violet-100', 'bg-cyan-50 border-cyan-100', 'bg-rose-50 border-rose-100']
+
+function toneFor(label) {
+  const found = MAPEL_ICON_MAP.find((m) => m.match.test(label || ''))
+  if (found) return found
+
+  let hash = 0
+  for (const ch of label || '') hash = (hash * 31 + ch.charCodeAt(0)) >>> 0
+  const [icon, ring] = FALLBACK_ICON_BG[hash % FALLBACK_ICON_BG.length].split(' ')
+  return { Icon: BookColorIcon, icon, ring }
+}
+
+const HARI_BADGE = {
+  Senin: 'bg-blue-50 text-blue-700',
+  Selasa: 'bg-teal-50 text-teal-700',
+  Rabu: 'bg-amber-50 text-amber-700',
+  Kamis: 'bg-violet-50 text-violet-700',
+  Jumat: 'bg-rose-50 text-rose-700',
+  Sabtu: 'bg-slate-100 text-slate-700',
+  Minggu: 'bg-slate-100 text-slate-700',
+}
+
+function jamKe(value) {
+  return value ? value.slice(0, 5) : '-'
+}
+
+function sedangBerlangsung(j, now) {
+  if (j.hari !== HARI_ORDER[(now.getDay() + 6) % 7]) return false
+  const jam = now.toTimeString().slice(0, 5)
+  return jam >= jamKe(j.jam_mulai) && jam <= jamKe(j.jam_selesai)
+}
+
+export function JadwalMengajarView({ onBack }) {
   const [jadwal, setJadwal] = useState(null)
+  const [kelasList, setKelasList] = useState([])
 
   useEffect(() => {
     api.getMyGuruJadwal().then(setJadwal).catch(() => setJadwal([]))
+    api.getMyGuruKelas().then(setKelasList).catch(() => {})
   }, [])
+
+  const jumlahSiswa = (kelasId) => kelasList.find((k) => k.id === kelasId)?.jumlah_siswa
 
   const sorted = [...(jadwal || [])].sort(
     (a, b) => HARI_ORDER.indexOf(a.hari) - HARI_ORDER.indexOf(b.hari) || a.jam_mulai.localeCompare(b.jam_mulai)
   )
 
+  const now = new Date()
+  const hariIni = HARI_ORDER[(now.getDay() + 6) % 7]
+  const jadwalHariIni = sorted.filter((j) => j.hari === hariIni)
+
   return (
-    <PageShell title="Jadwal Mengajar" onBack={onBack}>
-      <div className="bg-white rounded-2xl border border-navy/10 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-navy/5 text-navy/60 text-xs uppercase tracking-wide">
-            <tr>
-              <th className="text-left px-5 py-3">Hari</th>
-              <th className="text-left px-5 py-3">Jam</th>
-              <th className="text-left px-5 py-3">Kelas</th>
-              <th className="text-left px-5 py-3">Mata Pelajaran</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-navy/5">
-            {sorted.map((j) => (
-              <tr key={j.id}>
-                <td className="px-5 py-3 font-medium text-navy">{j.hari}</td>
-                <td className="px-5 py-3 text-navy/70">{j.jam_mulai?.slice(0, 5)} - {j.jam_selesai?.slice(0, 5)}</td>
-                <td className="px-5 py-3 text-navy/70">{j.kelas?.nama_kelas ?? '-'}</td>
-                <td className="px-5 py-3 text-navy/70">{j.mata_pelajaran?.nama_mapel ?? '-'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {jadwal && sorted.length === 0 && <EmptyState text="Belum ada jadwal mengajar." />}
-        {jadwal === null && <EmptyState text="Memuat..." />}
-      </div>
-    </PageShell>
+    <div className="-m-6 sm:-m-8 min-h-[calc(100%+3rem)] p-6 sm:p-8 bg-gradient-to-br from-emerald-100 via-emerald-50 to-emerald-100">
+      <button onClick={onBack} className="text-sm text-navy/50 hover:text-navy mb-1 block">
+        ← Kembali ke Dashboard
+      </button>
+      <h1 className="text-xl font-extrabold text-navy mb-1">Jadwal Mengajar</h1>
+      <p className="text-sm text-navy/45 mb-5">Jadwal mengajar Anda sepekan ini.</p>
+
+      {jadwal === null && <EmptyState text="Memuat..." />}
+      {jadwal !== null && sorted.length === 0 && <EmptyState text="Belum ada jadwal mengajar." />}
+
+      {jadwalHariIni.length > 0 && (
+        <div className="mb-7">
+          <h2 className="text-xs font-bold uppercase tracking-wide text-navy/45 mb-3">Hari Ini · {hariIni}</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {jadwalHariIni.map((j) => {
+              const tone = toneFor(j.mata_pelajaran?.nama_mapel)
+              const live = sedangBerlangsung(j, now)
+              return (
+                <div key={j.id} className={`relative overflow-hidden rounded-2xl border ${tone.ring} bg-white p-5`}>
+                  <div className="flex items-start gap-4">
+                    <span className={`h-14 w-14 rounded-2xl flex items-center justify-center shrink-0 ${tone.icon}`}>
+                      <tone.Icon className="h-8 w-8" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-bold text-navy leading-tight">{j.mata_pelajaran?.nama_mapel ?? '-'}</p>
+                        {live && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 rounded-full px-2 py-0.5">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            Berlangsung
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-navy/50 mt-0.5">{j.kelas?.nama_kelas ?? '-'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 mt-4 pt-4 border-t border-navy/5">
+                    <span className="inline-flex items-center gap-1.5 text-xs text-navy/60">
+                      <ClockIcon className="h-3.5 w-3.5 text-navy/35" />
+                      {jamKe(j.jam_mulai)} - {jamKe(j.jam_selesai)}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 text-xs text-navy/60">
+                      <UsersIcon className="h-3.5 w-3.5 text-navy/35" />
+                      {jumlahSiswa(j.kelas?.id) ?? '-'} Siswa
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {sorted.length > 0 && (
+        <div>
+          <h2 className="text-xs font-bold uppercase tracking-wide text-navy/45 mb-3">Semua Jadwal</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            {sorted.map((j) => {
+              const tone = toneFor(j.mata_pelajaran?.nama_mapel)
+              return (
+                <div key={j.id} className="bg-white rounded-2xl border border-navy/10 p-4">
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <span className={`h-11 w-11 rounded-xl flex items-center justify-center shrink-0 ${tone.icon}`}>
+                      <tone.Icon className="h-7 w-7" />
+                    </span>
+                    <span className={`text-[10px] font-bold uppercase tracking-wide rounded-full px-2.5 py-1 ${HARI_BADGE[j.hari] ?? 'bg-navy/5 text-navy/60'}`}>
+                      {j.hari}
+                    </span>
+                  </div>
+                  <p className="font-bold text-navy text-sm leading-tight truncate">{j.mata_pelajaran?.nama_mapel ?? '-'}</p>
+                  <p className="text-xs text-navy/50 mt-0.5 truncate">{j.kelas?.nama_kelas ?? '-'}</p>
+                  <div className="flex items-center gap-3 mt-3 pt-3 border-t border-navy/5">
+                    <span className="inline-flex items-center gap-1.5 text-[11px] text-navy/55">
+                      <ClockIcon className="h-3.5 w-3.5 text-navy/30" />
+                      {jamKe(j.jam_mulai)} - {jamKe(j.jam_selesai)}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 text-[11px] text-navy/55">
+                      <UsersIcon className="h-3.5 w-3.5 text-navy/30" />
+                      {jumlahSiswa(j.kelas?.id) ?? '-'}
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
-function KelasSayaView({ onBack }) {
+export function KelasSayaView({ onBack, title = 'Kelas Saya' }) {
   const [kelas, setKelas] = useState(null)
 
   useEffect(() => {
@@ -464,7 +589,7 @@ function KelasSayaView({ onBack }) {
   }, [])
 
   return (
-    <PageShell title="Kelas Saya" onBack={onBack}>
+    <PageShell title={title} onBack={onBack}>
       <div className="grid sm:grid-cols-3 gap-4">
         {(kelas || []).map((k) => (
           <div key={k.id} className="bg-white rounded-2xl border border-navy/10 p-5">
@@ -617,7 +742,77 @@ function KelasMapelSelect({ pilihan, value, onChange }) {
   )
 }
 
-function MateriManagement({ onBack }) {
+const ITEM_TONES = [
+  { border: 'border-l-emerald-400', icon: 'bg-emerald-100 text-emerald-600' },
+  { border: 'border-l-violet-400', icon: 'bg-violet-100 text-violet-600' },
+  { border: 'border-l-amber-400', icon: 'bg-amber-100 text-amber-600' },
+  { border: 'border-l-rose-400', icon: 'bg-rose-100 text-rose-600' },
+]
+
+function toneAt(i) {
+  return ITEM_TONES[i % ITEM_TONES.length]
+}
+
+function fileUrl(kind, path) {
+  if (!path) return null
+  const clean = path.replace(new RegExp(`^${kind}/`), '')
+  return `${BASE_URL}/${kind}-file/${clean}`
+}
+
+function fileExt(path) {
+  if (!path) return null
+  const ext = path.split('.').pop()
+  return ext ? ext.toUpperCase() : null
+}
+
+function formatTanggalPendek(value) {
+  if (!value) return '-'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return '-'
+  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+function ListToolbar({ title, subtitle, search, onSearch, onAdd, addLabel, showFilter, onToggleFilter, filterPanel }) {
+  return (
+    <div className="mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-1">
+        <div>
+          <h2 className="text-base font-bold text-navy">{title}</h2>
+          <p className="text-xs text-navy/45 mt-0.5">{subtitle}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <SearchMiniIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-navy/30" />
+            <input
+              value={search}
+              onChange={(e) => onSearch(e.target.value)}
+              placeholder={`Cari ${title.toLowerCase()}...`}
+              className="border border-navy/10 rounded-full pl-10 pr-4 py-2 text-sm text-navy placeholder:text-navy/35 focus:outline-none focus:border-emerald-400 w-48 sm:w-56"
+            />
+          </div>
+          <button
+            onClick={onToggleFilter}
+            className={`h-9 w-9 rounded-full border flex items-center justify-center transition-colors ${
+              showFilter ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-navy/10 text-navy/50 hover:bg-navy/5'
+            }`}
+          >
+            <FilterMiniIcon className="h-4 w-4" />
+          </button>
+          <button
+            onClick={onAdd}
+            className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-full whitespace-nowrap transition-colors"
+          >
+            <PlusMiniIcon className="h-4 w-4" />
+            {addLabel}
+          </button>
+        </div>
+      </div>
+      {showFilter && filterPanel}
+    </div>
+  )
+}
+
+export function MateriManagement({ onBack, bare }) {
   const { guru, pilihan } = useGuruContext()
   const [items, setItems] = useState(null)
   const [showForm, setShowForm] = useState(false)
@@ -628,6 +823,9 @@ function MateriManagement({ onBack }) {
   const [file, setFile] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [search, setSearch] = useState('')
+  const [showFilter, setShowFilter] = useState(false)
+  const [filterKelas, setFilterKelas] = useState('')
 
   function load() {
     if (!guru) return
@@ -683,19 +881,48 @@ function MateriManagement({ onBack }) {
     }
   }
 
-  return (
-    <PageShell title="Materi" onBack={onBack}>
-      <div className="flex justify-end mb-4">
-        <button
-          onClick={() => {
-            resetForm()
-            setShowForm((v) => !v)
-          }}
-          className="bg-navy hover:bg-navy-light text-white text-sm font-semibold px-5 py-2.5 rounded-full"
-        >
-          {showForm ? 'Batal' : '+ Tambah Materi'}
-        </button>
-      </div>
+  const kelasOptions = [...new Map((pilihan || []).map((p) => [p.kelas_id, p.nama_kelas])).entries()]
+
+  const filtered = (items || []).filter((m) => {
+    if (filterKelas && String(m.kelas_id) !== String(filterKelas)) return false
+    if (!search.trim()) return true
+    const q = search.trim().toLowerCase()
+    return (
+      m.judul?.toLowerCase().includes(q) ||
+      m.kelas?.nama_kelas?.toLowerCase().includes(q) ||
+      m.mata_pelajaran?.nama_mapel?.toLowerCase().includes(q)
+    )
+  })
+
+  const body = (
+    <>
+      <ListToolbar
+        title="Daftar Materi"
+        subtitle="Berikut adalah daftar materi yang telah diunggah."
+        search={search}
+        onSearch={setSearch}
+        onAdd={() => {
+          resetForm()
+          setShowForm((v) => !v)
+        }}
+        addLabel={showForm ? 'Batal' : 'Tambah Materi'}
+        showFilter={showFilter}
+        onToggleFilter={() => setShowFilter((v) => !v)}
+        filterPanel={
+          <select
+            value={filterKelas}
+            onChange={(e) => setFilterKelas(e.target.value)}
+            className="mt-2 border border-navy/10 rounded-xl px-3 py-2 text-sm text-navy"
+          >
+            <option value="">Semua Kelas</option>
+            {kelasOptions.map(([id, nama]) => (
+              <option key={id} value={id}>
+                {nama}
+              </option>
+            ))}
+          </select>
+        }
+      />
 
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-navy/10 p-5 mb-5 space-y-3">
@@ -735,31 +962,101 @@ function MateriManagement({ onBack }) {
       )}
 
       <div className="space-y-3">
-        {(items || []).map((m) => (
-          <div key={m.id} className="bg-white rounded-2xl border border-navy/10 p-4 flex items-start justify-between gap-4">
-            <div>
-              <p className="font-bold text-navy">{m.judul}</p>
-              <p className="text-xs text-navy/50 mt-0.5">
-                {m.kelas?.nama_kelas} &middot; {m.mata_pelajaran?.nama_mapel}
-              </p>
-              {m.deskripsi && <p className="text-sm text-navy/60 mt-1.5">{m.deskripsi}</p>}
+        {filtered.map((m, i) => {
+          const tone = toneAt(i)
+          const tersedia = Boolean(m.file || m.tautan)
+          const url = m.tautan || fileUrl('materi', m.file)
+          return (
+            <div key={m.id} className={`bg-white rounded-2xl border border-l-4 ${tone.border} border-navy/10 p-4`}>
+              <div className="flex items-start gap-3.5">
+                <span className={`h-11 w-11 rounded-xl flex items-center justify-center shrink-0 ${tone.icon}`}>
+                  <DocMiniIcon className="h-5 w-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div className="min-w-0">
+                      <p className="font-bold text-navy">{m.judul}</p>
+                      <p className="text-xs text-navy/45 mt-0.5">
+                        {m.kelas?.nama_kelas} &middot; {m.mata_pelajaran?.nama_mapel}
+                      </p>
+                    </div>
+                    <span
+                      className={`text-[11px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap ${
+                        tersedia ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-600'
+                      }`}
+                    >
+                      {tersedia ? 'Tersedia' : 'Tidak Tersedia'}
+                    </span>
+                  </div>
+                  {m.deskripsi && <p className="text-sm text-navy/60 mt-1.5">{m.deskripsi}</p>}
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2.5 text-[11px] text-navy/40">
+                    <span className="inline-flex items-center gap-1.5">
+                      <CalendarMiniIcon className="h-3.5 w-3.5" />
+                      Diupload: {formatTanggalPendek(m.created_at)}
+                    </span>
+                    {m.file && (
+                      <span className="inline-flex items-center gap-1.5">
+                        <DocMiniIcon className="h-3.5 w-3.5" />
+                        {fileExt(m.file)}
+                      </span>
+                    )}
+                    {!m.file && m.tautan && (
+                      <span className="inline-flex items-center gap-1.5">
+                        <LinkMiniIcon className="h-3.5 w-3.5" />
+                        Tautan Eksternal
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 mt-3">
+                    <a
+                      href={url || undefined}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-disabled={!url}
+                      onClick={(e) => !url && e.preventDefault()}
+                      className={`inline-flex items-center gap-1.5 text-xs font-semibold border rounded-full px-3.5 py-1.5 transition-colors ${
+                        url ? 'border-navy/15 text-navy hover:bg-navy/5' : 'border-navy/10 text-navy/30 cursor-not-allowed'
+                      }`}
+                    >
+                      <EyeMiniIcon className="h-3.5 w-3.5" />
+                      Lihat
+                    </a>
+                    {m.file && (
+                      <a
+                        href={fileUrl('materi', m.file)}
+                        download
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-full px-3.5 py-1.5 transition-colors"
+                      >
+                        <DownloadMiniIcon className="h-3.5 w-3.5" />
+                        Unduh
+                      </a>
+                    )}
+                    <button
+                      onClick={() => handleDelete(m)}
+                      title="Hapus Materi"
+                      className="ml-auto h-8 w-8 rounded-full flex items-center justify-center text-navy/30 hover:bg-red-50 hover:text-red-600 transition-colors"
+                    >
+                      <TrashMiniIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
-            <button
-              onClick={() => handleDelete(m)}
-              className="text-xs font-semibold text-red-600 border border-red-200 rounded-full px-3.5 py-1.5 hover:bg-red-600 hover:text-white transition-colors shrink-0"
-            >
-              Hapus
-            </button>
-          </div>
-        ))}
+          )
+        })}
       </div>
-      {items && items.length === 0 && <EmptyState text="Belum ada materi yang dibagikan." />}
+      {items && filtered.length === 0 && (
+        <EmptyState text={items.length === 0 ? 'Belum ada materi yang dibagikan.' : 'Materi tidak ditemukan.'} />
+      )}
       {items === null && <EmptyState text="Memuat..." />}
-    </PageShell>
+    </>
   )
+
+  if (bare) return body
+  return <PageShell title="Materi" onBack={onBack}>{body}</PageShell>
 }
 
-function TugasManagement({ onBack }) {
+export function TugasManagement({ onBack, bare }) {
   const { guru, pilihan } = useGuruContext()
   const [items, setItems] = useState(null)
   const [showForm, setShowForm] = useState(false)
@@ -772,6 +1069,9 @@ function TugasManagement({ onBack }) {
   const [error, setError] = useState('')
   const [openJawabanId, setOpenJawabanId] = useState(null)
   const [jawabanList, setJawabanList] = useState(null)
+  const [search, setSearch] = useState('')
+  const [showFilter, setShowFilter] = useState(false)
+  const [filterKelas, setFilterKelas] = useState('')
 
   function load() {
     if (!guru) return
@@ -841,19 +1141,48 @@ function TugasManagement({ onBack }) {
     reloadJawaban(t.id)
   }
 
-  return (
-    <PageShell title="Tugas" onBack={onBack}>
-      <div className="flex justify-end mb-4">
-        <button
-          onClick={() => {
-            resetForm()
-            setShowForm((v) => !v)
-          }}
-          className="bg-navy hover:bg-navy-light text-white text-sm font-semibold px-5 py-2.5 rounded-full"
-        >
-          {showForm ? 'Batal' : '+ Tambah Tugas'}
-        </button>
-      </div>
+  const kelasOptions = [...new Map((pilihan || []).map((p) => [p.kelas_id, p.nama_kelas])).entries()]
+
+  const filtered = (items || []).filter((t) => {
+    if (filterKelas && String(t.kelas_id) !== String(filterKelas)) return false
+    if (!search.trim()) return true
+    const q = search.trim().toLowerCase()
+    return (
+      t.judul?.toLowerCase().includes(q) ||
+      t.kelas?.nama_kelas?.toLowerCase().includes(q) ||
+      t.mata_pelajaran?.nama_mapel?.toLowerCase().includes(q)
+    )
+  })
+
+  const body = (
+    <>
+      <ListToolbar
+        title="Daftar Tugas"
+        subtitle="Berikut adalah daftar tugas yang telah diberikan."
+        search={search}
+        onSearch={setSearch}
+        onAdd={() => {
+          resetForm()
+          setShowForm((v) => !v)
+        }}
+        addLabel={showForm ? 'Batal' : 'Tambah Tugas'}
+        showFilter={showFilter}
+        onToggleFilter={() => setShowFilter((v) => !v)}
+        filterPanel={
+          <select
+            value={filterKelas}
+            onChange={(e) => setFilterKelas(e.target.value)}
+            className="mt-2 border border-navy/10 rounded-xl px-3 py-2 text-sm text-navy"
+          >
+            <option value="">Semua Kelas</option>
+            {kelasOptions.map(([id, nama]) => (
+              <option key={id} value={id}>
+                {nama}
+              </option>
+            ))}
+          </select>
+        }
+      />
 
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-navy/10 p-5 mb-5 space-y-3">
@@ -896,53 +1225,199 @@ function TugasManagement({ onBack }) {
       )}
 
       <div className="space-y-3">
-        {(items || []).map((t) => (
-          <div key={t.id} className="bg-white rounded-2xl border border-navy/10 p-4">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="font-bold text-navy">{t.judul}</p>
-                <p className="text-xs text-navy/50 mt-0.5">
-                  {t.kelas?.nama_kelas} &middot; {t.mata_pelajaran?.nama_mapel} &middot; Batas:{' '}
-                  {new Date(t.deadline).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
-                </p>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  onClick={() => toggleJawaban(t)}
-                  className="text-xs font-semibold text-navy border border-navy/20 rounded-full px-3.5 py-1.5 hover:bg-navy hover:text-white transition-colors"
-                >
-                  {t.jawaban_count ?? 0} Jawaban
-                </button>
-                <button
-                  onClick={() => handleDelete(t)}
-                  className="text-xs font-semibold text-red-600 border border-red-200 rounded-full px-3.5 py-1.5 hover:bg-red-600 hover:text-white transition-colors"
-                >
-                  Hapus
-                </button>
+        {filtered.map((t, i) => {
+          const tone = toneAt(i)
+          const lewatTenggat = new Date(t.deadline) < new Date()
+          const url = fileUrl('tugas', t.file)
+          return (
+            <div key={t.id} className={`bg-white rounded-2xl border border-l-4 ${tone.border} border-navy/10 p-4`}>
+              <div className="flex items-start gap-3.5">
+                <span className={`h-11 w-11 rounded-xl flex items-center justify-center shrink-0 ${tone.icon}`}>
+                  <TaskMiniIcon className="h-5 w-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div className="min-w-0">
+                      <p className="font-bold text-navy">{t.judul}</p>
+                      <p className="text-xs text-navy/45 mt-0.5">
+                        {t.kelas?.nama_kelas} &middot; {t.mata_pelajaran?.nama_mapel}
+                      </p>
+                    </div>
+                    <span
+                      className={`text-[11px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap ${
+                        lewatTenggat ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-700'
+                      }`}
+                    >
+                      {lewatTenggat ? 'Lewat Tenggat' : 'Aktif'}
+                    </span>
+                  </div>
+                  {t.deskripsi && <p className="text-sm text-navy/60 mt-1.5">{t.deskripsi}</p>}
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2.5 text-[11px] text-navy/40">
+                    <span className="inline-flex items-center gap-1.5">
+                      <CalendarMiniIcon className="h-3.5 w-3.5" />
+                      Batas: {new Date(t.deadline).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
+                    </span>
+                    {t.file && (
+                      <span className="inline-flex items-center gap-1.5">
+                        <DocMiniIcon className="h-3.5 w-3.5" />
+                        {fileExt(t.file)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 mt-3 flex-wrap">
+                    {url && (
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold border border-navy/15 text-navy hover:bg-navy/5 rounded-full px-3.5 py-1.5 transition-colors"
+                      >
+                        <EyeMiniIcon className="h-3.5 w-3.5" />
+                        Lihat
+                      </a>
+                    )}
+                    <button
+                      onClick={() => toggleJawaban(t)}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-full px-3.5 py-1.5 transition-colors"
+                    >
+                      <UsersMiniIcon className="h-3.5 w-3.5" />
+                      {t.jawaban_count ?? 0} Jawaban
+                    </button>
+                    <button
+                      onClick={() => handleDelete(t)}
+                      title="Hapus Tugas"
+                      className="ml-auto h-8 w-8 rounded-full flex items-center justify-center text-navy/30 hover:bg-red-50 hover:text-red-600 transition-colors"
+                    >
+                      <TrashMiniIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {openJawabanId === t.id && (
+                    <div className="mt-4 pt-4 border-t border-navy/10">
+                      {jawabanList === null ? (
+                        <EmptyState text="Memuat..." />
+                      ) : jawabanList.length === 0 ? (
+                        <EmptyState text="Belum ada siswa yang mengumpulkan." />
+                      ) : (
+                        <div className="space-y-2">
+                          {jawabanList.map((j) => (
+                            <TugasJawabanRow key={j.id} jawaban={j} onGraded={() => reloadJawaban(t.id)} />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-
-            {openJawabanId === t.id && (
-              <div className="mt-4 pt-4 border-t border-navy/10">
-                {jawabanList === null ? (
-                  <EmptyState text="Memuat..." />
-                ) : jawabanList.length === 0 ? (
-                  <EmptyState text="Belum ada siswa yang mengumpulkan." />
-                ) : (
-                  <div className="space-y-2">
-                    {jawabanList.map((j) => (
-                      <TugasJawabanRow key={j.id} jawaban={j} onGraded={() => reloadJawaban(t.id)} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        ))}
+          )
+        })}
       </div>
-      {items && items.length === 0 && <EmptyState text="Belum ada tugas yang diberikan." />}
+      {items && filtered.length === 0 && (
+        <EmptyState text={items.length === 0 ? 'Belum ada tugas yang diberikan.' : 'Tugas tidak ditemukan.'} />
+      )}
       {items === null && <EmptyState text="Memuat..." />}
-    </PageShell>
+    </>
+  )
+
+  if (bare) return body
+  return <PageShell title="Tugas" onBack={onBack}>{body}</PageShell>
+}
+
+function SearchMiniIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m21 21-4.3-4.3" />
+    </svg>
+  )
+}
+
+function FilterMiniIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 6h16M7 12h10M10 18h4" />
+    </svg>
+  )
+}
+
+function PlusMiniIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  )
+}
+
+function DocMiniIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 2h9l3 3v17H6Z" />
+      <path d="M15 2v3h3M9 12h6M9 16h6" />
+    </svg>
+  )
+}
+
+function TaskMiniIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="3" width="16" height="18" rx="2" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  )
+}
+
+function CalendarMiniIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M8 3v4M16 3v4M3 10h18" />
+    </svg>
+  )
+}
+
+function LinkMiniIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 15 15 9" />
+      <path d="M10 6.5 12 4.5a3.5 3.5 0 0 1 5 5l-2 2M14 17.5l-2 2a3.5 3.5 0 0 1-5-5l2-2" />
+    </svg>
+  )
+}
+
+function EyeMiniIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  )
+}
+
+function DownloadMiniIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3v12m0 0 4-4m-4 4-4-4M4 19h16" />
+    </svg>
+  )
+}
+
+function TrashMiniIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 7h16M9 7V4h6v3m-8 0 1 13a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2l1-13" />
+    </svg>
+  )
+}
+
+function UsersMiniIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="9" cy="8" r="3.2" />
+      <path d="M2.5 19c0-3 2.9-5 6.5-5s6.5 2 6.5 5" />
+      <circle cx="17" cy="9" r="2.6" />
+      <path d="M15.2 14.3c2.6.4 4.3 2 4.3 4.7" />
+    </svg>
   )
 }
 
@@ -1510,6 +1985,17 @@ function CalendarIcon(props) {
   )
 }
 
+function UsersIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="9" cy="8" r="3.2" />
+      <path d="M2.5 19c0-3 2.9-5 6.5-5s6.5 2 6.5 5" />
+      <circle cx="17" cy="9" r="2.6" />
+      <path d="M15.2 14.3c2.6.4 4.3 2 4.3 4.7" />
+    </svg>
+  )
+}
+
 function ClassIcon(props) {
   return (
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1524,6 +2010,165 @@ function BookIcon(props) {
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
       <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" />
+    </svg>
+  )
+}
+
+function MathIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24">
+      <rect x="3" y="4" width="18" height="16" rx="2" fill="#eef2ff" stroke="#6366f1" strokeWidth="1.3" />
+      <line x1="7" y1="4" x2="7" y2="20" stroke="#a5b4fc" strokeWidth="1" />
+      <line x1="12" y1="4" x2="12" y2="20" stroke="#a5b4fc" strokeWidth="1" />
+      <line x1="17" y1="4" x2="17" y2="20" stroke="#a5b4fc" strokeWidth="1" />
+      <circle cx="7" cy="9" r="1.6" fill="#ef4444" />
+      <circle cx="7" cy="14" r="1.6" fill="#ef4444" />
+      <circle cx="12" cy="8" r="1.6" fill="#f59e0b" />
+      <circle cx="12" cy="13" r="1.6" fill="#f59e0b" />
+      <circle cx="12" cy="17" r="1.6" fill="#f59e0b" />
+      <circle cx="17" cy="10" r="1.6" fill="#10b981" />
+      <circle cx="17" cy="15" r="1.6" fill="#10b981" />
+    </svg>
+  )
+}
+
+function IndonesianIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24">
+      <path d="M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2V4Z" fill="#fff" stroke="#dc2626" strokeWidth="1.3" />
+      <path d="M5 4h13v6H5Z" fill="#dc2626" />
+      <path d="M8 13.5h8M8 16.5h5" stroke="#6b7280" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function EnglishIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24">
+      <circle cx="10" cy="13" r="7" fill="#38bdf8" />
+      <ellipse cx="10" cy="13" rx="7" ry="3" fill="none" stroke="#e0f2fe" strokeWidth="1" opacity=".7" />
+      <path d="M10 6v14" stroke="#e0f2fe" strokeWidth="1" opacity=".7" />
+      <path d="M17 3.5v10" stroke="#64748b" strokeWidth="1.3" strokeLinecap="round" fill="none" />
+      <path d="M17 3.5 22 6l-5 2.5Z" fill="#ef4444" />
+    </svg>
+  )
+}
+
+function ScienceIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24">
+      <path
+        d="M10 3h4M10.5 3v6.2l-5 8.8a2 2 0 0 0 1.8 3h9.4a2 2 0 0 0 1.8-3l-5-8.8V3"
+        fill="#ecfeff"
+        stroke="#0891b2"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+      <path d="M7.3 15.5h9.4l1.3 2.3a1 1 0 0 1-.9 1.5H6.9a1 1 0 0 1-.9-1.5Z" fill="#34d399" />
+      <circle cx="9" cy="17.8" r=".7" fill="#fff" />
+      <circle cx="12" cy="18.6" r=".9" fill="#fff" />
+      <circle cx="15" cy="17.3" r=".6" fill="#fff" />
+    </svg>
+  )
+}
+
+function MapIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24">
+      <path d="M4 6l5-2 6 2 5-2v14l-5 2-6-2-5 2Z" fill="#fde68a" stroke="#d97706" strokeWidth="1.1" strokeLinejoin="round" />
+      <path d="M9 4v14M15 6v14" stroke="#d97706" strokeWidth="1" opacity=".5" />
+      <path d="M15 8.5a3 3 0 0 0-3 3c0 2.2 3 5.2 3 5.2s3-3 3-5.2a3 3 0 0 0-3-3Z" fill="#ef4444" />
+      <circle cx="15" cy="11.5" r="1.1" fill="#fff" />
+    </svg>
+  )
+}
+
+function EconomyIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none">
+      <circle cx="7" cy="17" r="4" fill="#fbbf24" stroke="#d97706" strokeWidth="1" />
+      <circle cx="7" cy="17" r="1.8" fill="none" stroke="#d97706" strokeWidth=".8" />
+      <path d="M11 15.5l3-3 2.5 2.5L21 9.5" stroke="#16a34a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M17 9.3h4v4" stroke="#16a34a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function FaithIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24">
+      <path
+        d="M12 5c-2-1.3-4.6-1.5-7-1v13c2.4-.5 5 .3 7 1.5 2-1.2 4.6-2 7-1.5V4c-2.4-.5-5-.3-7 1Z"
+        fill="#fef3c7"
+        stroke="#d97706"
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+      />
+      <path d="M12 5v14" stroke="#d97706" strokeWidth="1" />
+      <path d="M12 1.8l.9 1.8 2 .2-1.5 1.4.4 2-1.8-1-1.8 1 .4-2-1.5-1.4 2-.2Z" fill="#f59e0b" />
+    </svg>
+  )
+}
+
+function SportIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none">
+      <circle cx="11" cy="12" r="8" fill="#fb923c" stroke="#c2410c" strokeWidth="1" />
+      <path
+        d="M11 4v16M3 12h16M5.3 6.5c2 2 2 9 0 11M16.7 6.5c-2 2-2 9 0 11"
+        stroke="#9a3412"
+        strokeWidth="1"
+      />
+    </svg>
+  )
+}
+
+function ArtIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24">
+      <path
+        d="M12 3a9 8 0 0 0 0 16c1.2 0 1.8-.8 1.8-1.6 0-.4-.2-.8-.4-1.1-.2-.3-.4-.6-.4-1 0-.9.8-1.6 1.7-1.6H17a4 4 0 0 0 4-4c0-4.1-4-6.7-9-6.7Z"
+        fill="#faf5ff"
+        stroke="#a855f7"
+        strokeWidth="1.2"
+      />
+      <circle cx="7.5" cy="11" r="1.3" fill="#ef4444" />
+      <circle cx="9.5" cy="7" r="1.3" fill="#3b82f6" />
+      <circle cx="14" cy="6.8" r="1.3" fill="#eab308" />
+      <circle cx="17" cy="9.5" r="1.3" fill="#22c55e" />
+    </svg>
+  )
+}
+
+function ComputerIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24">
+      <rect x="3" y="4" width="18" height="13" rx="2" fill="#1e293b" />
+      <path d="M8 20h8M12 17v3" stroke="#94a3b8" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M9 8l-2.5 3L9 14" stroke="#38bdf8" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M15 8l2.5 3L15 14" stroke="#4ade80" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M13 7.3l-2 7.4" stroke="#fbbf24" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function PknIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24">
+      <path d="M12 2 4 5v6c0 5.2 3.4 8.6 8 10 4.6-1.4 8-4.8 8-10V5Z" fill="#fff" stroke="#dc2626" strokeWidth="1.2" />
+      <path d="M12 2 4 5v6c0 5.2 3.4 8.6 8 10Z" fill="#fee2e2" />
+      <path d="M12 7.2l1.1 2.3 2.5.3-1.8 1.7.4 2.5-2.2-1.2-2.2 1.2.4-2.5-1.8-1.7 2.5-.3Z" fill="#f59e0b" />
+    </svg>
+  )
+}
+
+function BookColorIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24">
+      <rect x="4" y="15" width="16" height="3.5" rx="1" fill="#f87171" />
+      <rect x="5" y="11" width="14" height="3.5" rx="1" fill="#60a5fa" />
+      <rect x="6" y="7" width="12" height="3.5" rx="1" fill="#34d399" />
+      <rect x="7" y="3.2" width="9" height="3.2" rx="1" fill="#fbbf24" />
     </svg>
   )
 }
