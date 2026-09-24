@@ -17,7 +17,7 @@ class LaporanKeuanganController extends Controller
     public function penerimaan(Request $request): JsonResponse
     {
         $query = Pembayaran::query()
-            ->with(['tagihan.siswa:id,nama,kelas_id'])
+            ->with(['tagihan.siswa:id,nama,nis,nisn,kelas_id', 'tagihan.siswa.kelas:id,nama_kelas', 'konfirmasi:id,pembayaran_id,bukti_path,status,tanggal_verifikasi'])
             ->when($request->filled('dari_tanggal'), fn ($q) => $q->where('tanggal_bayar', '>=', $request->string('dari_tanggal')))
             ->when($request->filled('sampai_tanggal'), fn ($q) => $q->where('tanggal_bayar', '<=', $request->string('sampai_tanggal')));
 
@@ -50,7 +50,7 @@ class LaporanKeuanganController extends Controller
     {
         $data = Tagihan::query()
             ->where('status', 'belum_lunas')
-            ->with('siswa:id,nama,kelas_id')
+            ->with('siswa:id,nama,nisn,kelas_id')
             ->orderBy('jatuh_tempo')
             ->get();
 
@@ -144,6 +144,7 @@ class LaporanKeuanganController extends Controller
             'saldo_kas' => $penerimaan['total'] - $pengeluaran['total'],
             'total_tunggakan' => $tunggakan['total'],
             'jumlah_siswa_menunggak' => $tunggakan['jumlah_siswa'],
+            'jumlah_siswa_bertagihan' => Tagihan::aktif()->distinct()->count('siswa_id'),
             'total_anggaran' => $anggaran['total_anggaran'],
             'total_realisasi_anggaran' => $anggaran['total_realisasi'],
             'penerimaan_terbaru' => array_slice($penerimaan['data'], 0, 10),

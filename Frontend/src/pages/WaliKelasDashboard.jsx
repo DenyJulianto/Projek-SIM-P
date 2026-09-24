@@ -111,7 +111,7 @@ export default function WaliKelasDashboard() {
                         className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors text-left ${
                           active
                             ? 'bg-white text-navy shadow-sm'
-                            : 'text-white/75 hover:bg-white/10 hover:text-white'
+                            : 'text-white/90 hover:bg-white/15 hover:text-white'
                         }`}
                       >
                         <Icon className="h-4.5 w-4.5 shrink-0" />
@@ -131,7 +131,7 @@ export default function WaliKelasDashboard() {
                 <button
                   onClick={() => toggleSection(group.section)}
                   className={`w-full flex items-center justify-between gap-2 px-4 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider transition-colors ${
-                    hasActiveItem ? 'text-white' : 'text-white/40 hover:text-white/70'
+                    hasActiveItem ? 'text-white' : 'text-white/65 hover:text-white'
                   }`}
                 >
                   <span className="truncate min-w-0">{group.section}</span>
@@ -149,7 +149,7 @@ export default function WaliKelasDashboard() {
                           className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors text-left ${
                             active
                               ? 'bg-white text-navy shadow-sm'
-                              : 'text-white/75 hover:bg-white/10 hover:text-white'
+                              : 'text-white/90 hover:bg-white/15 hover:text-white'
                           }`}
                         >
                           <Icon className="h-4.5 w-4.5 shrink-0" />
@@ -166,7 +166,7 @@ export default function WaliKelasDashboard() {
 
         <button
           onClick={() => setConfirmingLogout(true)}
-          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium text-white/60 hover:bg-white/10 hover:text-white transition-colors mt-2"
+          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium text-white/85 hover:bg-white/15 hover:text-white transition-colors mt-2"
         >
           <LogoutIcon className="h-4.5 w-4.5 shrink-0" />
           Keluar

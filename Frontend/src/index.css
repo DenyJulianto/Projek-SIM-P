@@ -7,6 +7,14 @@
   --color-gold-light: #f0c078;
 }
 
+/* Tailwind v4 membuat tombol berkursor panah; kembalikan ke tangan agar terlihat bisa diklik. */
+@layer base {
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
 body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
@@ -14,5 +22,56 @@ body {
 @layer components {
   .input {
     @apply w-full rounded-md border border-navy/20 px-3 py-2 text-sm text-navy focus:outline-none focus:ring-2 focus:ring-gold/50;
+  }
+
+  .modal-input {
+    @apply w-full rounded-xl border border-emerald-100 bg-white px-3 py-2.5 text-sm text-navy placeholder-navy/40 shadow-sm focus:outline-none focus:ring-2 focus:ring-navy-light/40 disabled:bg-navy/5 disabled:text-navy/40 disabled:shadow-none;
+  }
+
+  .modal-field-icon .modal-input {
+    @apply pl-10;
+  }
+
+  .modal-field-right .modal-input {
+    @apply pr-10;
+  }
+}
+
+@media print {
+  body:has(.print-area) * {
+    visibility: hidden;
+  }
+
+  body:has(.print-area) .print-area,
+  body:has(.print-area) .print-area * {
+    visibility: visible;
+  }
+
+  .print-area {
+    position: fixed;
+    inset: 0;
+    max-height: none !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+  }
+}
+
+@media print {
+  body:has(.print-report) * {
+    visibility: hidden;
+  }
+
+  body:has(.print-report) .print-report,
+  body:has(.print-report) .print-report * {
+    visibility: visible;
+  }
+
+  .print-report {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
   }
 }

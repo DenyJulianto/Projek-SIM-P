@@ -4,7 +4,15 @@ import CompleteNameForm from '../components/CompleteNameForm'
 import PasswordInput from '../components/PasswordInput'
 import { useAuth } from '../lib/AuthContext'
 import { api, IS_CENTRAL_DOMAIN } from '../lib/api'
-import LogoStacked from '../components/LogoStacked'
+import {
+  WavyBackground,
+  AuthHeroPanel,
+  AuthTagline,
+  MailIcon,
+  LockIcon,
+  AlertIcon,
+  ArrowRightIcon,
+} from '../components/AuthVisuals'
 
 export default function Login() {
   const { login, verifyTwoFactor, setUser } = useAuth()
@@ -78,31 +86,11 @@ export default function Login() {
       )}
 
       <div className="relative w-full max-w-5xl bg-white rounded-[2rem] shadow-2xl shadow-navy/10 overflow-hidden grid md:grid-cols-2">
-        <div className="relative bg-gradient-to-br from-emerald-500 via-emerald-700 to-navy text-white p-10 flex flex-col justify-between overflow-hidden">
-          <LogoStacked />
-
-          <div className="py-8">
-            <h2 className="text-3xl font-extrabold leading-tight mb-3">
-              Selamat Datang
-              <br />
-              <span className="text-emerald-300">Kembali!</span>
-            </h2>
-            <p className="text-white/70 text-sm leading-relaxed max-w-xs">
-              Tetap terhubung dengan sekolah — masuk dengan akun Anda untuk mengakses informasi
-              terbaru.
-            </p>
-
-            <div className="mt-8 flex items-center gap-6">
-              <Feature icon={<CheckIcon className="h-5 w-5" />} label={['Aman', 'dan Terpercaya']} />
-              <Feature icon={<BoltIcon className="h-5 w-5" />} label={['Cepat', 'dan Mudah']} />
-              <Feature icon={<UsersIcon className="h-5 w-5" />} label={['Untuk', 'Semua Stakeholder']} />
-            </div>
-          </div>
-
-          <div className="relative -mx-10 -mb-10">
-            <BuildingIllustration className="w-full h-auto" />
-          </div>
-        </div>
+        <AuthHeroPanel
+          titleLine1="Selamat Datang"
+          titleLine2="Kembali!"
+          description="Tetap terhubung dengan sekolah — masuk dengan akun Anda untuk mengakses informasi terbaru."
+        />
 
         <div className="p-8 sm:p-10 flex flex-col justify-center">
           {twoFactorChallenge ? (
@@ -156,14 +144,7 @@ export default function Login() {
             <CompleteNameForm user={{ email }} onDone={handleNameCompleted} />
           ) : (
             <>
-              <div className="flex items-start justify-end gap-1.5 text-emerald-700 text-xs font-medium text-right mb-4">
-                <LeafIcon className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-                <span>
-                  Teman Digital untuk
-                  <br />
-                  Perjalanan Belajarmu
-                </span>
-              </div>
+              <AuthTagline />
 
               <h1 className="text-4xl font-extrabold text-navy">Masuk</h1>
               <p className="text-navy/50 text-sm mt-1 mb-6">
@@ -173,7 +154,7 @@ export default function Login() {
               {error && (
                 <div className="flex items-start gap-3 text-red-600 bg-red-50 border border-red-200 rounded-xl text-sm py-3 px-4 mb-4">
                   <span className="flex-shrink-0 h-7 w-7 rounded-full bg-red-100 flex items-center justify-center mt-0.5">
-                    <MailWarningIcon className="h-4 w-4" />
+                    <AlertIcon className="h-4 w-4" />
                   </span>
                   <span>{error}</span>
                 </div>
@@ -248,153 +229,3 @@ export default function Login() {
   )
 }
 
-function Feature({ icon, label }) {
-  return (
-    <div className="flex flex-col items-center text-center gap-1.5 w-16">
-      <div className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center text-emerald-300">
-        {icon}
-      </div>
-      <p className="text-[10px] leading-tight">
-        <span className="block font-semibold text-white">{label[0]}</span>
-        <span className="block text-white/60">{label[1]}</span>
-      </p>
-    </div>
-  )
-}
-
-function LeafIcon(props) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M11 20A7 7 0 0 1 4 13c0-5 5-10 12-11 1 7-4 12-9 12" />
-      <path d="M4 13c3 0 6 1 8 3" />
-    </svg>
-  )
-}
-
-function MailIcon(props) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="2" y="4" width="20" height="16" rx="2" />
-      <path d="m2 6 10 7 10-7" />
-    </svg>
-  )
-}
-
-function LockIcon(props) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="4" y="10" width="16" height="10" rx="2" />
-      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-    </svg>
-  )
-}
-
-function MailWarningIcon(props) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="2" y="4" width="20" height="16" rx="2" />
-      <path d="m2 6 10 7 10-7" />
-    </svg>
-  )
-}
-
-function ArrowRightIcon(props) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-      <path d="M5 12h14" />
-      <path d="m13 6 6 6-6 6" />
-    </svg>
-  )
-}
-
-function CheckIcon(props) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="9" />
-      <path d="m8 12.5 2.5 2.5L16 9.5" />
-    </svg>
-  )
-}
-
-function BoltIcon(props) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z" />
-    </svg>
-  )
-}
-
-function UsersIcon(props) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="9" cy="8" r="3.5" />
-      <path d="M2.5 20c0-3.6 2.9-6.5 6.5-6.5s6.5 2.9 6.5 6.5" />
-      <path d="M16 4.5c1.7.3 3 1.8 3 3.5s-1.3 3.2-3 3.5" />
-      <path d="M18.5 13.7c2 .7 3.5 2.8 3.5 6.3" />
-    </svg>
-  )
-}
-
-function BuildingIllustration(props) {
-  return (
-    <svg {...props} viewBox="0 0 400 130" fill="none" preserveAspectRatio="xMidYMax slice">
-      <rect x="0" y="112" width="400" height="18" fill="white" fillOpacity="0.06" />
-
-      <g opacity="0.5">
-        <rect x="38" y="76" width="6" height="30" fill="white" fillOpacity="0.3" />
-        <circle cx="41" cy="66" r="18" fill="#6ee7b7" fillOpacity="0.4" />
-      </g>
-      <g opacity="0.5">
-        <rect x="352" y="80" width="6" height="26" fill="white" fillOpacity="0.3" />
-        <circle cx="355" cy="70" r="16" fill="#6ee7b7" fillOpacity="0.4" />
-      </g>
-
-      <polygon points="128,42 200,10 272,42" fill="#6ee7b7" fillOpacity="0.55" />
-      <rect x="138" y="42" width="124" height="64" rx="2" fill="white" fillOpacity="0.14" stroke="white" strokeOpacity="0.2" />
-
-      <rect x="152" y="54" width="20" height="18" rx="1" fill="#fcd34d" fillOpacity="0.6" />
-      <rect x="182" y="54" width="20" height="18" rx="1" fill="#fcd34d" fillOpacity="0.6" />
-      <rect x="228" y="54" width="20" height="18" rx="1" fill="#fcd34d" fillOpacity="0.6" />
-
-      <rect x="190" y="82" width="20" height="24" rx="1" fill="white" fillOpacity="0.25" />
-    </svg>
-  )
-}
-
-function WavyBackground(props) {
-  return (
-    <svg {...props} viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" fill="none">
-      <defs>
-        <linearGradient id="wbg1" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#a7f3d0" />
-          <stop offset="100%" stopColor="#d1fae5" />
-        </linearGradient>
-        <linearGradient id="wbg2" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#6ee7b7" />
-          <stop offset="100%" stopColor="#34d399" />
-        </linearGradient>
-        <linearGradient id="wbg3" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#14a673" />
-          <stop offset="100%" stopColor="#0b3d2e" />
-        </linearGradient>
-      </defs>
-      <rect width="1440" height="900" fill="#ecfdf5" />
-      <path
-        d="M0 120 C 240 40, 480 200, 760 120 S 1300 20, 1440 140 L1440 0 L0 0 Z"
-        fill="url(#wbg1)"
-        opacity="0.6"
-      />
-      <path
-        d="M0 900 C 300 760, 620 900, 900 760 S 1250 640, 1440 760 L1440 900 L0 900 Z"
-        fill="url(#wbg2)"
-        opacity="0.5"
-      />
-      <path d="M900 900 C 1050 700, 1250 760, 1440 620 L1440 900 Z" fill="url(#wbg3)" opacity="0.45" />
-      <path
-        d="M0 500 C 200 420, 420 560, 640 480 S 1000 380, 1200 480 L1200 900 L0 900 Z"
-        fill="url(#wbg2)"
-        opacity="0.25"
-      />
-    </svg>
-  )
-}
