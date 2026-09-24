@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import ComingSoon from '../components/ComingSoon'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import { useAuth } from '../lib/AuthContext'
-import { api } from '../lib/api'
+import { api, BASE_URL } from '../lib/api'
 import AttendanceRecap from './AttendanceRecap'
 import KelasManagement from './KelasManagement'
 import MyProfile from './MyProfile'
@@ -16,7 +16,7 @@ import RekapPembinaanManagement from './RekapPembinaanManagement'
 import RekapPrestasi from './RekapPrestasi'
 import SiswaManagement from './SiswaManagement'
 import StatistikSiswa from './StatistikSiswa'
-import LogoHorizontal from '../components/LogoHorizontal'
+import logoLambang from '../assets/logo-sim-lambang.png'
 import NotifBell from '../components/NotifBell'
 
 const MENU_GROUPS = [
@@ -67,6 +67,16 @@ export default function KesiswaanDashboard() {
   const [view, setView] = useState('home')
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const [openSection, setOpenSection] = useState(null)
+  const [sekolah, setSekolah] = useState(null)
+
+  useEffect(() => {
+    api.getProfil().then(setSekolah).catch(() => {})
+  }, [])
+
+  // Sapaan mengikuti jenis kelamin di profil; kalau belum diisi, dipakai "Bapak/Ibu".
+  const sapaan = { L: 'Bapak', P: 'Ibu' }[user?.jenis_kelamin] || 'Bapak/Ibu'
+  const namaLengkap = [user?.name, user?.gelar].filter(Boolean).join(', ')
+  const avatarSrc = user?.avatar_url ? `${BASE_URL}${user.avatar_url}` : null
 
   useEffect(() => {
     const activeGroup = MENU_GROUPS.find(
@@ -80,22 +90,35 @@ export default function KesiswaanDashboard() {
   }
 
   const itemClass = (active) =>
-    `w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors text-left ${
-      active ? 'bg-emerald-50 text-navy font-semibold shadow-sm' : 'text-white/80 hover:bg-white/10 hover:text-white'
+    `w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all text-left ${
+      active
+        ? 'bg-gradient-to-r from-emerald-600 to-teal-500 text-white shadow-lg shadow-emerald-600/30'
+        : 'text-navy/70 hover:bg-emerald-50 hover:text-navy'
     }`
 
   return (
-    <div className="h-screen bg-[#f4faf7] flex overflow-hidden">
-      <aside className="w-64 shrink-0 bg-gradient-to-b from-[#0d5c40] to-[#0a3f2c] text-white flex flex-col pt-6 h-screen">
-        <div className="flex items-center gap-2 px-6 mb-6">
-          <LogoHorizontal />
-        </div>
+    <div className="h-screen bg-gradient-to-br from-emerald-300 via-emerald-200 to-teal-300 flex overflow-hidden">
+      <aside className="relative w-64 shrink-0 bg-white/75 backdrop-blur-xl text-navy flex flex-col py-6 px-4 h-screen shadow-xl shadow-emerald-900/10 border-r border-white/60">
+        <button
+          type="button"
+          onClick={() => setView('home')}
+          title="Ke Dashboard"
+          className="flex items-center gap-2.5 px-2 mb-6 text-left hover:opacity-90 transition-opacity"
+        >
+          <div className="h-16 w-16 rounded-full bg-white ring-2 ring-white/60 shadow-md shadow-emerald-900/15 overflow-hidden shrink-0">
+            <img src={logoLambang} alt="Logo SIM Pendidikan" className="h-full w-full object-cover" />
+          </div>
+          <span className="min-w-0">
+            <span className="block font-bold text-navy leading-tight">SIM Pendidikan</span>
+            <span className="block text-[11px] leading-snug mt-1 text-navy/55">Mendampingi Siswa, Membangun Karakter.</span>
+          </span>
+        </button>
 
-        <nav className="flex-1 space-y-1.5 overflow-y-auto px-3">
+        <nav className="flex-1 space-y-1 overflow-y-auto pr-1">
           {MENU_GROUPS.map((group, gi) => {
             if (!group.section) {
               return (
-                <div key={gi} className="space-y-1.5 pb-1.5">
+                <div key={gi} className="space-y-1 pb-1.5">
                   {group.items.map((item) => {
                     const Icon = item.icon
                     return (
@@ -116,15 +139,15 @@ export default function KesiswaanDashboard() {
               <div key={gi} className="pb-1">
                 <button
                   onClick={() => toggleSection(group.section)}
-                  className={`w-full flex items-center justify-between gap-2 px-4 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider transition-colors ${
-                    hasActiveItem ? 'text-white' : 'text-white/55 hover:text-white/85'
+                  className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-colors ${
+                    hasActiveItem ? 'text-emerald-700' : 'text-navy/45 hover:text-navy/75'
                   }`}
                 >
                   <span className="truncate min-w-0">{group.section}</span>
                   <ChevronIcon className={`h-3.5 w-3.5 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {isOpen && (
-                  <div className="space-y-1.5 mt-1">
+                  <div className="space-y-1 mt-1">
                     {group.items.map((item) => {
                       const Icon = item.icon
                       return (
@@ -141,21 +164,52 @@ export default function KesiswaanDashboard() {
           })}
         </nav>
 
-        <div className="mt-2 px-4 py-4 border-t border-white/10 flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-white/90 text-navy flex items-center justify-center shrink-0">
+        <div className="mt-2 px-2 py-3 border-t border-navy/10 flex items-center gap-3">
+          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-600 to-teal-500 text-white flex items-center justify-center shrink-0 shadow-sm">
             <ProfileIcon className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold truncate">{user?.name}</p>
-            <p className="text-xs text-white/60 truncate">Admin Kesiswaan</p>
+            <p className="text-sm font-semibold text-navy truncate">{user?.name}</p>
+            <p className="text-xs text-navy/50 truncate">Admin Kesiswaan</p>
           </div>
-          <button onClick={() => setConfirmingLogout(true)} title="Keluar" className="p-2 rounded-full text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+          <button onClick={() => setConfirmingLogout(true)} title="Keluar" className="p-2 rounded-full text-navy/50 hover:bg-emerald-50 hover:text-navy transition-colors">
             <LogoutIcon className="h-5 w-5" />
           </button>
         </div>
       </aside>
 
-      <main className="flex-1 p-6 sm:p-8 overflow-y-auto">
+      <main className="relative flex-1 overflow-y-auto">
+        <KesiswaanDoodleBackground />
+
+        <div className="kesiswaan-theme relative p-6 sm:p-8">
+        {view === 'home' && (
+          <div
+            className="relative overflow-hidden rounded-2xl p-6 mb-6 shadow-lg shadow-emerald-800/20 flex items-center gap-5"
+            style={{ backgroundImage: 'linear-gradient(135deg, #059669 0%, #0D9488 100%)' }}
+          >
+            <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-white/10" />
+            <div className="pointer-events-none absolute right-40 -bottom-14 h-28 w-28 rounded-full bg-white/10" />
+            <button
+              onClick={() => setView('profile')}
+              title="Buka profil"
+              className="relative h-16 w-16 rounded-full shadow-lg overflow-hidden shrink-0 bg-white/95 text-emerald-700 text-xl font-bold flex items-center justify-center"
+            >
+              {avatarSrc ? (
+                <img src={avatarSrc} alt="Foto profil" className="h-full w-full object-cover" />
+              ) : (
+                user?.name?.[0]?.toUpperCase() || '?'
+              )}
+            </button>
+            <div className="relative min-w-0">
+              <h2 className="text-xl sm:text-2xl font-extrabold text-white leading-tight">
+                Selamat Datang, {[sapaan, namaLengkap].filter(Boolean).join(' ')}
+              </h2>
+              <p className="text-sm text-white/90">
+                Anda adalah admin kesiswaan{sekolah?.nama_sekolah ? ` di ${sekolah.nama_sekolah}` : ''}
+              </p>
+            </div>
+          </div>
+        )}
         {view === 'home' && <KesiswaanHome user={user} onNavigate={setView} />}
         {view === 'siswa' && <SiswaManagement onBack={() => setView('home')} />}
         {view === 'ppdb' && <PpdbManagement onBack={() => setView('home')} />}
@@ -172,7 +226,7 @@ export default function KesiswaanDashboard() {
         {view === 'rekap-pelanggaran' && <RekapPelanggaran onBack={() => setView('home')} />}
         {view === 'rekap-prestasi' && <RekapPrestasi onBack={() => setView('home')} />}
         {view === 'statistik-siswa' && <StatistikSiswa onBack={() => setView('home')} />}
-        {view === 'profile' && <MyProfile onBack={() => setView('home')} />}
+        {view === 'profile' && <MyProfile onBack={() => setView('home')} staffProfile />}
         {COMING_SOON_LABEL[view] && (
           <div>
             <button onClick={() => setView('home')} className="text-sm text-navy/50 hover:text-navy mb-1">
@@ -181,6 +235,7 @@ export default function KesiswaanDashboard() {
             <ComingSoon title={COMING_SOON_LABEL[view][0]} description={COMING_SOON_LABEL[view][1]} />
           </div>
         )}
+        </div>
       </main>
 
       {confirmingLogout && (
@@ -697,6 +752,66 @@ function LogoutIcon(props) {
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
       <path d="M16 17l5-5-5-5M21 12H9" />
+    </svg>
+  )
+}
+
+function KesiswaanDoodleBackground() {
+  const doodles = [
+    { Icon: DoodleBookIcon, className: 'top-6 right-[8%] h-20 w-20 -rotate-6' },
+    { Icon: DoodlePencilIcon, className: 'top-40 right-[3%] h-16 w-16 rotate-12' },
+    { Icon: DoodleBulbIcon, className: 'top-[42%] right-[10%] h-16 w-16 -rotate-6' },
+    { Icon: DoodleCapIcon, className: 'top-[68%] right-[4%] h-20 w-20 rotate-6' },
+    { Icon: DoodleBookIcon, className: 'top-[80%] right-[26%] h-14 w-14 rotate-12' },
+    { Icon: DoodlePencilIcon, className: 'top-[10%] right-[34%] h-12 w-12 -rotate-45' },
+    { Icon: DoodleBulbIcon, className: 'top-[55%] left-[3%] h-14 w-14 rotate-6' },
+    { Icon: DoodleCapIcon, className: 'top-[88%] left-[14%] h-16 w-16 -rotate-6' },
+    { Icon: DoodlePencilIcon, className: 'top-[30%] left-[1.5%] h-12 w-12 rotate-45' },
+    { Icon: DoodleBookIcon, className: 'top-[74%] left-[38%] h-14 w-14 -rotate-12' },
+  ]
+  return (
+    <div className="pointer-events-none fixed inset-y-0 right-0 left-64 overflow-hidden">
+      <div className="absolute -top-24 -right-24 h-80 w-80 rounded-full bg-white/25 blur-3xl" />
+      <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-teal-200/40 blur-3xl" />
+      {doodles.map((d, i) => (
+        <d.Icon key={i} className={`absolute text-white/55 ${d.className}`} />
+      ))}
+    </div>
+  )
+}
+
+function DoodleBookIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" />
+    </svg>
+  )
+}
+
+function DoodlePencilIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  )
+}
+
+function DoodleBulbIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 18h6M10 21h4" />
+      <path d="M12 3a6 6 0 0 0-4 10.5c.6.5 1 1.3 1 2.1V16h6v-.4c0-.8.4-1.6 1-2.1A6 6 0 0 0 12 3Z" />
+    </svg>
+  )
+}
+
+function DoodleCapIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m2 8 10-5 10 5-10 5-10-5Z" />
+      <path d="M6 10.5V16c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5v-5.5" />
     </svg>
   )
 }

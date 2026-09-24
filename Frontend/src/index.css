@@ -203,45 +203,58 @@ body {
 }
 
 /* Tema role Kurikulum: kartu kaca di atas latar hijau, tabel berheader hijau. */
-.kurikulum-theme .bg-white {
+.kurikulum-theme,
+.kesiswaan-theme .bg-white {
   background-color: rgb(255 255 255 / 0.7);
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
 }
 
-.kurikulum-theme .rounded-2xl.bg-white,
-.kurikulum-theme .rounded-xl.bg-white {
+.kurikulum-theme,
+.kesiswaan-theme .rounded-2xl.bg-white,
+.kurikulum-theme,
+.kesiswaan-theme .rounded-xl.bg-white {
   box-shadow: 0 12px 32px -14px rgb(6 78 59 / 0.35);
 }
 
-.kurikulum-theme .border-navy\/10,
-.kurikulum-theme .border-navy\/5,
-.kurikulum-theme .border-navy\/15 {
+.kurikulum-theme,
+.kesiswaan-theme .border-navy\/10,
+.kurikulum-theme,
+.kesiswaan-theme .border-navy\/5,
+.kurikulum-theme,
+.kesiswaan-theme .border-navy\/15 {
   border-color: rgb(255 255 255 / 0.8);
 }
 
 /* Modal tetap putih solid supaya terbaca. */
-.kurikulum-theme .fixed .bg-white {
+.kurikulum-theme,
+.kesiswaan-theme .fixed .bg-white {
   background-color: #fff;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
 
-.kurikulum-theme thead,
-.kurikulum-theme thead tr {
+.kurikulum-theme,
+.kesiswaan-theme thead,
+.kurikulum-theme,
+.kesiswaan-theme thead tr {
   background-image: linear-gradient(to right, #14a673, #059669);
 }
 
-.kurikulum-theme thead th,
-.kurikulum-theme thead td {
+.kurikulum-theme,
+.kesiswaan-theme thead th,
+.kurikulum-theme,
+.kesiswaan-theme thead td {
   color: #fff !important;
 }
 
-.kurikulum-theme tbody tr:nth-child(even) {
+.kurikulum-theme,
+.kesiswaan-theme tbody tr:nth-child(even) {
   background-color: rgb(209 250 229 / 0.45);
 }
 
-.kurikulum-theme tbody tr:hover {
+.kurikulum-theme,
+.kesiswaan-theme tbody tr:hover {
   background-color: rgb(167 243 208 / 0.5);
 }
 
