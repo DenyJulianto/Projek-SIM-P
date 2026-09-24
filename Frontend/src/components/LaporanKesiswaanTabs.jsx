@@ -488,9 +488,9 @@ export function PemilihSiswa({ terpilih, onPilih }) {
 
 // -------------------------------------------------------------------- mutasi
 
-export function FormMutasi({ onClose, onSaved }) {
+export function FormMutasi({ onClose, onSaved, jenisAwal = 'keluar' }) {
   const [siswa, setSiswa] = useState(null)
-  const [f, setF] = useState({ jenis: 'keluar', tanggal: new Date().toISOString().slice(0, 10), asal_sekolah: '', tujuan_sekolah: '', alasan: '', keterangan: '', terapkan_status: false })
+  const [f, setF] = useState({ jenis: jenisAwal, tanggal: new Date().toISOString().slice(0, 10), asal_sekolah: '', tujuan_sekolah: '', alasan: '', keterangan: '', terapkan_status: false })
   const [error, setError] = useState('')
   const [sibuk, setSibuk] = useState(false)
   const u = (k, v) => setF((x) => ({ ...x, [k]: v }))

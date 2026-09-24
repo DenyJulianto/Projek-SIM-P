@@ -27,10 +27,13 @@ const MENU_GROUPS = [
       { key: 'siswa', label: 'Data Siswa', icon: StudentIcon },
       { key: 'ppdb', label: 'PPDB', icon: DocIcon },
       { key: 'kelas-rombel', label: 'Kelas & Rombel', icon: ClassIcon },
+      { heading: 'Mutasi Siswa' },
+      { key: 'mutasi-masuk', label: 'Siswa Masuk', icon: DoorEnterIcon, indent: true },
+      { key: 'mutasi-keluar', label: 'Siswa Keluar', icon: DoorExitIcon, indent: true },
     ],
   },
   {
-    section: 'Pembinaan',
+    section: 'Pembinaan Siswa',
     items: [
       { key: 'pelanggaran', label: 'Pelanggaran', icon: AlertIcon },
       { key: 'prestasi', label: 'Prestasi', icon: TrophyIcon },
@@ -48,11 +51,20 @@ const MENU_GROUPS = [
     ],
   },
   {
+    section: 'Layanan Siswa',
+    items: [
+      { key: 'pengajuan-surat', label: 'Pengajuan Surat', icon: MailIcon },
+      { key: 'beasiswa', label: 'Beasiswa', icon: StarIcon },
+      { key: 'dokumen-siswa', label: 'Dokumen Siswa', icon: FolderIcon },
+    ],
+  },
+  {
     section: 'Laporan',
     items: [
       { key: 'laporan-kesiswaan', label: 'Laporan Kesiswaan', icon: DocIcon },
       { key: 'statistik-siswa', label: 'Statistik Siswa', icon: ChartIcon },
       { key: 'rekap-pembinaan', label: 'Rekap Pembinaan', icon: ReportIcon },
+      { key: 'rekap-mutasi', label: 'Rekap Mutasi Siswa', icon: ReportIcon },
     ],
   },
   { section: null, items: [{ key: 'profile', label: 'Profil Saya', icon: ProfileIcon }] },
@@ -60,6 +72,9 @@ const MENU_GROUPS = [
 
 const COMING_SOON_LABEL = {
   'organisasi-siswa': ['Organisasi Siswa', 'Pengelolaan data organisasi siswa (OSIS, dll.) sedang disiapkan.'],
+  'pengajuan-surat': ['Pengajuan Surat', 'Layanan pengajuan surat keterangan siswa sedang disiapkan.'],
+  beasiswa: ['Beasiswa', 'Pengelolaan data beasiswa siswa sedang disiapkan.'],
+  'dokumen-siswa': ['Dokumen Siswa', 'Arsip dokumen siswa (ijazah, akta, KK, dll.) sedang disiapkan.'],
 }
 
 export default function KesiswaanDashboard() {
@@ -132,8 +147,29 @@ export default function KesiswaanDashboard() {
               )
             }
 
+            const renderItem = (item) => {
+              if (item.heading) {
+                return (
+                  <p key={item.heading} className="px-4 pt-1.5 pb-0.5 text-[10px] font-bold uppercase tracking-wider text-navy/35">
+                    {item.heading}
+                  </p>
+                )
+              }
+              const Icon = item.icon
+              return (
+                <button
+                  key={item.key}
+                  onClick={() => setView(item.key)}
+                  className={`${itemClass(view === item.key)} ${item.indent ? 'pl-7' : ''}`}
+                >
+                  <Icon className="h-4.5 w-4.5 shrink-0" />
+                  <span className="truncate min-w-0">{item.label}</span>
+                </button>
+              )
+            }
+
             const isOpen = openSection === group.section
-            const hasActiveItem = group.items.some((item) => item.key === view)
+            const hasActiveItem = group.items.some((item) => !item.heading && item.key === view)
 
             return (
               <div key={gi} className="pb-1">
@@ -146,19 +182,7 @@ export default function KesiswaanDashboard() {
                   <span className="truncate min-w-0">{group.section}</span>
                   <ChevronIcon className={`h-3.5 w-3.5 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                 </button>
-                {isOpen && (
-                  <div className="space-y-1 mt-1">
-                    {group.items.map((item) => {
-                      const Icon = item.icon
-                      return (
-                        <button key={item.key} onClick={() => setView(item.key)} className={itemClass(view === item.key)}>
-                          <Icon className="h-4.5 w-4.5 shrink-0" />
-                          <span className="truncate min-w-0">{item.label}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
+                {isOpen && <div className="space-y-1 mt-1">{group.items.map(renderItem)}</div>}
               </div>
             )
           })}
@@ -215,6 +239,13 @@ export default function KesiswaanDashboard() {
         {view === 'ppdb' && <PpdbManagement onBack={() => setView('home')} />}
         {view === 'ekstrakurikuler' && <EkskulManagement onBack={() => setView('home')} />}
         {view === 'laporan-kesiswaan' && <LaporanKesiswaanManagement onBack={() => setView('home')} />}
+        {view === 'mutasi-masuk' && (
+          <LaporanKesiswaanManagement onBack={() => setView('home')} tabAwal="mutasi" jenisMutasiAwal="masuk" />
+        )}
+        {view === 'mutasi-keluar' && (
+          <LaporanKesiswaanManagement onBack={() => setView('home')} tabAwal="mutasi" jenisMutasiAwal="keluar" />
+        )}
+        {view === 'rekap-mutasi' && <LaporanKesiswaanManagement onBack={() => setView('home')} tabAwal="mutasi" />}
         {view === 'rekap-ekskul' && <EkskulManagement onBack={() => setView('home')} tabAwal="laporan" />}
         {view === 'kelas-rombel' && <KelasManagement onBack={() => setView('home')} />}
         {view === 'pelanggaran' && <PelanggaranManagement onBack={() => setView('home')} />}
@@ -752,6 +783,41 @@ function LogoutIcon(props) {
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
       <path d="M16 17l5-5-5-5M21 12H9" />
+    </svg>
+  )
+}
+
+function DoorEnterIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9" />
+      <path d="M10 12h11M17 8l4 4-4 4" />
+    </svg>
+  )
+}
+
+function DoorExitIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9" />
+      <path d="M21 12H10M14 8l-4 4 4 4" />
+    </svg>
+  )
+}
+
+function MailIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m3 7 9 6 9-6" />
+    </svg>
+  )
+}
+
+function FolderIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
     </svg>
   )
 }

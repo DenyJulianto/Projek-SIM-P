@@ -41,13 +41,13 @@ const KEHADIRAN_REKAP = [
   ['semester', 'Semester'],
 ]
 
-export default function LaporanKesiswaanManagement({ onBack, tabAwal = 'dashboard' }) {
+export default function LaporanKesiswaanManagement({ onBack, tabAwal = 'dashboard', jenisMutasiAwal = '' }) {
   const [opsi, setOpsi] = useState(null)
   const [tab, setTab] = useState(tabAwal)
   const [f, setF] = useState({ tahun_ajaran_id: '', semester: '', dari: '', sampai: '', jenjang: '', tingkat: '', kelas_id: '', status: '' })
   const [search, setSearch] = useState('')
   const [jalur, setJalur] = useState('')
-  const [jenisMutasi, setJenisMutasi] = useState('')
+  const [jenisMutasi, setJenisMutasi] = useState(jenisMutasiAwal)
   const [rekap, setRekap] = useState('siswa')
   const [ambang, setAmbang] = useState('75')
   const [siswa, setSiswa] = useState(null)
@@ -334,6 +334,7 @@ export default function LaporanKesiswaanManagement({ onBack, tabAwal = 'dashboar
       {formMutasi && (
         <FormMutasi
           onClose={() => setFormMutasi(false)}
+          jenisAwal={jenisMutasiAwal || 'keluar'}
           onSaved={() => {
             setFormMutasi(false)
             setInfo('Mutasi dicatat.')
