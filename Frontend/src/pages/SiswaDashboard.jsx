@@ -1,10 +1,10 @@
+import logoLambang from '../assets/logo-sim-lambang.png'
 import { useEffect, useRef, useState } from 'react'
 import ComingSoon from '../components/ComingSoon'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import { useAuth } from '../lib/AuthContext'
 import { api, BASE_URL } from '../lib/api'
 import MyProfile from './MyProfile'
-import LogoHorizontal from '../components/LogoHorizontal'
 
 const MENU_GROUPS = [
   { section: null, items: [{ key: 'home', label: 'Dashboard', icon: HomeIcon }] },
@@ -106,13 +106,13 @@ export default function SiswaDashboard() {
       <header className="relative z-30 shrink-0 bg-gradient-to-r from-navy via-navy to-navy-light shadow-lg flex items-center justify-between gap-4 px-6 h-16">
         <div className="flex items-center gap-6 min-w-0 flex-1">
           <div className="flex items-center gap-3 shrink-0">
-            <LogoHorizontal
-              badgeClassName="h-11 w-11"
-              iconClassName="h-6 w-6"
-              textClassName="text-base"
-              subtitle="Teman Digital untuk Perjalanan Belajarmu"
-              className="shrink-0"
-            />
+            <div className="h-12 w-12 rounded-full bg-white ring-2 ring-white/40 shadow-md overflow-hidden shrink-0">
+              <img src={logoLambang} alt="Logo SIM Pendidikan" className="h-full w-full object-cover" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-bold tracking-wide text-sm text-white">SIM Pendidikan</p>
+              <p className="text-[11px] leading-snug mt-0.5 text-white/60 whitespace-nowrap">Teman Digital untuk Perjalanan Belajarmu</p>
+            </div>
           </div>
 
           <nav className="hidden lg:flex items-center gap-1">
@@ -299,13 +299,16 @@ function SiswaHome({ user, siswa, onNavigate }) {
 
   return (
     <div className="space-y-5">
-      <div className="relative overflow-hidden bg-gradient-to-br from-navy to-navy-light rounded-2xl p-6">
+      <div
+        className="relative overflow-hidden rounded-2xl p-6 shadow-lg shadow-emerald-700/20"
+        style={{ backgroundImage: 'linear-gradient(135deg, #059669 0%, #0D9488 100%)' }}
+      >
         <div className="pointer-events-none absolute -right-8 -top-10 h-36 w-36 rounded-full bg-white/10" />
         <div className="pointer-events-none absolute right-20 -bottom-10 h-24 w-24 rounded-full bg-white/10" />
         <h1 className="relative text-xl font-extrabold text-white mb-1.5">
           Hai, {siswa?.nama || user?.name} 👋
         </h1>
-        <p className="relative text-white/70 text-sm">Siap belajar hal baru hari ini?</p>
+        <p className="relative text-white/85 text-sm">Siap belajar hal baru hari ini?</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)] gap-5 items-start">
