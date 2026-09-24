@@ -124,6 +124,29 @@ class StudentSelfController extends Controller
         return response()->json($tagihan);
     }
 
+    /**
+     * Saldo uang jajan digital siswa beserta riwayat transaksinya (mis. isi
+     * saldo dari orang tua). Read-only — pengisian dilakukan orang tua lewat
+     * ParentSelfController::isiSaldo.
+     */
+    public function saldo(Request $request): JsonResponse
+    {
+        $siswa = $this->siswaFor($request);
+
+        $riwayat = $siswa->saldoTransaksi()
+            ->with('diisiOleh:id,name')
+            ->latest()
+            ->limit(50)
+            ->get();
+
+        return response()->json([
+            'saldo' => (float) ($siswa->saldo?->saldo ?? 0),
+            'total_masuk' => (float) $siswa->saldoTransaksi()->where('jenis', 'masuk')->sum('jumlah'),
+            'total_keluar' => (float) $siswa->saldoTransaksi()->where('jenis', 'keluar')->sum('jumlah'),
+            'riwayat' => $riwayat,
+        ]);
+    }
+
     public function prestasi(Request $request): JsonResponse
     {
         $siswa = $this->siswaFor($request);

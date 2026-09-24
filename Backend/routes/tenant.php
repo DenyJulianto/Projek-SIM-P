@@ -157,6 +157,7 @@ Route::middleware([
         Route::post('/me/siswa/absensi/ajukan', [StudentSelfController::class, 'ajukanAbsensi']);
         Route::put('/me/siswa/absensi/{absensi}/keterangan', [StudentSelfController::class, 'updateKeteranganAbsensi']);
         Route::get('/me/siswa/tagihan', [StudentSelfController::class, 'tagihan']);
+        Route::get('/me/siswa/saldo', [StudentSelfController::class, 'saldo']);
         Route::get('/me/siswa/prestasi', [StudentSelfController::class, 'prestasi']);
         Route::post('/me/siswa/prestasi', [StudentSelfController::class, 'submitPrestasi']);
         Route::delete('/me/siswa/prestasi/{prestasi}', [StudentSelfController::class, 'destroyPrestasi']);

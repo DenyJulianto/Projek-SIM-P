@@ -1,43 +1,55 @@
-import { useAuth } from '../lib/AuthContext'
-
 export default function LogoutConfirmModal({ onConfirm, onClose }) {
-  const { user } = useAuth()
-  const roleName = user?.roles?.[0]?.name || 'Anda'
-
   return (
-    <div className="fixed inset-0 bg-navy/50 flex items-center justify-center z-50 p-4">
-      <div className="relative bg-white rounded-3xl max-w-sm w-full p-7 text-center shadow-2xl">
+    <div
+      className="fixed inset-0 z-50 bg-emerald-950/55 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="modal-pop relative w-full max-w-sm overflow-hidden rounded-3xl border border-white bg-gradient-to-br from-white via-emerald-50 to-teal-100 px-8 pt-10 pb-8 text-center shadow-2xl shadow-emerald-900/30"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="logout-title"
+      >
+        <div className="pointer-events-none absolute -top-16 -right-16 h-44 w-44 rounded-full bg-emerald-300/30" />
+        <div className="pointer-events-none absolute -bottom-20 -left-16 h-44 w-44 rounded-full bg-teal-300/25" />
+
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 text-navy/30 hover:text-navy/60 transition-colors"
+          className="absolute top-4 right-4 h-8 w-8 rounded-full bg-white/80 hover:bg-white border border-emerald-200 text-emerald-800 flex items-center justify-center transition-colors"
           aria-label="Tutup"
         >
-          <CloseIcon className="h-5 w-5" />
+          <CloseIcon className="h-4 w-4" />
         </button>
 
-        <DoorIllustration className="h-32 w-auto mx-auto mb-4" />
+        <div className="relative mx-auto mb-6 h-24 w-24 rounded-full bg-emerald-100/80 ring-8 ring-emerald-50 flex items-center justify-center">
+          <div className="h-16 w-16 rounded-full bg-gradient-to-br from-emerald-500 to-teal-700 text-white flex items-center justify-center shadow-lg shadow-emerald-700/40">
+            <LogoutIcon className="h-8 w-8" />
+          </div>
+        </div>
 
-        <h2 className="text-lg font-extrabold text-navy mb-2">Keluar dari Akun?</h2>
-        <p className="text-sm text-navy/50 mb-6 leading-relaxed">
-          Apakah kamu yakin ingin keluar dari akun {roleName}? Kamu harus login kembali untuk mengakses sistem.
+        <h2 id="logout-title" className="relative text-2xl font-extrabold text-teal-900 mb-2">
+          Keluar dari akun?
+        </h2>
+        <p className="relative text-sm text-navy/60 leading-relaxed mb-8">
+          Anda perlu login kembali untuk mengakses halaman ini.
         </p>
 
-        <div className="flex items-center justify-center gap-3">
+        <div className="relative grid grid-cols-2 gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 border border-navy-light text-navy-light font-bold py-2.5 rounded-full hover:bg-navy-light/5 transition-colors"
+            className="rounded-xl bg-white/80 hover:bg-white border border-emerald-200 text-teal-800 font-bold py-3 transition-colors"
           >
             Batal
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="flex-1 inline-flex items-center justify-center gap-2 bg-navy hover:bg-navy/90 text-white font-bold py-2.5 rounded-full transition-colors"
+            className="rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold py-3 shadow-md shadow-emerald-700/30 transition-colors"
           >
-            <LogoutDoorIcon className="h-4 w-4" />
-            Logout
+            Ya, Keluar
           </button>
         </div>
       </div>
@@ -45,55 +57,19 @@ export default function LogoutConfirmModal({ onConfirm, onClose }) {
   )
 }
 
-function DoorIllustration({ className }) {
+function CloseIcon(props) {
   return (
-    <svg viewBox="0 0 200 170" className={className} aria-hidden="true">
-      <ellipse cx="100" cy="95" rx="85" ry="68" fill="#eef6f0" />
-      <path
-        d="M40 130 Q18 92 54 54 Q90 18 140 34 Q176 47 165 90 Q155 131 109 146 Q64 159 40 130Z"
-        fill="#e3f0e6"
-        opacity="0.7"
-      />
-
-      <g>
-        <path d="M32 138 L58 138 L54 112 Q45 106 36 112 Z" fill="#fdfdfb" stroke="#dfe6e0" strokeWidth="1.5" />
-        <path d="M45 112 Q33 90 21 98" stroke="#2f8f5f" strokeWidth="5" strokeLinecap="round" fill="none" />
-        <path d="M45 112 Q45 86 57 92" stroke="#3fbf8f" strokeWidth="5" strokeLinecap="round" fill="none" />
-        <path d="M45 112 Q49 82 39 78" stroke="#1f7a4f" strokeWidth="5" strokeLinecap="round" fill="none" />
-      </g>
-
-      <rect x="78" y="28" width="64" height="112" rx="6" fill="#bfe3cd" />
-      <path d="M84 34 L128 40 L128 128 L84 134 Z" fill="#2f8f5f" />
-      <circle cx="119" cy="86" r="3" fill="#eaf6ee" />
-      <path
-        d="M96 84 H124 M114 74 L126 84 L114 94"
-        stroke="#ffffff"
-        strokeWidth="5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-
-      <path d="M150 40 L162 32" stroke="#1f7a4f" strokeWidth="4" strokeLinecap="round" />
-      <path d="M157 55 L171 51" stroke="#1f7a4f" strokeWidth="4" strokeLinecap="round" />
-      <path d="M151 68 L164 70" stroke="#1f7a4f" strokeWidth="4" strokeLinecap="round" />
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <path d="M18 6 6 18M6 6l12 12" />
     </svg>
   )
 }
 
-function LogoutDoorIcon(props) {
+function LogoutIcon(props) {
   return (
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
       <path d="M16 17l5-5-5-5M21 12H9" />
-    </svg>
-  )
-}
-
-function CloseIcon({ strokeWidth = 2, ...props }) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round">
-      <path d="M18 6 6 18M6 6l12 12" />
     </svg>
   )
 }
