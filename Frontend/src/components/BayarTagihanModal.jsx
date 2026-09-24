@@ -1,3 +1,4 @@
+import ModalCloseButton from './ModalCloseButton'
 import { useState } from 'react'
 import { api } from '../lib/api'
 
@@ -30,8 +31,9 @@ export default function BayarTagihanModal({ tagihan, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-navy/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl max-w-sm w-full p-6">
+    <div className="fixed inset-0 z-[100] bg-teal-950/50 backdrop-blur-[2px] flex items-center justify-center p-4">
+      <div className="tm-panel relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white rounded-3xl max-w-sm w-full shadow-2xl shadow-teal-900/20 p-6">
+<ModalCloseButton onClose={onClose} />
         <h2 className="text-lg font-bold text-navy mb-1">Catat Pembayaran</h2>
         <p className="text-xs text-navy/50 mb-4">
           {tagihan.judul} — {tagihan.siswa?.nama}
@@ -77,7 +79,7 @@ export default function BayarTagihanModal({ tagihan, onClose, onSaved }) {
             <button
               type="submit"
               disabled={saving}
-              className="bg-navy hover:bg-navy-light text-white text-sm font-semibold px-5 py-2 rounded-md disabled:opacity-50"
+              className="bg-gradient-to-r from-teal-600 to-emerald-500 hover:from-teal-700 hover:to-emerald-600 shadow-md shadow-teal-600/30 text-white text-sm font-semibold px-5 py-2 rounded-md disabled:opacity-50"
             >
               {saving ? 'Menyimpan...' : 'Simpan'}
             </button>

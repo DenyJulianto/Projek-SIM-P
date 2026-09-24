@@ -1,3 +1,4 @@
+import ModalCloseButton from '../components/ModalCloseButton'
 import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import { useAuth } from '../lib/AuthContext'
@@ -290,8 +291,9 @@ function DoorExitIllustration(props) {
 
 function OrangTuaLogoutModal({ onConfirm, onClose }) {
   return (
-    <div className="fixed inset-0 bg-navy/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-sm w-full p-8 text-center">
+    <div className="fixed inset-0 z-[100] bg-teal-950/50 backdrop-blur-[2px] flex items-center justify-center p-4">
+      <div className="tm-panel relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white rounded-3xl max-w-sm w-full shadow-2xl shadow-teal-900/20 p-8 text-center">
+<ModalCloseButton onClose={onClose} />
         <DoorExitIllustration className="h-24 w-24 mx-auto mb-5" />
         <h2 className="text-lg font-bold text-navy mb-1">Yah, mau keluar nih?</h2>
         <p className="text-sm text-navy/50 mb-6">Yakin mau logout dari akun Orang Tua?</p>
@@ -1715,8 +1717,9 @@ function QrisPembayaranModal({ anak, tagihan, onClose }) {
   }, [anak?.id, tagihan?.id])
 
   return (
-    <div className="fixed inset-0 bg-navy/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] bg-teal-950/50 backdrop-blur-[2px] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="tm-panel relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white rounded-3xl max-w-sm w-full shadow-2xl shadow-teal-900/20 p-6 text-center" onClick={(e) => e.stopPropagation()}>
+<ModalCloseButton onClose={onClose} />
         <div className="flex justify-end mb-1">
           <button onClick={onClose} className="text-navy/40 hover:text-navy text-xl leading-none">
             &times;
@@ -1792,8 +1795,9 @@ function KonfirmasiPembayaranModal({ tagihan, metode, virtualAccount, onClose, o
   }
 
   return (
-    <div className="fixed inset-0 bg-navy/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl max-w-sm w-full p-6 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-[100] bg-teal-950/50 backdrop-blur-[2px] flex items-center justify-center p-4">
+      <div className="tm-panel relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white rounded-3xl max-w-sm w-full shadow-2xl shadow-teal-900/20 p-6 max-h-[90vh] overflow-y-auto">
+<ModalCloseButton onClose={onClose} />
         <h2 className="text-lg font-bold text-navy mb-1">Konfirmasi Pembayaran</h2>
         <p className="text-xs text-navy/50 mb-4">{tagihan.judul}</p>
 

@@ -1,3 +1,4 @@
+import ModalCloseButton from './ModalCloseButton'
 import { useState } from 'react'
 import { LABEL_EVENT, TONE, waktu } from './ppdbKonstanta'
 
@@ -26,8 +27,9 @@ export function Badge({ tone = 'abu', children }) {
 
 export function ModalShell({ title, onClose, children, lebar = 'max-w-3xl', footer }) {
   return (
-    <div className="fixed inset-0 bg-navy/50 flex items-center justify-center z-50 p-4">
-      <div className={`bg-white rounded-xl ${lebar} w-full max-h-[92vh] flex flex-col`}>
+    <div className="fixed inset-0 z-[100] bg-teal-950/50 backdrop-blur-[2px] flex items-center justify-center p-4">
+      <div className={`tm-panel relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white rounded-3xl ${lebar} w-full max-h-[92vh] flex flex-col shadow-2xl shadow-teal-900/20 overflow-hidden`}>
+<ModalCloseButton onClose={onClose} />
         <div className="flex items-center justify-between px-6 py-4 border-b border-navy/10">
           <h2 className="text-lg font-bold text-navy">{title}</h2>
           <button onClick={onClose} className="text-navy/40 hover:text-navy text-xl leading-none" aria-label="Tutup">

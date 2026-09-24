@@ -804,8 +804,8 @@ function KonfirmasiPembayaranManagement({ onBack }) {
       </div>
 
       {previewPath && (
-        <div className="fixed inset-0 bg-navy/60 flex items-center justify-center z-50 p-4" onClick={() => setPreviewPath(null)}>
-          <div className="bg-white rounded-xl max-w-lg w-full max-h-[85vh] overflow-auto p-4" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[100] bg-teal-950/50 backdrop-blur-[2px] flex items-center justify-center p-4" onClick={() => setPreviewPath(null)}>
+          <div className="tm-panel relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white rounded-3xl max-w-lg w-full shadow-2xl shadow-teal-900/20 max-h-[85vh] overflow-auto p-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-end mb-2">
               <button onClick={() => setPreviewPath(null)} className="text-navy/40 hover:text-navy text-xl leading-none">
                 &times;
@@ -891,10 +891,10 @@ function PengaturanPembayaranOnlineModal({ pengaturan, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-navy/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] bg-teal-950/50 backdrop-blur-[2px] flex items-center justify-center p-4" onClick={onClose}>
       <form
         onSubmit={handleSubmit}
-        className="bg-white rounded-2xl max-w-lg w-full max-h-[85vh] overflow-auto p-6"
+        className="tm-panel relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white rounded-3xl max-w-lg w-full shadow-2xl shadow-teal-900/20 max-h-[85vh] overflow-auto p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-lg font-extrabold text-navy mb-1">Pengaturan Pembayaran Online</h2>
@@ -1386,8 +1386,8 @@ function MutasiFormModal({ onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-navy/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] bg-teal-950/50 backdrop-blur-[2px] flex items-center justify-center p-4" onClick={onClose}>
+      <form onSubmit={handleSubmit} className="tm-panel relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white rounded-3xl max-w-md w-full shadow-2xl shadow-teal-900/20 p-6" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-lg font-extrabold text-navy mb-4">Catat Mutasi Bank Masuk</h2>
 
         <div className="space-y-3">

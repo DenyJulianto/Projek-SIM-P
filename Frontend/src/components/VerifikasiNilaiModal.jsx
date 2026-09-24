@@ -1,3 +1,4 @@
+import ModalCloseButton from './ModalCloseButton'
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 
@@ -12,7 +13,7 @@ const AKSI = [
   ['perbaikan', 'Ajukan Perbaikan', 'Ada bagian yang perlu dikoreksi guru, lalu diajukan kembali.'],
   ['tolak', 'Tolak', 'Nilai tidak layak dan perlu disusun ulang.'],
 ]
-const primaryBtn = 'bg-navy hover:bg-navy-light text-white text-sm font-semibold px-5 py-2 rounded-md disabled:opacity-50'
+const primaryBtn = 'bg-gradient-to-r from-teal-600 to-emerald-500 hover:from-teal-700 hover:to-emerald-600 shadow-md shadow-teal-600/30 text-white text-sm font-semibold px-5 py-2 rounded-md disabled:opacity-50'
 
 export default function VerifikasiNilaiModal({ row, params, bisaMemverifikasi, onClose, onSaved }) {
   const [data, setData] = useState(null)
@@ -58,8 +59,9 @@ export default function VerifikasiNilaiModal({ row, params, bisaMemverifikasi, o
   const blokirSetuju = aksi === 'setujui' && p && !p.dapat_disetujui
 
   return (
-    <div className="fixed inset-0 bg-navy/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] bg-teal-950/50 backdrop-blur-[2px] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="tm-panel relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white rounded-3xl max-w-3xl w-full shadow-2xl shadow-teal-900/20 max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+<ModalCloseButton onClose={onClose} />
         <div className="flex justify-between items-start mb-2">
           <div>
             <h2 className="text-lg font-extrabold text-navy">

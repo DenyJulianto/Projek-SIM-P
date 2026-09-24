@@ -410,19 +410,24 @@ class AuthController extends Controller
         $user->name = $data['name'];
         $user->email = $data['email'];
         $user->phone = $data['phone'] ?? null;
-        $user->alamat = $data['alamat'] ?? null;
-        $user->jenis_kelamin = $data['jenis_kelamin'] ?? null;
+        if (array_key_exists('alamat', $data)) {
+            $user->alamat = $data['alamat'];
+        }
+        if (array_key_exists('jenis_kelamin', $data)) {
+            $user->jenis_kelamin = $data['jenis_kelamin'];
+        }
         $user->save();
 
         // Siswa/Guru punya kolom nama/alamat/jenis_kelamin sendiri yang
         // terpisah dari users, jadi harus disinkronkan supaya nama yang
         // tampil di dashboard (diambil dari siswa/guru) ikut berubah saat
         // profil diedit lewat halaman ini.
-        $profileSync = [
-            'nama' => $data['name'],
-            'alamat' => $data['alamat'] ?? null,
-            'jenis_kelamin' => $data['jenis_kelamin'] ?? null,
-        ];
+        $profileSync = ['nama' => $data['name']];
+        foreach (['alamat', 'jenis_kelamin'] as $field) {
+            if (array_key_exists($field, $data)) {
+                $profileSync[$field] = $data[$field];
+            }
+        }
         Siswa::where('user_id', $user->id)->update($profileSync);
         Guru::where('user_id', $user->id)->update($profileSync);
 

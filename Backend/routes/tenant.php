@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\GuruController;
 use App\Http\Controllers\Api\GuruPenggantiController;
 use App\Http\Controllers\Api\GuruSelfController;
+use App\Http\Controllers\Api\StaffProfileController;
 use App\Http\Controllers\Api\MonitoringNilaiController;
 use App\Http\Controllers\Api\NotifikasiSelfController;
 use App\Http\Controllers\Api\PenerbitanRaporController;
@@ -122,6 +123,7 @@ Route::middleware([
     Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
     Route::get('avatar/{path}', [AvatarController::class, 'show'])->where('path', '.*');
+    Route::get('sertifikat-staf-file/{path}', [StaffProfileController::class, 'showSertifikatFile'])->where('path', '.*');
     Route::get('surat-file/{path}', [SuratController::class, 'showFile'])->where('path', '.*');
     Route::get('arsip-file/{path}', [ArsipDokumenController::class, 'showFile'])->where('path', '.*');
     Route::get('materi-file/{path}', [MateriController::class, 'showFile'])->where('path', '.*');
@@ -142,6 +144,11 @@ Route::middleware([
         Route::get('/me', [AuthController::class, 'me']);
         Route::put('/me', [AuthController::class, 'updateMe']);
         Route::post('/me/avatar', [AuthController::class, 'updateAvatar']);
+
+        Route::get('/me/profil-staf', [StaffProfileController::class, 'profil']);
+        Route::put('/me/profil-staf', [StaffProfileController::class, 'update']);
+        Route::post('/me/profil-staf/sertifikat', [StaffProfileController::class, 'storeSertifikat']);
+        Route::delete('/me/profil-staf/sertifikat/{sertifikat}', [StaffProfileController::class, 'destroySertifikat']);
 
         Route::get('/me/siswa', [StudentSelfController::class, 'profil']);
         Route::get('/me/siswa/jadwal', [StudentSelfController::class, 'jadwal']);

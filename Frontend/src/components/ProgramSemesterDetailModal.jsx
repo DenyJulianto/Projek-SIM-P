@@ -1,3 +1,4 @@
+import ModalCloseButton from './ModalCloseButton'
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 import ProgramSemesterPrint from './ProgramSemesterPrint'
@@ -84,8 +85,9 @@ export default function ProgramSemesterDetailModal({ id, onClose, onChanged }) {
   if (printing && detail) return <ProgramSemesterPrint program={detail} onClose={() => setPrinting(false)} />
 
   return (
-    <div className="fixed inset-0 bg-navy/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] bg-teal-950/50 backdrop-blur-[2px] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="tm-panel relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white rounded-3xl max-w-4xl w-full shadow-2xl shadow-teal-900/20 max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+<ModalCloseButton onClose={onClose} />
         <div className="flex justify-end mb-1">
           <button onClick={onClose} className="text-navy/40 hover:text-navy text-xl leading-none">
             &times;
