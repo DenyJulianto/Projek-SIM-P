@@ -40,7 +40,6 @@ use App\Http\Controllers\Api\MutasiSiswaController;
 use App\Http\Controllers\Api\PembinaanTindakLanjutController;
 use App\Http\Controllers\Api\RekapPembinaanController;
 use App\Http\Controllers\Api\WakasekController;
-use App\Http\Controllers\Api\WakasekLaporanController;
 use App\Http\Controllers\Api\PpdbPemantauController;
 use App\Http\Controllers\Api\PpdbPendaftarController;
 use App\Http\Controllers\Api\PpdbPenerimaanController;
@@ -563,28 +562,6 @@ Route::middleware([
             });
         });
 
-        // Dashboard Wakil Kepala Sekolah: ringkasan, guru & tendik, kehadiran, persetujuan, dan laporan. Baca saja; keputusan
-        // persetujuan diambil lewat endpoint asli tiap modul (perubahan jadwal / guru pengganti).
-        Route::prefix('wakasek')->group(function () {
-            Route::middleware('permission:laporan.dashboard')->group(function () {
-                Route::get('dashboard', [WakasekController::class, 'dashboard']);
-                Route::get('rekap-kehadiran', [WakasekController::class, 'rekapKehadiran']);
-                Route::get('laporan/sekolah', fn (\Illuminate\Http\Request $r) => app(WakasekLaporanController::class)->tampil($r, 'sekolah'));
-                Route::get('laporan/sekolah/export', fn (\Illuminate\Http\Request $r) => app(WakasekLaporanController::class)->export($r, 'sekolah'));
-                Route::post('laporan/sekolah/cetak', fn (\Illuminate\Http\Request $r) => app(WakasekLaporanController::class)->catatCetak($r, 'sekolah'));
-            });
-            Route::middleware('permission:monitoring-guru.laporan')->group(function () {
-                Route::get('guru-tendik', [WakasekController::class, 'guruTendik']);
-                Route::get('aktivitas-guru', [WakasekController::class, 'aktivitasGuru']);
-                Route::get('laporan/guru-tendik', fn (\Illuminate\Http\Request $r) => app(WakasekLaporanController::class)->tampil($r, 'guru-tendik'));
-                Route::get('laporan/guru-tendik/export', fn (\Illuminate\Http\Request $r) => app(WakasekLaporanController::class)->export($r, 'guru-tendik'));
-                Route::post('laporan/guru-tendik/cetak', fn (\Illuminate\Http\Request $r) => app(WakasekLaporanController::class)->catatCetak($r, 'guru-tendik'));
-            });
-            Route::middleware('permission:persetujuan.approval')->group(function () {
-                Route::get('persetujuan', [WakasekController::class, 'persetujuan']);
-            });
-        });
-
         Route::middleware('permission:ppdb.manage')->prefix('ppdb')->group(function () {
             Route::get('opsi', [PpdbPeriodeController::class, 'opsi']);
             Route::get('dashboard', [PpdbPeriodeController::class, 'dashboard']);
@@ -885,6 +862,15 @@ Route::middleware([
                 Route::get('statistik', [BkMonitoringController::class, 'statistik']);
                 Route::get('laporan', [BkMonitoringController::class, 'laporan']);
             });
+        });
+
+        Route::middleware('permission:laporan.dashboard|dashboard.view-all')->prefix('wakasek')->group(function () {
+            foreach ([
+                'dashboard', 'kepala-sekolah', 'kurikulum', 'pembelajaran', 'nilai-rapor', 'siswa', 'pelanggaran', 'prestasi',
+                'guru', 'beban-mengajar', 'aktivitas-guru', 'kehadiran', 'jadwal', 'jam-pelajaran', 'persetujuan',
+            ] as $endpoint) {
+                Route::get($endpoint, [WakasekController::class, \Illuminate\Support\Str::camel($endpoint)]);
+            }
         });
 
         Route::middleware('permission:dashboard.view-all')->prefix('principal')->group(function () {

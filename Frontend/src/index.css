@@ -168,3 +168,36 @@ body {
 .modal-pop {
   animation: modal-pop 0.18s ease-out;
 }
+
+@keyframes modal-pop {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.modal-pop {
+  animation: modal-pop 0.18s ease-out;
+}
+
+@media print {
+  body:has(.print-report) * {
+    visibility: hidden;
+  }
+
+  body:has(.print-report) .print-report,
+  body:has(.print-report) .print-report * {
+    visibility: visible;
+  }
+
+  .print-report {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+}

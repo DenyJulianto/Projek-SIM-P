@@ -102,9 +102,12 @@ export default function Login() {
               </p>
 
               {error && (
-                <p className="text-red-600 bg-red-50 border border-red-200 rounded-lg text-sm text-center py-2 px-3 mb-4">
-                  {error}
-                </p>
+                <div className="flex items-start gap-3 text-red-600 bg-red-50 border border-red-200 rounded-xl text-sm py-3 px-4 mb-4">
+                  <span className="flex-shrink-0 h-7 w-7 rounded-full bg-red-100 flex items-center justify-center mt-0.5">
+                    <AlertIcon className="h-4 w-4" />
+                  </span>
+                  <span>{error}</span>
+                </div>
               )}
 
               <form onSubmit={handleTwoFactorSubmit} className="space-y-4">

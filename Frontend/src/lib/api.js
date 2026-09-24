@@ -1401,6 +1401,7 @@ export const api = {
   getBkLaporan: () => request('/bk/laporan'),
 
   // Kepala Sekolah — data pemantauan (read-only)
+  getWakasek: (name) => request(`/wakasek/${name}`),
   getPrincipalDashboard: () => request('/principal/dashboard'),
   getPrincipalAkademik: () => request('/principal/akademik'),
   getPrincipalKesiswaan: () => request('/principal/kesiswaan'),

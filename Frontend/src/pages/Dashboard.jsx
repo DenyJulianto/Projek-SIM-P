@@ -20,7 +20,6 @@ import KurikulumDashboard from './KurikulumDashboard'
 import MyProfile from './MyProfile'
 import OrangTuaDashboard from './OrangTuaDashboard'
 import PrincipalDashboard from './PrincipalDashboard'
-import WakilKepalaSekolahDashboard from './WakilKepalaSekolahDashboard'
 import RoleManagement from './RoleManagement'
 import SiswaDashboard from './SiswaDashboard'
 import SiswaManagement from './SiswaManagement'
@@ -30,6 +29,7 @@ import SuratArsipManagement from './SuratArsipManagement'
 import SystemConfig from './SystemConfig'
 import TataUsahaDashboard from './TataUsahaDashboard'
 import UserManagement from './UserManagement'
+import WakasekDashboard from './WakasekDashboard'
 import WaliKelasDashboard from './WaliKelasDashboard'
 import Logo from '../components/Logo'
 import LogoHorizontal from '../components/LogoHorizontal'
@@ -158,11 +158,6 @@ export default function Dashboard() {
     return <PrincipalDashboard />
   }
 
-  const isWakasek = user?.roles?.some((r) => r.name === 'Wakil Kepala Sekolah') && !isAdmin
-  if (isWakasek) {
-    return <WakilKepalaSekolahDashboard />
-  }
-
   const isTataUsaha = user?.roles?.some((r) => r.name === 'Tata Usaha') && !isAdmin
   if (isTataUsaha) {
     return <TataUsahaDashboard />
@@ -201,6 +196,11 @@ export default function Dashboard() {
   const isGuruMapel = user?.roles?.some((r) => r.name === 'Guru Mata Pelajaran') && !isAdmin
   if (isGuruMapel) {
     return <GuruMapelDashboard />
+  }
+
+  const isWakasek = user?.roles?.some((r) => r.name === 'Wakil Kepala Sekolah') && !isAdmin
+  if (isWakasek) {
+    return <WakasekDashboard />
   }
 
   const isWaliKelas = user?.roles?.some((r) => r.name === 'Wali Kelas') && !isAdmin

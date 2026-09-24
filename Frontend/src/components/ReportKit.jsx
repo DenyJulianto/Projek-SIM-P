@@ -189,6 +189,7 @@ export function ReportPage({
   csv,
   footerNote,
   emptyText = 'Tidak ada data.',
+  beforeContent = null,
 }) {
   const [cari, setCari] = useState('')
   const [bulan, setBulan] = useState('')
@@ -211,6 +212,7 @@ export function ReportPage({
 
   return (
     <div className="print-report">
+      {beforeContent}
       <ReportHeader
         onBack={onBack}
         icon={icon}
