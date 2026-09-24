@@ -29,6 +29,7 @@ class SiswaController extends Controller
         $data = $request->validate([
             'user_id' => ['nullable', 'exists:users,id'],
             'kelas_id' => ['nullable', 'exists:kelas,id'],
+            'tahun_masuk' => ['nullable', 'integer', 'min:1950', 'max:2100'],
             'nis' => ['required', 'string', 'max:20', 'unique:siswa,nis'],
             'nisn' => ['nullable', 'string', 'max:20', 'unique:siswa,nisn'],
             'nama' => ['required', 'string', 'max:255'],
@@ -54,6 +55,7 @@ class SiswaController extends Controller
         $data = $request->validate([
             'user_id' => ['nullable', 'exists:users,id'],
             'kelas_id' => ['nullable', 'exists:kelas,id'],
+            'tahun_masuk' => ['nullable', 'integer', 'min:1950', 'max:2100'],
             'nis' => ['sometimes', 'string', 'max:20', 'unique:siswa,nis,' . $siswa->id],
             'nisn' => ['nullable', 'string', 'max:20', 'unique:siswa,nisn,' . $siswa->id],
             'nama' => ['sometimes', 'string', 'max:255'],

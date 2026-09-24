@@ -1,7 +1,9 @@
+import ModalCloseButton from './ModalCloseButton'
 import { useState } from 'react'
 import { api } from '../lib/api'
 
 const AGAMA_OPTIONS = ['Islam', 'Kristen', 'Katolik', 'Hindu', 'Buddha', 'Konghucu']
+const STATUS_KEPEGAWAIAN_OPTIONS = ['PNS', 'PPPK', 'GTY/PTY', 'Honorer', 'Kontrak']
 
 export default function GuruFormModal({ guru, onClose, onSaved }) {
   const isEdit = Boolean(guru)
@@ -11,6 +13,8 @@ export default function GuruFormModal({ guru, onClose, onSaved }) {
     nip: guru?.nip || '',
     nuptk: guru?.nuptk || '',
     jabatan: guru?.jabatan || '',
+    mata_pelajaran: guru?.mata_pelajaran || '',
+    status_kepegawaian: guru?.status_kepegawaian || '',
     pendidikan_terakhir: guru?.pendidikan_terakhir || '',
     tahun_mulai_mengajar: guru?.tahun_mulai_mengajar || '',
     agama: guru?.agama || '',
@@ -51,8 +55,9 @@ export default function GuruFormModal({ guru, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-navy/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6">
+    <div className="fixed inset-0 z-[100] bg-teal-950/50 backdrop-blur-[2px] flex items-center justify-center p-4">
+      <div className="tm-panel relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white rounded-3xl max-w-lg w-full shadow-2xl shadow-teal-900/20 max-h-[90vh] overflow-y-auto p-6">
+<ModalCloseButton onClose={onClose} />
         <h2 className="text-lg font-bold text-navy mb-4">{isEdit ? 'Edit Guru' : 'Tambah Guru'}</h2>
 
         {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
@@ -100,14 +105,40 @@ export default function GuruFormModal({ guru, onClose, onSaved }) {
             </Field>
           </div>
 
-          <Field label="Jabatan">
-            <input
-              type="text"
-              value={form.jabatan}
-              onChange={(e) => update('jabatan', e.target.value)}
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Jabatan">
+              <input
+                type="text"
+                value={form.jabatan}
+                onChange={(e) => update('jabatan', e.target.value)}
+                className="input"
+                placeholder="Guru Mata Pelajaran, Wali Kelas, dll."
+              />
+            </Field>
+            <Field label="Mata Pelajaran">
+              <input
+                type="text"
+                value={form.mata_pelajaran}
+                onChange={(e) => update('mata_pelajaran', e.target.value)}
+                className="input"
+                placeholder="Matematika, dll."
+              />
+            </Field>
+          </div>
+
+          <Field label="Status Kepegawaian">
+            <select
+              value={form.status_kepegawaian}
+              onChange={(e) => update('status_kepegawaian', e.target.value)}
               className="input"
-              placeholder="Guru Mata Pelajaran, Wali Kelas, dll."
-            />
+            >
+              <option value="">Pilih status kepegawaian...</option>
+              {STATUS_KEPEGAWAIAN_OPTIONS.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
@@ -217,7 +248,7 @@ export default function GuruFormModal({ guru, onClose, onSaved }) {
             <button
               type="submit"
               disabled={saving}
-              className="bg-navy hover:bg-navy-light text-white text-sm font-semibold px-5 py-2 rounded-md disabled:opacity-50"
+              className="bg-gradient-to-r from-teal-600 to-emerald-500 hover:from-teal-700 hover:to-emerald-600 shadow-md shadow-teal-600/30 text-white text-sm font-semibold px-5 py-2 rounded-md disabled:opacity-50"
             >
               {saving ? 'Menyimpan...' : 'Simpan'}
             </button>

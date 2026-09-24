@@ -11,6 +11,7 @@ use App\Models\Kelas;
 use App\Models\Konseling;
 use App\Models\Nilai;
 use App\Models\PengumumanKelas;
+use App\Models\Siswa;
 use App\Models\StrukturKelas;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -48,6 +49,7 @@ class WaliKelasSelfController extends Controller
     {
         $kelas = Kelas::where('wali_kelas_id', $this->guruId($request))
             ->withCount('siswa')
+            ->with('waliKelas:id,nama')
             ->get();
 
         return response()->json($kelas);
@@ -57,7 +59,94 @@ class WaliKelasSelfController extends Controller
     {
         $this->authorizeKelas($request, $kelas);
 
-        return response()->json($kelas->siswa()->orderBy('nama')->get());
+        $siswa = $kelas->siswa()->orderBy('nama')->with('user:id,avatar')->get();
+
+        $siswa->each(function ($s) {
+            if ($s->user) {
+                $s->user->setAttribute('avatar_url', $s->user->avatar ? "/avatar/{$s->user->avatar}" : null);
+            }
+        });
+
+        return response()->json($siswa);
+    }
+
+    public function storeSiswa(Request $request, Kelas $kelas): JsonResponse
+    {
+        $this->authorizeKelas($request, $kelas);
+
+        $data = $request->validate([
+            'nis' => ['required', 'string', 'max:20', 'unique:siswa,nis'],
+            'nisn' => ['nullable', 'string', 'max:20', 'unique:siswa,nisn'],
+            'nama' => ['required', 'string', 'max:255'],
+            'jenis_kelamin' => ['required', 'in:L,P'],
+            'tempat_lahir' => ['nullable', 'string', 'max:255'],
+            'tanggal_lahir' => ['nullable', 'date'],
+            'alamat' => ['nullable', 'string'],
+        ]);
+
+        $siswa = Siswa::create([
+            ...$data,
+            'kelas_id' => $kelas->id,
+            'tahun_masuk' => (int) now()->year,
+            'status' => 'aktif',
+        ]);
+
+        return response()->json($siswa, 201);
+    }
+
+    public function keluarkanSiswa(Request $request, Kelas $kelas, Siswa $siswa): JsonResponse
+    {
+        $this->authorizeKelas($request, $kelas);
+        abort_unless($siswa->kelas_id === $kelas->id, 403, 'Siswa ini bukan anggota kelas binaan Anda.');
+
+        $data = $request->validate([
+            'jenis' => ['required', 'in:pindah_kelas,pindah_sekolah,lainnya'],
+            'alasan' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $jenisLabel = [
+            'pindah_kelas' => 'Pindah Kelas',
+            'pindah_sekolah' => 'Pindah Sekolah',
+            'lainnya' => 'Lainnya',
+        ][$data['jenis']];
+
+        CatatanSiswa::create([
+            'siswa_id' => $siswa->id,
+            'tanggal' => now()->toDateString(),
+            'kategori' => 'lainnya',
+            'catatan' => "Siswa dikeluarkan dari kelas {$kelas->nama_kelas} ({$jenisLabel}): {$data['alasan']}",
+        ]);
+
+        $statusBaru = match ($data['jenis']) {
+            'pindah_sekolah' => 'pindah',
+            'lainnya' => 'keluar',
+            default => 'aktif',
+        };
+
+        $siswa->update(['status' => $statusBaru, 'kelas_id' => null]);
+
+        return response()->json(['message' => 'Siswa berhasil dikeluarkan dari kelas.']);
+    }
+
+    public function updateSiswa(Request $request, Kelas $kelas, Siswa $siswa): JsonResponse
+    {
+        $this->authorizeKelas($request, $kelas);
+        abort_unless($siswa->kelas_id === $kelas->id, 403, 'Siswa ini bukan anggota kelas binaan Anda.');
+
+        $data = $request->validate([
+            'nama' => ['sometimes', 'string', 'max:255'],
+            'nis' => ['sometimes', 'string', 'max:20', 'unique:siswa,nis,' . $siswa->id],
+            'nisn' => ['nullable', 'string', 'max:20', 'unique:siswa,nisn,' . $siswa->id],
+            'jenis_kelamin' => ['sometimes', 'in:L,P'],
+            'tempat_lahir' => ['nullable', 'string', 'max:255'],
+            'tanggal_lahir' => ['nullable', 'date'],
+            'alamat' => ['nullable', 'string'],
+            'status' => ['nullable', 'in:aktif,lulus,pindah,keluar'],
+        ]);
+
+        $siswa->update($data);
+
+        return response()->json($siswa);
     }
 
     public function getStruktur(Request $request, Kelas $kelas): JsonResponse
@@ -77,6 +166,22 @@ class WaliKelasSelfController extends Controller
             'siswa_id' => ['required', 'exists:siswa,id'],
             'jabatan' => ['required', 'string', 'max:255'],
         ]);
+
+        abort_unless($kelas->siswa()->whereKey($data['siswa_id'])->exists(), 422, 'Siswa bukan anggota kelas ini.');
+
+        $jabatanTunggal = ['ketua murid', 'wakil ketua murid', 'sekretaris 1', 'sekretaris 2', 'bendahara 1', 'bendahara 2'];
+        if (in_array(mb_strtolower($data['jabatan']), $jabatanTunggal, true)) {
+            StrukturKelas::where('kelas_id', $kelas->id)
+                ->whereRaw('lower(jabatan) = ?', [mb_strtolower($data['jabatan'])])
+                ->delete();
+        } else {
+            abort_if(
+                StrukturKelas::where('kelas_id', $kelas->id)->where('siswa_id', $data['siswa_id'])
+                    ->whereRaw('lower(jabatan) = ?', [mb_strtolower($data['jabatan'])])->exists(),
+                422,
+                'Siswa ini sudah tercatat pada jabatan tersebut.'
+            );
+        }
 
         $struktur = StrukturKelas::create(['kelas_id' => $kelas->id, ...$data]);
 
@@ -106,8 +211,41 @@ class WaliKelasSelfController extends Controller
 
         $rataNilai = Nilai::whereIn('siswa_id', $siswaIds)->avg('nilai');
 
+        $tanggalAcuan = $kelas->absensi()->whereDate('tanggal', '<=', now()->toDateString())->max('tanggal');
+        $acuan = $tanggalAcuan ? \Illuminate\Support\Carbon::parse($tanggalAcuan) : null;
+
+        $absensiHariIni = null;
+        $absensiMingguan = [];
+        if ($acuan) {
+            $absensiHariIni = [
+                'tanggal' => $acuan->toDateString(),
+                'adalah_hari_ini' => $acuan->isToday(),
+                'per_status' => $kelas->absensi()->whereDate('tanggal', $acuan->toDateString())
+                    ->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status'),
+            ];
+
+            $senin = $acuan->copy()->startOfWeek();
+            $rekapHarian = $kelas->absensi()
+                ->whereDate('tanggal', '>=', $senin->toDateString())
+                ->whereDate('tanggal', '<=', $senin->copy()->addDays(4)->toDateString())
+                ->get(['tanggal', 'status'])
+                ->groupBy(fn ($a) => $a->tanggal->toDateString());
+
+            foreach (['Sen', 'Sel', 'Rab', 'Kam', 'Jum'] as $i => $label) {
+                $tgl = $senin->copy()->addDays($i)->toDateString();
+                $hari = $rekapHarian->get($tgl);
+                $absensiMingguan[] = [
+                    'label' => $label,
+                    'tanggal' => $tgl,
+                    'persen_hadir' => $hari ? round($hari->where('status', 'hadir')->count() / $hari->count() * 100) : null,
+                ];
+            }
+        }
+
         return response()->json([
             'jumlah_siswa' => $siswaIds->count(),
+            'absensi_hari_ini' => $absensiHariIni,
+            'absensi_mingguan' => $absensiMingguan,
             'rekap_absensi' => $rekapAbsensi,
             'rata_rata_nilai' => $rataNilai ? round((float) $rataNilai, 2) : null,
             'jumlah_pelanggaran' => \App\Models\Pelanggaran::whereIn('siswa_id', $siswaIds)->count(),
@@ -183,62 +321,6 @@ class WaliKelasSelfController extends Controller
         return response()->json($status);
     }
 
-    public function catatanSiswa(Request $request, Kelas $kelas): JsonResponse
-    {
-        $this->authorizeKelas($request, $kelas);
-
-        $siswaIds = $kelas->siswa()->pluck('id');
-
-        $catatan = CatatanSiswa::whereIn('siswa_id', $siswaIds)
-            ->with('siswa:id,nama')
-            ->when($request->filled('kategori'), fn ($q) => $q->where('kategori', $request->string('kategori')))
-            ->orderByDesc('tanggal')
-            ->get();
-
-        return response()->json($catatan);
-    }
-
-    public function storeCatatanSiswa(Request $request): JsonResponse
-    {
-        $data = $request->validate([
-            'siswa_id' => ['required', 'exists:siswa,id'],
-            'tanggal' => ['required', 'date'],
-            'kategori' => ['required', 'in:akademik,perilaku,kesehatan,lainnya'],
-            'catatan' => ['required', 'string'],
-        ]);
-
-        $siswa = \App\Models\Siswa::findOrFail($data['siswa_id']);
-        $this->authorizeSiswa($request, $siswa->kelas_id);
-
-        $catatan = CatatanSiswa::create([...$data, 'guru_id' => $this->guruId($request)]);
-
-        return response()->json($catatan->load('siswa:id,nama'), 201);
-    }
-
-    public function updateCatatanSiswa(Request $request, CatatanSiswa $catatanSiswa): JsonResponse
-    {
-        $this->authorizeSiswa($request, $catatanSiswa->siswa->kelas_id);
-
-        $data = $request->validate([
-            'tanggal' => ['required', 'date'],
-            'kategori' => ['required', 'in:akademik,perilaku,kesehatan,lainnya'],
-            'catatan' => ['required', 'string'],
-        ]);
-
-        $catatanSiswa->update($data);
-
-        return response()->json($catatanSiswa->load('siswa:id,nama'));
-    }
-
-    public function destroyCatatanSiswa(Request $request, CatatanSiswa $catatanSiswa): JsonResponse
-    {
-        $this->authorizeSiswa($request, $catatanSiswa->siswa->kelas_id);
-
-        $catatanSiswa->delete();
-
-        return response()->json(['message' => 'Catatan siswa berhasil dihapus.']);
-    }
-
     public function konsultasiBk(Request $request, Kelas $kelas): JsonResponse
     {
         $this->authorizeKelas($request, $kelas);
@@ -267,15 +349,38 @@ class WaliKelasSelfController extends Controller
         $data = $request->validate([
             'judul' => ['required', 'string', 'max:255'],
             'konten' => ['required', 'string'],
+            'kategori' => ['nullable', 'in:umum,akademik,kegiatan,penting'],
         ]);
 
         $pengumuman = PengumumanKelas::create([
             'kelas_id' => $kelas->id,
             'guru_id' => $this->guruId($request),
-            ...$data,
+            'kategori' => $data['kategori'] ?? 'umum',
+            'judul' => $data['judul'],
+            'konten' => $data['konten'],
         ]);
 
         return response()->json($pengumuman, 201);
+    }
+
+    public function updatePengumumanKelas(Request $request, Kelas $kelas, PengumumanKelas $pengumuman): JsonResponse
+    {
+        $this->authorizeKelas($request, $kelas);
+        abort_unless($pengumuman->kelas_id === $kelas->id, 404);
+
+        $data = $request->validate([
+            'judul' => ['required', 'string', 'max:255'],
+            'konten' => ['required', 'string'],
+            'kategori' => ['nullable', 'in:umum,akademik,kegiatan,penting'],
+        ]);
+
+        $pengumuman->update([
+            'judul' => $data['judul'],
+            'konten' => $data['konten'],
+            'kategori' => $data['kategori'] ?? $pengumuman->kategori,
+        ]);
+
+        return response()->json($pengumuman);
     }
 
     public function destroyPengumumanKelas(Request $request, Kelas $kelas, PengumumanKelas $pengumuman): JsonResponse
@@ -292,13 +397,31 @@ class WaliKelasSelfController extends Controller
     {
         $this->authorizeKelas($request, $kelas);
 
-        $siswa = $kelas->siswa()->with('walis:id,name,email')->get(['id', 'nama']);
+        $siswa = $kelas->siswa()->with('walis:id,name,email,phone')->get(['id', 'nama', 'nama_wali', 'telepon_wali']);
 
         $kontak = $siswa->map(fn ($s) => [
             'siswa' => ['id' => $s->id, 'nama' => $s->nama],
-            'wali' => $s->walis->map(fn ($w) => ['nama' => $w->name, 'email' => $w->email]),
+            'wali' => $s->walis->map(fn ($w) => ['nama' => $w->name, 'email' => $w->email, 'telepon' => $w->phone]),
+            'kontak_manual' => $s->nama_wali || $s->telepon_wali
+                ? ['nama' => $s->nama_wali, 'telepon' => $s->telepon_wali]
+                : null,
         ]);
 
         return response()->json($kontak);
+    }
+
+    public function updateKontakWali(Request $request, Kelas $kelas, Siswa $siswa): JsonResponse
+    {
+        $this->authorizeKelas($request, $kelas);
+        abort_unless($siswa->kelas_id === $kelas->id, 403, 'Siswa ini bukan anggota kelas binaan Anda.');
+
+        $data = $request->validate([
+            'nama_wali' => ['nullable', 'string', 'max:255'],
+            'telepon_wali' => ['nullable', 'string', 'max:30'],
+        ]);
+
+        $siswa->update($data);
+
+        return response()->json(['nama_wali' => $siswa->nama_wali, 'telepon_wali' => $siswa->telepon_wali]);
     }
 }

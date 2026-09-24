@@ -19,6 +19,9 @@ class Guru extends Model
         'nama',
         'gelar',
         'jabatan',
+        'tugas_tambahan',
+        'mata_pelajaran',
+        'status_kepegawaian',
         'pendidikan_terakhir',
         'tahun_mulai_mengajar',
         'agama',
@@ -28,12 +31,18 @@ class Guru extends Model
         'alamat',
         'no_telepon',
         'status',
+        'keahlian',
+        'sertifikasi',
+        'kutipan',
+        'bio',
+        'media_sosial',
     ];
 
     protected function casts(): array
     {
         return [
             'tanggal_lahir' => 'date',
+            'tugas_tambahan' => 'array',
         ];
     }
 
@@ -45,6 +54,16 @@ class Guru extends Model
     public function kelasWali(): HasMany
     {
         return $this->hasMany(Kelas::class, 'wali_kelas_id');
+    }
+
+    public function modulAjar(): HasMany
+    {
+        return $this->hasMany(ModulAjar::class);
+    }
+
+    public function sertifikat(): HasMany
+    {
+        return $this->hasMany(GuruSertifikat::class);
     }
 
     public function jadwalPelajaran(): HasMany

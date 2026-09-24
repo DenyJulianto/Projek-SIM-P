@@ -20,7 +20,7 @@ class RaporPengesahanController extends Controller
     public function index(Request $request): JsonResponse
     {
         $rapor = Rapor::query()
-            ->with(['siswa:id,nama,nis,kelas_id', 'diajukanOleh:id,name', 'disahkanOleh:id,name'])
+            ->with(['siswa:id,nama,nis,kelas_id', 'siswa.kelas:id,nama_kelas', 'diajukanOleh:id,name', 'disahkanOleh:id,name'])
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
             ->orderByDesc('created_at')
             ->get();
@@ -77,6 +77,36 @@ class RaporPengesahanController extends Controller
         $rapor->update($data);
 
         return response()->json($rapor->load(['siswa:id,nama,nis,kelas_id']));
+    }
+
+    /**
+     * Menghapus pengajuan rapor. Karena Kepala Sekolah membaca tabel yang sama,
+     * data ikut hilang dari daftar pengesahan mereka. Rapor yang sudah disahkan
+     * tidak boleh dihapus karena sudah menjadi dokumen resmi.
+     */
+    public function destroy(Request $request, Rapor $rapor): JsonResponse
+    {
+        $user = $request->user();
+
+        if (! $user->can('kurikulum.manage')) {
+            $waliId = $rapor->siswa?->kelas?->wali_kelas_id;
+            abort_unless($waliId !== null && $waliId === $user->guru?->id, 403, 'Rapor ini bukan milik kelas binaan Anda.');
+        }
+
+        if ($rapor->status === 'disahkan') {
+            throw ValidationException::withMessages([
+                'status' => ['Rapor yang sudah disahkan tidak dapat dihapus.'],
+            ]);
+        }
+
+        $nama = $rapor->siswa?->nama;
+        $rapor->delete();
+
+        activity()
+            ->causedBy($user)
+            ->log("Menghapus pengajuan rapor siswa \"{$nama}\" ({$rapor->semester} {$rapor->tahun_ajaran}).");
+
+        return response()->json(['message' => 'Rapor dihapus.']);
     }
 
     public function sahkan(Request $request, Rapor $rapor): JsonResponse

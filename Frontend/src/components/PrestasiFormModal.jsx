@@ -1,3 +1,4 @@
+import ModalCloseButton from './ModalCloseButton'
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 
@@ -19,6 +20,10 @@ export default function PrestasiFormModal({ item, onClose, onSaved }) {
     tingkat: item?.tingkat || 'sekolah',
     tanggal: item?.tanggal?.slice(0, 10) || new Date().toISOString().slice(0, 10),
     keterangan: item?.keterangan || '',
+    bidang: item?.bidang || '',
+    jenis: item?.jenis || '',
+    penyelenggara: item?.penyelenggara || '',
+    peringkat: item?.peringkat || '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -51,8 +56,9 @@ export default function PrestasiFormModal({ item, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-navy/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6">
+    <div className="fixed inset-0 z-[100] bg-teal-950/50 backdrop-blur-[2px] flex items-center justify-center p-4">
+      <div className="tm-panel relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white rounded-3xl max-w-md w-full shadow-2xl shadow-teal-900/20 max-h-[90vh] overflow-y-auto p-6">
+<ModalCloseButton onClose={onClose} />
         <h2 className="text-lg font-bold text-navy mb-4">
           {isEdit ? 'Edit Prestasi' : 'Tambah Prestasi'}
         </h2>
@@ -109,6 +115,36 @@ export default function PrestasiFormModal({ item, onClose, onSaved }) {
               />
             </Field>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Bidang (opsional)">
+              <input
+                type="text"
+                list="bidang-prestasi"
+                value={form.bidang}
+                onChange={(e) => update('bidang', e.target.value)}
+                className="input"
+                placeholder="mis. Olahraga"
+              />
+              <datalist id="bidang-prestasi">
+                {['Akademik', 'Olahraga', 'Seni & Budaya', 'Keagamaan', 'Teknologi', 'Kepemimpinan', 'Lainnya'].map((k) => (
+                  <option key={k} value={k} />
+                ))}
+              </datalist>
+            </Field>
+            <Field label="Jenis prestasi">
+              <select value={form.jenis} onChange={(e) => update('jenis', e.target.value)} className="input">
+                <option value="">—</option>
+                <option value="individu">Individu</option>
+                <option value="kelompok">Kelompok</option>
+              </select>
+            </Field>
+            <Field label="Penyelenggara">
+              <input type="text" value={form.penyelenggara} onChange={(e) => update('penyelenggara', e.target.value)} className="input" />
+            </Field>
+            <Field label="Peringkat">
+              <input type="text" value={form.peringkat} onChange={(e) => update('peringkat', e.target.value)} className="input" placeholder="mis. Juara 1" />
+            </Field>
+          </div>
           <Field label="Keterangan">
             <textarea
               rows={2}
@@ -129,7 +165,7 @@ export default function PrestasiFormModal({ item, onClose, onSaved }) {
             <button
               type="submit"
               disabled={saving}
-              className="bg-navy hover:bg-navy-light text-white text-sm font-semibold px-5 py-2 rounded-md disabled:opacity-50"
+              className="bg-gradient-to-r from-teal-600 to-emerald-500 hover:from-teal-700 hover:to-emerald-600 shadow-md shadow-teal-600/30 text-white text-sm font-semibold px-5 py-2 rounded-md disabled:opacity-50"
             >
               {saving ? 'Menyimpan...' : 'Simpan'}
             </button>

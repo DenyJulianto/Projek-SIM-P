@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import logoLambang from '../assets/logo-sim-lambang.png'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import { useAuth } from '../lib/AuthContext'
+import { api, BASE_URL } from '../lib/api'
 import AnggaranView from './principal/AnggaranView'
 import ERaporView from './principal/ERaporView'
 import KepegawaianKepsekView from './principal/KepegawaianKepsekView'
@@ -8,6 +10,7 @@ import LaporanKepsek from './principal/LaporanKepsek'
 import PemantauanView from './principal/PemantauanView'
 import PrincipalHome from './principal/PrincipalHome'
 import MyProfile from './MyProfile'
+import RekapPembinaanManagement from './RekapPembinaanManagement'
 
 const MENU_GROUPS = [
   { section: null, items: [{ key: 'home', label: 'Dashboard', icon: GridIcon }] },
@@ -20,6 +23,10 @@ const MENU_GROUPS = [
       { key: 'pemantauan-keuangan', label: 'Keuangan', icon: MoneyIcon },
       { key: 'pemantauan-kepegawaian', label: 'Kepegawaian', icon: StaffIcon },
       { key: 'pemantauan-sarpras', label: 'Sarana & Prasarana', icon: InventoryIcon },
+      { key: 'pemantauan-jadwal', label: 'Jadwal Pelajaran', icon: ScheduleIcon },
+      { key: 'pemantauan-surat', label: 'Persuratan', icon: MailIcon },
+      { key: 'pemantauan-prestasi-pelanggaran', label: 'Prestasi & Pelanggaran', icon: AwardIcon },
+      { key: 'rekap-pembinaan', label: 'Rekap Pembinaan Siswa', icon: StudentIcon },
     ],
   },
   {
@@ -36,6 +43,7 @@ const MENU_GROUPS = [
       { key: 'anggaran-rkas', label: 'RKAS / RAPBS', icon: MoneyIcon },
       { key: 'anggaran-pengajuan', label: 'Pengajuan Anggaran', icon: SendIcon },
       { key: 'anggaran-realisasi', label: 'Realisasi & Saldo', icon: ChartIcon },
+      { key: 'anggaran-sumberdana', label: 'Sumber Dana', icon: MoneyIcon },
       { key: 'anggaran-persetujuan', label: 'Persetujuan Anggaran', icon: CheckIcon },
     ],
   },
@@ -55,52 +63,98 @@ export default function PrincipalDashboard() {
   const { user, logout } = useAuth()
   const [view, setView] = useState('home')
   const [confirmingLogout, setConfirmingLogout] = useState(false)
+  const [sekolah, setSekolah] = useState(null)
+  const [insights, setInsights] = useState(null)
+  const [notifOpen, setNotifOpen] = useState(false)
+
+  useEffect(() => {
+    api.getProfil().then(setSekolah).catch(() => {})
+    api.getPrincipalInsights().then(setInsights).catch(() => {})
+  }, [])
+
+  const perluPerhatianCount = (insights?.ringkasan || []).filter((r) => r.tipe === 'perhatian').length
+
+  // Sapaan mengikuti jenis kelamin di profil; kalau belum diisi, dipakai "Bapak/Ibu".
+  const sapaan = { L: 'Bapak', P: 'Ibu' }[user?.jenis_kelamin] || 'Bapak/Ibu'
+  const namaLengkap = [user?.name, user?.gelar].filter(Boolean).join(', ')
+  const namaSapaan = [sapaan, namaLengkap].filter(Boolean).join(' ')
+  const avatarSrc = user?.avatar_url ? `${BASE_URL}${user.avatar_url}` : null
+  const [openSection, setOpenSection] = useState(null)
+
+  useEffect(() => {
+    const activeGroup = MENU_GROUPS.find((group) => group.section && group.items.some((item) => item.key === view))
+    if (activeGroup) setOpenSection(activeGroup.section)
+  }, [view])
+
+  function toggleSection(section) {
+    setOpenSection((prev) => (prev === section ? null : section))
+  }
 
   return (
-    <div className="h-screen bg-white flex overflow-hidden">
-      <aside className="w-64 shrink-0 bg-navy text-white flex flex-col py-6 px-4 h-screen">
-        <div className="flex items-center gap-2 px-2 mb-8">
-          <div className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-            <CapIcon className="h-5 w-5 text-white" />
+    <div className="h-screen bg-gradient-to-br from-emerald-200 via-teal-100 to-emerald-300 flex overflow-hidden">
+      <aside className="w-64 shrink-0 bg-gradient-to-b from-emerald-500 via-emerald-700 to-emerald-900 text-white flex flex-col py-6 px-4 h-screen">
+        <div className="flex items-center gap-2.5 px-2 mb-8 min-w-0">
+          <div className="h-16 w-16 rounded-full bg-white ring-2 ring-white/40 shadow-md overflow-hidden shrink-0">
+            <img src={logoLambang} alt="Logo SIM Pendidikan" className="h-full w-full object-cover" />
           </div>
-          <p className="font-bold tracking-wide text-sm">SIM Pendidikan</p>
+          <div className="min-w-0">
+            <p className="font-bold tracking-wide text-sm">SIM Pendidikan</p>
+            <p className="text-[11px] leading-snug mt-1 text-white/60">
+              Mewujudkan Sekolah Unggul, Berkarakter, dan Berprestasi.
+            </p>
+          </div>
         </div>
 
-        <nav className="flex-1 space-y-4 overflow-y-auto">
-          {MENU_GROUPS.map((group, gi) => (
-            <div key={gi} className="space-y-1.5">
-              {group.section && (
-                <p className="px-4 text-[10px] font-bold text-white/40 uppercase tracking-wider">
-                  {group.section}
-                </p>
-              )}
-              {group.items.map((item) => {
-                const Icon = item.icon
-                const active = view === item.key
-                return (
+        <nav className="flex-1 space-y-1.5 overflow-y-auto">
+          {MENU_GROUPS.map((group, gi) => {
+            const isOpen = !group.section || openSection === group.section
+            const hasActiveItem = group.items.some((item) => item.key === view)
+
+            return (
+              <div key={gi} className="space-y-1.5">
+                {group.section && (
                   <button
-                    key={item.key}
-                    onClick={() => setView(item.key)}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors text-left ${
-                      active
-                        ? 'bg-white text-navy shadow-sm'
-                        : 'text-white/75 hover:bg-white/10 hover:text-white'
+                    onClick={() => toggleSection(group.section)}
+                    className={`w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-colors ${
+                      hasActiveItem ? 'text-white' : 'text-white/75 hover:bg-white/10 hover:text-white'
                     }`}
                   >
-                    <Icon className="h-4.5 w-4.5 shrink-0" />
-                    <span className="truncate min-w-0">{item.label}</span>
+                    <span className="truncate min-w-0">{group.section}</span>
+                    <ChevronIcon className={`h-4 w-4 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                   </button>
-                )
-              })}
-            </div>
-          ))}
+                )}
+                {isOpen && (
+                  <div className={`space-y-1.5 ${group.section ? 'pl-2' : ''}`}>
+                    {group.items.map((item) => {
+                      const Icon = item.icon
+                      const active = view === item.key
+                      return (
+                        <button
+                          key={item.key}
+                          onClick={() => setView(item.key)}
+                          className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium transition-colors text-left ${
+                            active
+                              ? 'bg-lime-400 text-navy shadow-sm'
+                              : 'text-white/75 hover:bg-white/10 hover:text-white'
+                          }`}
+                        >
+                          <Icon className="h-4.5 w-4.5 shrink-0" />
+                          <span className="min-w-0 leading-snug">{item.label}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </nav>
 
         <button
           onClick={() => setView('profile')}
           className={`flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors text-left mt-2 ${
             view === 'profile'
-              ? 'bg-white text-navy shadow-sm'
+              ? 'bg-lime-400 text-navy shadow-sm'
               : 'text-white/75 hover:bg-white/10 hover:text-white'
           }`}
         >
@@ -118,18 +172,77 @@ export default function PrincipalDashboard() {
       </aside>
 
       <main className="flex-1 p-6 sm:p-8 overflow-y-auto">
-        <div className="mb-6">
-          <h1 className="text-xl font-extrabold text-navy">Selamat datang, {user?.name}!</h1>
-          <p className="text-sm text-navy/50">Kepala Sekolah — pantau kinerja sekolah dari sini.</p>
+        <div className="-mx-6 -mt-6 sm:-mx-8 sm:-mt-8 mb-[1cm] flex items-center gap-5 bg-gradient-to-r from-emerald-600 via-sky-400 to-white px-6 sm:px-8 py-8 shadow-sm shadow-emerald-900/10">
+          <button
+            onClick={() => setView('profile')}
+            title="Buka profil"
+            className="h-16 w-16 rounded-full shadow-lg overflow-hidden shrink-0 bg-gradient-to-br from-navy to-navy-light text-white text-xl font-bold flex items-center justify-center"
+          >
+            {avatarSrc ? (
+              <img src={avatarSrc} alt="Foto profil" className="h-full w-full object-cover" />
+            ) : (
+              user?.name?.[0]?.toUpperCase() || '?'
+            )}
+          </button>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl font-extrabold text-white drop-shadow-sm">Selamat Datang, {namaSapaan}</h1>
+            <p className="text-sm text-white/90">
+              Anda adalah kepala sekolah{sekolah?.nama_sekolah ? ` di ${sekolah.nama_sekolah}` : ''}
+            </p>
+          </div>
+
+          <div className="relative shrink-0">
+            <button
+              onClick={() => setNotifOpen((v) => !v)}
+              className={`relative h-11 w-11 rounded-full bg-white/20 backdrop-blur border border-white/30 flex items-center justify-center transition-colors ${
+                notifOpen ? 'text-white' : 'text-white/80 hover:text-white'
+              }`}
+            >
+              <BellIcon className="h-5 w-5" />
+              {perluPerhatianCount > 0 && <span className="absolute top-2.5 right-3 h-1.5 w-1.5 rounded-full bg-red-500" />}
+            </button>
+            {notifOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
+                <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl border border-navy/10 shadow-xl p-3 z-50 text-left">
+                  <p className="text-xs font-bold text-navy/60 uppercase tracking-wide px-1 mb-2">Ringkasan &amp; Rekomendasi</p>
+                  {!insights ? (
+                    <p className="text-xs text-navy/40 text-center py-4">Memuat...</p>
+                  ) : insights.ringkasan.length === 0 ? (
+                    <p className="text-xs text-navy/40 text-center py-4">Belum ada ringkasan untuk ditampilkan.</p>
+                  ) : (
+                    <div className="space-y-1.5 max-h-72 overflow-y-auto">
+                      {insights.ringkasan.map((item, i) => (
+                        <div key={i} className="px-3 py-2 rounded-xl hover:bg-navy/5">
+                          <p className="text-xs font-bold text-navy leading-snug">{item.judul}</p>
+                          <p className="text-[11px] text-navy/50 leading-snug mt-0.5">{item.deskripsi}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <button
+                    onClick={() => {
+                      setView('home')
+                      setNotifOpen(false)
+                    }}
+                    className="w-full text-center text-xs font-semibold text-navy-light hover:underline mt-2 py-1"
+                  >
+                    Lihat di Dashboard →
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
-        {view === 'home' && <PrincipalHome />}
+        {view === 'home' && <PrincipalHome onNavigate={setView} />}
         {view.startsWith('pemantauan-') && <PemantauanView section={view.replace('pemantauan-', '')} />}
         {view.startsWith('erapor-') && <ERaporView tab={view.replace('erapor-', '')} />}
         {view.startsWith('anggaran-') && <AnggaranView tab={view.replace('anggaran-', '')} />}
         {view.startsWith('kepeg-') && <KepegawaianKepsekView tab={view.replace('kepeg-', '')} />}
+        {view === 'rekap-pembinaan' && <RekapPembinaanManagement onBack={() => setView('home')} />}
         {view === 'laporan' && <LaporanKepsek />}
-        {view === 'profile' && <MyProfile onBack={() => setView('home')} />}
+        {view === 'profile' && <MyProfile onBack={() => setView('home')} staffProfile />}
       </main>
 
       {confirmingLogout && (
@@ -139,11 +252,38 @@ export default function PrincipalDashboard() {
   )
 }
 
-function CapIcon(props) {
+function ScheduleIcon(props) {
   return (
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="m2 9 10-5 10 5-10 5-10-5Z" />
-      <path d="M6 11v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5" />
+      <rect x="3" y="4" width="18" height="17" rx="2" />
+      <path d="M3 9h18M8 2v4M16 2v4" />
+      <path d="M8 13h2M14 13h2M8 17h2M14 17h2" />
+    </svg>
+  )
+}
+
+function MailIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="2" y="5" width="20" height="14" rx="2" />
+      <path d="m3 6 9 7 9-7" />
+    </svg>
+  )
+}
+
+function AwardIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="8" r="5" />
+      <path d="m8.5 12.5-2 8 5.5-3 5.5 3-2-8" />
+    </svg>
+  )
+}
+
+function ChevronIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m6 9 6 6 6-6" />
     </svg>
   )
 }
@@ -272,6 +412,15 @@ function ReportIcon(props) {
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M9 17v-6M15 17v-3M12 17V9" />
       <rect x="3" y="3" width="18" height="18" rx="2" />
+    </svg>
+  )
+}
+
+function BellIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
     </svg>
   )
 }

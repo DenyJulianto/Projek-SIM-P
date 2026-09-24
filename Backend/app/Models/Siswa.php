@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Siswa extends Model
 {
@@ -16,6 +17,7 @@ class Siswa extends Model
     protected $fillable = [
         'user_id',
         'kelas_id',
+        'tahun_masuk',
         'nis',
         'nisn',
         'nama',
@@ -23,6 +25,8 @@ class Siswa extends Model
         'tempat_lahir',
         'tanggal_lahir',
         'alamat',
+        'nama_wali',
+        'telepon_wali',
         'status',
     ];
 
@@ -58,5 +62,25 @@ class Siswa extends Model
     public function nilai(): HasMany
     {
         return $this->hasMany(Nilai::class);
+    }
+
+    public function tagihan(): HasMany
+    {
+        return $this->hasMany(Tagihan::class);
+    }
+
+    public function saldo(): HasOne
+    {
+        return $this->hasOne(SaldoSiswa::class);
+    }
+
+    public function saldoTransaksi(): HasMany
+    {
+        return $this->hasMany(SaldoTransaksi::class);
+    }
+
+    public function pelanggaran(): HasMany
+    {
+        return $this->hasMany(Pelanggaran::class);
     }
 }

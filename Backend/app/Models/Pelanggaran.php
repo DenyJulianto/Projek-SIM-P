@@ -11,7 +11,7 @@ class Pelanggaran extends Model
 {
     protected $table = 'pelanggaran';
 
-    protected $fillable = ['siswa_id', 'tingkat', 'jenis', 'tanggal', 'keterangan', 'tindakan'];
+    protected $fillable = ['siswa_id', 'tingkat', 'jenis', 'kategori', 'poin', 'tanggal', 'keterangan', 'tindakan', 'status', 'catatan', 'dicatat_oleh'];
 
     protected function casts(): array
     {

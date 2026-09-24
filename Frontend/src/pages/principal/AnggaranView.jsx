@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react'
+import {
+  CardIcon,
+  CheckIcon,
+  ChartIcon,
+  ClockIcon,
+  DatabaseIcon,
+  NoteIcon,
+  PeopleIcon,
+  ReportPage,
+  TrendDownIcon,
+  WalletIcon,
+  formatRupiah,
+} from '../../components/ReportKit'
 import { api } from '../../lib/api'
-
-const TITLES = {
-  rkas: 'RKAS / RAPBS',
-  pengajuan: 'Pengajuan Anggaran',
-  realisasi: 'Realisasi & Saldo',
-  persetujuan: 'Persetujuan Anggaran',
-}
-
-const DESC = {
-  rkas: 'Rencana Kerja & Anggaran Sekolah / Rencana Anggaran Pendapatan dan Belanja Sekolah.',
-  pengajuan: 'Daftar pengajuan anggaran dari tiap bidang.',
-  realisasi: 'Realisasi belanja dibandingkan anggaran yang disetujui, beserta sisa saldo.',
-  persetujuan: 'Pengajuan anggaran yang menunggu persetujuan Anda.',
-}
+import { kategoriLabel } from '../../lib/sumberDanaKategori'
 
 const STATUS_STYLE = {
   diajukan: 'bg-amber-100 text-amber-700',
@@ -21,94 +21,217 @@ const STATUS_STYLE = {
   ditolak: 'bg-red-100 text-red-600',
 }
 
+const STATUS_LABEL = { diajukan: 'Diajukan', disetujui: 'Disetujui', ditolak: 'Ditolak' }
+
+const sum = (list, pick) => list.reduce((total, item) => total + (Number(pick(item)) || 0), 0)
+const unik = (list, pick) => [...new Set(list.map(pick).filter(Boolean))].sort().map((v) => ({ value: v, label: v }))
+
+function formatTanggal(value) {
+  if (!value) return '-'
+  const [y, m, d] = String(value).slice(0, 10).split('-')
+  return `${d}/${m}/${y}`
+}
+
+function useData(fetcher) {
+  const [rows, setRows] = useState(null)
+  const [error, setError] = useState('')
+
+  function load() {
+    fetcher()
+      .then((res) => {
+        setRows(res)
+        setError('')
+      })
+      .catch((err) => {
+        setRows([])
+        setError(err.message)
+      })
+  }
+
+  useEffect(load, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  return [rows, error, load]
+}
+
+function ErrorNote({ error }) {
+  return error ? <p className="text-red-600 text-sm mb-3 print:hidden">{error}</p> : null
+}
+
 export default function AnggaranView({ tab }) {
   return (
     <div>
-      <h1 className="text-2xl font-extrabold text-navy mb-1">{TITLES[tab]}</h1>
-      <p className="text-sm text-navy/50 mb-6">{DESC[tab]}</p>
-
       {tab === 'rkas' && <RkasTab />}
       {tab === 'pengajuan' && <PengajuanTab />}
       {tab === 'realisasi' && <RealisasiTab />}
+      {tab === 'sumberdana' && <SumberDanaTab />}
       {tab === 'persetujuan' && <PersetujuanTab />}
     </div>
   )
 }
 
 function RkasTab() {
-  const [data, setData] = useState(null)
-  const [error, setError] = useState('')
-
-  useEffect(() => {
-    api.listAnggaranPos().then(setData).catch((err) => setError(err.message))
-  }, [])
-
-  if (error) return <p className="text-red-600 text-sm">{error}</p>
-  if (!data) return <p className="text-navy/40 text-center py-10">Memuat...</p>
-
-  const total = data.reduce((sum, p) => sum + Number(p.jumlah_anggaran), 0)
+  const [rows, error] = useData(() => api.listAnggaranPos())
 
   return (
-    <div className="space-y-4">
-      <StatBox label="Total Anggaran RKAS" value={formatRupiah(total)} />
-      <div className="bg-white rounded-2xl border border-navy/10 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-navy/5 text-navy/60 text-xs uppercase text-left">
-              <th className="px-4 py-3">Tahun Ajaran</th>
-              <th className="px-4 py-3">Bidang</th>
-              <th className="px-4 py-3">Uraian</th>
-              <th className="px-4 py-3 text-right">Jumlah Anggaran</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-navy/40">
-                  Belum ada pos RKAS yang dicatat Bendahara.
-                </td>
-              </tr>
-            ) : (
-              data.map((p) => (
-                <tr key={p.id} className="border-t border-navy/5">
-                  <td className="px-4 py-3 text-navy/70">{p.tahun_ajaran}</td>
-                  <td className="px-4 py-3 text-navy/70">{p.bidang}</td>
-                  <td className="px-4 py-3 font-medium text-navy">{p.uraian}</td>
-                  <td className="px-4 py-3 text-right text-navy/70">{formatRupiah(p.jumlah_anggaran)}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <>
+      <ErrorNote error={error} />
+      <ReportPage
+        icon={DatabaseIcon}
+        title="RKAS / RAPBS"
+        description="Rencana Kerja & Anggaran Sekolah / Rencana Anggaran Pendapatan dan Belanja Sekolah, dicatat oleh Bendahara."
+        rows={rows}
+        searchText={(p) => `${p.bidang || ''} ${p.uraian || ''}`}
+        searchPlaceholder="Cari bidang atau uraian..."
+        selects={[
+          {
+            key: 'tahun',
+            icon: ClockIcon,
+            placeholder: 'Semua Tahun Ajaran',
+            options: (semua) => unik(semua, (p) => p.tahun_ajaran),
+            match: (p, v) => p.tahun_ajaran === v,
+          },
+          {
+            key: 'bidang',
+            icon: DatabaseIcon,
+            placeholder: 'Semua Bidang',
+            options: (semua) => unik(semua, (p) => p.bidang),
+            match: (p, v) => p.bidang === v,
+          },
+        ]}
+        cards={(f) => [
+          { icon: WalletIcon, circle: 'bg-emerald-500', label: 'Total Anggaran RKAS', value: f ? formatRupiah(sum(f, (p) => p.jumlah_anggaran)) : '-', note: 'Sesuai filter aktif' },
+          { icon: NoteIcon, circle: 'bg-blue-500', label: 'Jumlah Pos', value: f ? f.length : '-', note: 'Pos anggaran tercatat' },
+          { icon: DatabaseIcon, circle: 'bg-purple-500', label: 'Bidang', value: f ? new Set(f.map((p) => p.bidang)).size : '-', note: 'Bidang berbeda' },
+          {
+            icon: ChartIcon,
+            circle: 'bg-amber-500',
+            label: 'Rata-rata per Pos',
+            value: f ? formatRupiah(f.length ? sum(f, (p) => p.jumlah_anggaran) / f.length : 0) : '-',
+            note: 'Anggaran per pos',
+          },
+        ]}
+        columns={[
+          { label: 'Tahun Ajaran', render: (p) => <span className="text-navy/70 whitespace-nowrap">{p.tahun_ajaran}</span> },
+          { label: 'Bidang', render: (p) => <span className="font-semibold text-navy">{p.bidang}</span> },
+          { label: 'Uraian', render: (p) => <span className="text-navy/70">{p.uraian}</span> },
+          { label: 'Jumlah Anggaran', align: 'right', render: (p) => <span className="font-semibold text-navy">{formatRupiah(p.jumlah_anggaran)}</span> },
+        ]}
+        csv={{
+          name: 'rkas.csv',
+          header: ['No', 'Tahun Ajaran', 'Bidang', 'Uraian', 'Jumlah Anggaran'],
+          row: (p, i) => [i + 1, p.tahun_ajaran, p.bidang, p.uraian, Math.round(Number(p.jumlah_anggaran))],
+        }}
+        emptyText="Belum ada pos RKAS yang dicatat Bendahara."
+      />
+    </>
   )
 }
 
 function PengajuanTab() {
-  const [data, setData] = useState(null)
-  const [error, setError] = useState('')
+  const [rows, error] = useData(() => api.listPengajuanAnggaran())
 
-  useEffect(() => {
-    api.listPengajuanAnggaran().then(setData).catch((err) => setError(err.message))
-  }, [])
+  return (
+    <>
+      <ErrorNote error={error} />
+      <ReportPage
+        icon={NoteIcon}
+        title="Pengajuan Anggaran"
+        description="Daftar pengajuan anggaran dari tiap bidang beserta status persetujuannya."
+        rows={rows}
+        searchText={(p) => `${p.judul || ''} ${p.diajukan_oleh?.name || ''}`}
+        searchPlaceholder="Cari judul atau pengaju..."
+        selects={[
+          {
+            key: 'status',
+            icon: ClockIcon,
+            placeholder: 'Semua Status',
+            options: () => Object.entries(STATUS_LABEL).map(([value, label]) => ({ value, label })),
+            match: (p, v) => p.status === v,
+          },
+        ]}
+        cards={(f) => [
+          { icon: NoteIcon, circle: 'bg-emerald-500', label: 'Total Pengajuan', value: f ? f.length : '-', note: f ? formatRupiah(sum(f, (p) => p.jumlah)) : '' },
+          { icon: ClockIcon, circle: 'bg-amber-500', label: 'Menunggu', value: f ? f.filter((p) => p.status === 'diajukan').length : '-', note: 'Perlu persetujuan' },
+          { icon: CheckIcon, circle: 'bg-blue-500', label: 'Disetujui', value: f ? f.filter((p) => p.status === 'disetujui').length : '-', note: f ? formatRupiah(sum(f.filter((p) => p.status === 'disetujui'), (p) => p.jumlah)) : '' },
+          { icon: CardIcon, circle: 'bg-teal-600', label: 'Ditolak', value: f ? f.filter((p) => p.status === 'ditolak').length : '-', note: 'Tidak disetujui' },
+        ]}
+        columns={[
+          { label: 'Judul', render: (p) => <span className="font-semibold text-navy">{p.judul}</span> },
+          { label: 'Diajukan Oleh', render: (p) => <span className="text-navy/70">{p.diajukan_oleh?.name || '-'}</span> },
+          { label: 'Jumlah', align: 'right', render: (p) => <span className="font-semibold text-navy">{formatRupiah(p.jumlah)}</span> },
+          {
+            label: 'Status',
+            render: (p) => (
+              <span className={`text-xs font-semibold px-3 py-1 rounded-full ${STATUS_STYLE[p.status]}`}>{STATUS_LABEL[p.status] || p.status}</span>
+            ),
+          },
+        ]}
+        csv={{
+          name: 'pengajuan-anggaran.csv',
+          header: ['No', 'Judul', 'Diajukan Oleh', 'Jumlah', 'Status'],
+          row: (p, i) => [i + 1, p.judul, p.diajukan_oleh?.name, Math.round(Number(p.jumlah)), STATUS_LABEL[p.status] || p.status],
+        }}
+        emptyText="Belum ada pengajuan anggaran."
+      />
+    </>
+  )
+}
 
-  if (error) return <p className="text-red-600 text-sm">{error}</p>
-  if (!data) return <p className="text-navy/40 text-center py-10">Memuat...</p>
+function SumberDanaTab() {
+  const [rows, error] = useData(() => api.listSumberDana())
 
-  return <PengajuanTable data={data} />
+  return (
+    <>
+      <ErrorNote error={error} />
+      <ReportPage
+        icon={DatabaseIcon}
+        title="Sumber Dana"
+        description="Sumber dana sekolah per tahun ajaran, dicatat oleh Bendahara."
+        rows={rows}
+        searchText={(p) => `${p.nama || ''} ${p.keterangan || ''}`}
+        searchPlaceholder="Cari nama atau keterangan..."
+        selects={[
+          {
+            key: 'tahun',
+            icon: ClockIcon,
+            placeholder: 'Semua Tahun Ajaran',
+            options: (semua) => unik(semua, (p) => p.tahun_ajaran),
+            match: (p, v) => p.tahun_ajaran === v,
+          },
+          {
+            key: 'kategori',
+            icon: DatabaseIcon,
+            placeholder: 'Semua Kategori',
+            options: (semua) => unik(semua, (p) => kategoriLabel(p.kategori)),
+            match: (p, v) => kategoriLabel(p.kategori) === v,
+          },
+        ]}
+        cards={(f) => [
+          { icon: WalletIcon, circle: 'bg-emerald-500', label: 'Total Sumber Dana', value: f ? formatRupiah(sum(f, (p) => p.jumlah)) : '-', note: 'Sesuai filter aktif' },
+          { icon: NoteIcon, circle: 'bg-blue-500', label: 'Jumlah Catatan', value: f ? f.length : '-', note: 'Sumber dana tercatat' },
+          { icon: DatabaseIcon, circle: 'bg-purple-500', label: 'Kategori', value: f ? new Set(f.map((p) => p.kategori)).size : '-', note: 'Kategori berbeda' },
+        ]}
+        columns={[
+          { label: 'Tahun Ajaran', render: (p) => <span className="text-navy/70 whitespace-nowrap">{p.tahun_ajaran}</span> },
+          { label: 'Nama', render: (p) => <span className="font-semibold text-navy">{p.nama}</span> },
+          { label: 'Kategori', render: (p) => <span className="text-navy/70">{kategoriLabel(p.kategori)}</span> },
+          { label: 'Keterangan', render: (p) => <span className="text-navy/70">{p.keterangan || '-'}</span> },
+          { label: 'Jumlah', align: 'right', render: (p) => <span className="font-semibold text-navy">{formatRupiah(p.jumlah)}</span> },
+        ]}
+        csv={{
+          name: 'sumber-dana.csv',
+          header: ['No', 'Tahun Ajaran', 'Nama', 'Kategori', 'Keterangan', 'Jumlah'],
+          row: (p, i) => [i + 1, p.tahun_ajaran, p.nama, kategoriLabel(p.kategori), p.keterangan, Math.round(Number(p.jumlah))],
+        }}
+        emptyText="Belum ada sumber dana yang dicatat Bendahara."
+      />
+    </>
+  )
 }
 
 function PersetujuanTab() {
-  const [data, setData] = useState(null)
-  const [error, setError] = useState('')
+  const [rows, error, load] = useData(() => api.listPengajuanAnggaran({ status: 'diajukan' }))
   const [busyId, setBusyId] = useState(null)
-
-  function load() {
-    api.listPengajuanAnggaran({ status: 'diajukan' }).then(setData).catch((err) => setError(err.message))
-  }
-
-  useEffect(load, [])
 
   async function handleApprove(item) {
     const catatan = window.prompt(`Catatan persetujuan untuk "${item.judul}" (opsional):`, '')
@@ -138,150 +261,105 @@ function PersetujuanTab() {
     }
   }
 
-  if (error) return <p className="text-red-600 text-sm">{error}</p>
-  if (!data) return <p className="text-navy/40 text-center py-10">Memuat...</p>
-
   return (
-    <div className="bg-white rounded-2xl border border-navy/10 divide-y divide-navy/5">
-      {data.length === 0 ? (
-        <p className="text-sm text-navy/40 text-center py-8">Tidak ada pengajuan yang menunggu persetujuan.</p>
-      ) : (
-        data.map((item) => (
-          <div key={item.id} className="p-4 flex items-center justify-between gap-4 flex-wrap">
-            <div>
-              <p className="text-sm font-semibold text-navy">{item.judul}</p>
-              <p className="text-xs text-navy/50 mt-0.5">
-                {formatRupiah(item.jumlah)} · diajukan oleh {item.diajukan_oleh?.name || '-'}
-                {item.anggaran_pos && ` · pos: ${item.anggaran_pos.uraian}`}
-              </p>
-              {item.keterangan && <p className="text-xs text-navy/40 mt-1">{item.keterangan}</p>}
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={() => handleReject(item)}
-                disabled={busyId === item.id}
-                className="text-xs font-semibold text-red-600 border border-red-200 rounded-full px-3.5 py-1.5 hover:bg-red-600 hover:text-white transition-colors disabled:opacity-50"
-              >
-                Tolak
-              </button>
-              <button
-                onClick={() => handleApprove(item)}
-                disabled={busyId === item.id}
-                className="text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-full px-3.5 py-1.5 transition-colors disabled:opacity-50"
-              >
-                Setujui
-              </button>
-            </div>
-          </div>
-        ))
-      )}
-    </div>
+    <>
+      <ErrorNote error={error} />
+      <ReportPage
+        icon={CheckIcon}
+        title="Persetujuan Anggaran"
+        description="Pengajuan anggaran yang menunggu persetujuan Anda. Setujui atau tolak langsung dari daftar ini."
+        rows={rows}
+        searchText={(p) => `${p.judul || ''} ${p.diajukan_oleh?.name || ''} ${p.anggaran_pos?.uraian || ''}`}
+        searchPlaceholder="Cari judul, pengaju, atau pos..."
+        cards={(f) => [
+          { icon: ClockIcon, circle: 'bg-amber-500', label: 'Menunggu Persetujuan', value: f ? f.length : '-', note: 'Pengajuan dalam antrian' },
+          { icon: WalletIcon, circle: 'bg-emerald-500', label: 'Total Nilai Diajukan', value: f ? formatRupiah(sum(f, (p) => p.jumlah)) : '-', note: 'Akumulasi semua antrian' },
+          { icon: PeopleIcon, circle: 'bg-blue-500', label: 'Jumlah Pengaju', value: f ? new Set(f.map((p) => p.diajukan_oleh?.name)).size : '-', note: 'Pengaju berbeda' },
+          { icon: TrendDownIcon, circle: 'bg-purple-500', label: 'Pengajuan Terbesar', value: f ? formatRupiah(f.reduce((max, p) => Math.max(max, Number(p.jumlah) || 0), 0)) : '-', note: 'Nilai tertinggi' },
+        ]}
+        columns={[
+          {
+            label: 'Pengajuan',
+            render: (p) => (
+              <div>
+                <p className="font-semibold text-navy">{p.judul}</p>
+                <p className="text-[11px] text-navy/50">
+                  {p.anggaran_pos ? `Pos: ${p.anggaran_pos.uraian}` : 'Tanpa pos'}
+                  {p.keterangan ? ` · ${p.keterangan}` : ''}
+                </p>
+              </div>
+            ),
+          },
+          { label: 'Diajukan Oleh', render: (p) => <span className="text-navy/70">{p.diajukan_oleh?.name || '-'}</span> },
+          { label: 'Jumlah', align: 'right', render: (p) => <span className="font-semibold text-navy">{formatRupiah(p.jumlah)}</span> },
+          {
+            label: 'Aksi',
+            render: (p) => (
+              <div className="flex items-center gap-2 print:hidden">
+                <button
+                  onClick={() => handleReject(p)}
+                  disabled={busyId === p.id}
+                  className="text-xs font-semibold text-red-600 border border-red-200 rounded-full px-3.5 py-1.5 hover:bg-red-600 hover:text-white transition-colors disabled:opacity-50"
+                >
+                  Tolak
+                </button>
+                <button
+                  onClick={() => handleApprove(p)}
+                  disabled={busyId === p.id}
+                  className="text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-full px-3.5 py-1.5 transition-colors disabled:opacity-50"
+                >
+                  Setujui
+                </button>
+              </div>
+            ),
+          },
+        ]}
+        csv={{
+          name: 'persetujuan-anggaran.csv',
+          header: ['No', 'Judul', 'Pos', 'Diajukan Oleh', 'Jumlah'],
+          row: (p, i) => [i + 1, p.judul, p.anggaran_pos?.uraian, p.diajukan_oleh?.name, Math.round(Number(p.jumlah))],
+        }}
+        emptyText="Tidak ada pengajuan yang menunggu persetujuan."
+      />
+    </>
   )
 }
 
 function RealisasiTab() {
-  const [data, setData] = useState(null)
-  const [error, setError] = useState('')
-
-  useEffect(() => {
-    api.getRealisasiAnggaran().then(setData).catch((err) => setError(err.message))
-  }, [])
-
-  if (error) return <p className="text-red-600 text-sm">{error}</p>
-  if (!data) return <p className="text-navy/40 text-center py-10">Memuat...</p>
+  const [data, error] = useData(() => api.getRealisasiAnggaran())
+  const rows = data ? data.realisasi : null
 
   return (
-    <div className="space-y-6">
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatBox label="Total Anggaran RKAS" value={formatRupiah(data.total_anggaran)} />
-        <StatBox label="Disetujui" value={formatRupiah(data.total_disetujui)} />
-        <StatBox label="Total Realisasi" value={formatRupiah(data.total_realisasi)} />
-        <StatBox label="Sisa Saldo" value={formatRupiah(data.saldo)} />
-      </div>
-
-      <div>
-        <h2 className="text-sm font-bold text-navy/60 uppercase tracking-wide mb-2">Riwayat Realisasi</h2>
-        <div className="bg-white rounded-2xl border border-navy/10 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-navy/5 text-navy/60 text-xs uppercase text-left">
-                <th className="px-4 py-3">Tanggal</th>
-                <th className="px-4 py-3">Pengajuan</th>
-                <th className="px-4 py-3">Keterangan</th>
-                <th className="px-4 py-3 text-right">Jumlah</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.realisasi.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-4 py-6 text-center text-navy/40">Belum ada realisasi.</td>
-                </tr>
-              ) : (
-                data.realisasi.map((r) => (
-                  <tr key={r.id} className="border-t border-navy/5">
-                    <td className="px-4 py-3 text-navy/60">{r.tanggal?.slice(0, 10)}</td>
-                    <td className="px-4 py-3 font-medium text-navy">{r.pengajuan_anggaran?.judul || '-'}</td>
-                    <td className="px-4 py-3 text-navy/60">{r.keterangan || '-'}</td>
-                    <td className="px-4 py-3 text-right text-navy/70">{formatRupiah(r.jumlah)}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function PengajuanTable({ data }) {
-  return (
-    <div className="bg-white rounded-2xl border border-navy/10 overflow-hidden">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="bg-navy/5 text-navy/60 text-xs uppercase text-left">
-            <th className="px-4 py-3">Judul</th>
-            <th className="px-4 py-3">Diajukan Oleh</th>
-            <th className="px-4 py-3 text-right">Jumlah</th>
-            <th className="px-4 py-3">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.length === 0 ? (
-            <tr>
-              <td colSpan={4} className="px-4 py-6 text-center text-navy/40">Belum ada pengajuan anggaran.</td>
-            </tr>
-          ) : (
-            data.map((item) => (
-              <tr key={item.id} className="border-t border-navy/5">
-                <td className="px-4 py-3 font-medium text-navy">{item.judul}</td>
-                <td className="px-4 py-3 text-navy/60">{item.diajukan_oleh?.name || '-'}</td>
-                <td className="px-4 py-3 text-right text-navy/70">{formatRupiah(item.jumlah)}</td>
-                <td className="px-4 py-3">
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLE[item.status]}`}>
-                    {item.status}
-                  </span>
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-function StatBox({ label, value }) {
-  return (
-    <div className="bg-white rounded-2xl border border-navy/10 p-5">
-      <p className="text-xl font-extrabold text-navy">{value}</p>
-      <p className="text-xs text-navy/50 uppercase tracking-wide mt-1">{label}</p>
-    </div>
-  )
-}
-
-function formatRupiah(value) {
-  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(
-    Number(value) || 0
+    <>
+      <ErrorNote error={error} />
+      <ReportPage
+        icon={ChartIcon}
+        title="Realisasi & Saldo"
+        description="Realisasi belanja dibandingkan anggaran yang disetujui, beserta sisa saldo."
+        rows={rows}
+        searchText={(r) => `${r.pengajuan_anggaran?.judul || ''} ${r.keterangan || ''}`}
+        searchPlaceholder="Cari pengajuan atau keterangan..."
+        monthOf={(r) => (r.tanggal || '').slice(0, 7)}
+        monthTitle="Periode realisasi"
+        cards={() => [
+          { icon: DatabaseIcon, circle: 'bg-emerald-500', label: 'Total Anggaran RKAS', value: data ? formatRupiah(data.total_anggaran) : '-', note: 'Seluruh pos RKAS' },
+          { icon: CheckIcon, circle: 'bg-blue-500', label: 'Disetujui', value: data ? formatRupiah(data.total_disetujui) : '-', note: 'Pengajuan disetujui' },
+          { icon: TrendDownIcon, circle: 'bg-amber-500', label: 'Total Realisasi', value: data ? formatRupiah(data.total_realisasi) : '-', note: 'Dana yang sudah terpakai' },
+          { icon: WalletIcon, circle: 'bg-purple-500', label: 'Sisa Saldo', value: data ? formatRupiah(data.saldo) : '-', note: 'Disetujui − realisasi' },
+        ]}
+        columns={[
+          { label: 'Tanggal', render: (r) => <span className="text-navy/70 whitespace-nowrap">{formatTanggal(r.tanggal)}</span> },
+          { label: 'Pengajuan', render: (r) => <span className="font-semibold text-navy">{r.pengajuan_anggaran?.judul || '-'}</span> },
+          { label: 'Keterangan', render: (r) => <span className="text-navy/70">{r.keterangan || '-'}</span> },
+          { label: 'Jumlah', align: 'right', render: (r) => <span className="font-semibold text-navy">{formatRupiah(r.jumlah)}</span> },
+        ]}
+        csv={{
+          name: 'realisasi-anggaran.csv',
+          header: ['No', 'Tanggal', 'Pengajuan', 'Keterangan', 'Jumlah'],
+          row: (r, i) => [i + 1, r.tanggal?.slice(0, 10), r.pengajuan_anggaran?.judul, r.keterangan, Math.round(Number(r.jumlah))],
+        }}
+        emptyText="Belum ada realisasi."
+      />
+    </>
   )
 }

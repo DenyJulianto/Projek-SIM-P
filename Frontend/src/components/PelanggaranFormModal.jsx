@@ -1,3 +1,4 @@
+import ModalCloseButton from './ModalCloseButton'
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 
@@ -17,6 +18,10 @@ export default function PelanggaranFormModal({ item, onClose, onSaved }) {
     tanggal: item?.tanggal?.slice(0, 10) || new Date().toISOString().slice(0, 10),
     keterangan: item?.keterangan || '',
     tindakan: item?.tindakan || '',
+    kategori: item?.kategori || '',
+    poin: item?.poin ?? '',
+    status: item?.status || 'aktif',
+    catatan: item?.catatan || '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -49,8 +54,9 @@ export default function PelanggaranFormModal({ item, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-navy/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6">
+    <div className="fixed inset-0 z-[100] bg-teal-950/50 backdrop-blur-[2px] flex items-center justify-center p-4">
+      <div className="tm-panel relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white rounded-3xl max-w-md w-full shadow-2xl shadow-teal-900/20 max-h-[90vh] overflow-y-auto p-6">
+<ModalCloseButton onClose={onClose} />
         <h2 className="text-lg font-bold text-navy mb-4">
           {isEdit ? 'Edit Pelanggaran' : 'Catat Pelanggaran'}
         </h2>
@@ -125,6 +131,36 @@ export default function PelanggaranFormModal({ item, onClose, onSaved }) {
             />
           </Field>
 
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Kategori (opsional)">
+              <input
+                type="text"
+                list="kategori-pelanggaran"
+                value={form.kategori}
+                onChange={(e) => update('kategori', e.target.value)}
+                className="input"
+                placeholder="mis. Kedisiplinan"
+              />
+              <datalist id="kategori-pelanggaran">
+                {['Kedisiplinan', 'Ketertiban', 'Kehadiran', 'Seragam & Atribut', 'Sopan Santun', 'Akademik', 'Lainnya'].map((k) => (
+                  <option key={k} value={k} />
+                ))}
+              </datalist>
+            </Field>
+            <Field label="Poin (bila sekolah memakai poin)">
+              <input type="number" min="0" max="1000" value={form.poin} onChange={(e) => update('poin', e.target.value)} className="input" />
+            </Field>
+          </div>
+          <Field label="Status penanganan">
+            <select value={form.status} onChange={(e) => update('status', e.target.value)} className="input">
+              <option value="aktif">Aktif</option>
+              <option value="dalam_pembinaan">Dalam Pembinaan</option>
+              <option value="selesai">Selesai</option>
+            </select>
+          </Field>
+          <Field label="Catatan (opsional)">
+            <textarea rows={2} value={form.catatan} onChange={(e) => update('catatan', e.target.value)} className="input" />
+          </Field>
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
@@ -136,7 +172,7 @@ export default function PelanggaranFormModal({ item, onClose, onSaved }) {
             <button
               type="submit"
               disabled={saving}
-              className="bg-navy hover:bg-navy-light text-white text-sm font-semibold px-5 py-2 rounded-md disabled:opacity-50"
+              className="bg-gradient-to-r from-teal-600 to-emerald-500 hover:from-teal-700 hover:to-emerald-600 shadow-md shadow-teal-600/30 text-white text-sm font-semibold px-5 py-2 rounded-md disabled:opacity-50"
             >
               {saving ? 'Menyimpan...' : 'Simpan'}
             </button>

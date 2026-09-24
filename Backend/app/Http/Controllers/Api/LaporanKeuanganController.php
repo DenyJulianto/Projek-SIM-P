@@ -17,7 +17,7 @@ class LaporanKeuanganController extends Controller
     public function penerimaan(Request $request): JsonResponse
     {
         $query = Pembayaran::query()
-            ->with(['tagihan.siswa:id,nama,kelas_id'])
+            ->with(['tagihan.siswa:id,nama,nis,nisn,kelas_id', 'tagihan.siswa.kelas:id,nama_kelas', 'konfirmasi:id,pembayaran_id,bukti_path,status,tanggal_verifikasi'])
             ->when($request->filled('dari_tanggal'), fn ($q) => $q->where('tanggal_bayar', '>=', $request->string('dari_tanggal')))
             ->when($request->filled('sampai_tanggal'), fn ($q) => $q->where('tanggal_bayar', '<=', $request->string('sampai_tanggal')));
 
@@ -50,7 +50,7 @@ class LaporanKeuanganController extends Controller
     {
         $data = Tagihan::query()
             ->where('status', 'belum_lunas')
-            ->with('siswa:id,nama,kelas_id')
+            ->with('siswa:id,nama,nisn,kelas_id')
             ->orderBy('jatuh_tempo')
             ->get();
 
@@ -87,6 +87,50 @@ class LaporanKeuanganController extends Controller
         ]);
     }
 
+    /**
+     * Total penerimaan per hari untuk 30 hari terakhir — dipakai untuk
+     * grafik tren penerimaan harian. Hari tanpa transaksi tetap muncul
+     * dengan nilai 0 supaya sumbu waktu grafik tidak bolong.
+     */
+    public function penerimaanHarian(): JsonResponse
+    {
+        $mulai = now()->subDays(29)->startOfDay();
+
+        $rows = Pembayaran::query()
+            ->where('tanggal_bayar', '>=', $mulai->toDateString())
+            ->selectRaw("date(tanggal_bayar) as tanggal, sum(jumlah) as total")
+            ->groupBy(\Illuminate\Support\Facades\DB::raw('date(tanggal_bayar)'))
+            ->pluck('total', 'tanggal');
+
+        $hasil = collect(range(0, 29))->map(function ($i) use ($mulai, $rows) {
+            $tanggal = (clone $mulai)->addDays($i)->toDateString();
+
+            return [
+                'tanggal' => $tanggal,
+                'total' => (float) ($rows[$tanggal] ?? 0),
+            ];
+        });
+
+        return response()->json($hasil);
+    }
+
+    /**
+     * Total penerimaan dikelompokkan per judul tagihan (mis. "SPP
+     * Oktober 2026", "Uang Buku") sebagai pemetaan "kategori" penerimaan.
+     */
+    public function penerimaanPerJenis(): JsonResponse
+    {
+        $rows = Pembayaran::query()
+            ->join('tagihan', 'tagihan.id', '=', 'pembayaran.tagihan_id')
+            ->selectRaw('tagihan.judul as judul, sum(pembayaran.jumlah) as total')
+            ->groupBy('tagihan.judul')
+            ->orderByDesc('total')
+            ->limit(8)
+            ->get();
+
+        return response()->json($rows);
+    }
+
     public function ringkasan(Request $request): JsonResponse
     {
         $penerimaan = json_decode($this->penerimaan($request)->getContent(), true);
@@ -100,6 +144,7 @@ class LaporanKeuanganController extends Controller
             'saldo_kas' => $penerimaan['total'] - $pengeluaran['total'],
             'total_tunggakan' => $tunggakan['total'],
             'jumlah_siswa_menunggak' => $tunggakan['jumlah_siswa'],
+            'jumlah_siswa_bertagihan' => Tagihan::aktif()->distinct()->count('siswa_id'),
             'total_anggaran' => $anggaran['total_anggaran'],
             'total_realisasi_anggaran' => $anggaran['total_realisasi'],
             'penerimaan_terbaru' => array_slice($penerimaan['data'], 0, 10),

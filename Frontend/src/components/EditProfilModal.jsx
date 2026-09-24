@@ -1,3 +1,4 @@
+import ModalCloseButton from './ModalCloseButton'
 import { useState } from 'react'
 import { api } from '../lib/api'
 
@@ -6,6 +7,12 @@ export default function EditProfilModal({ profil, onClose, onSaved }) {
     nama_sekolah: profil?.nama_sekolah || '',
     jenjang: profil?.jenjang || '',
     alamat: profil?.alamat || '',
+    kecamatan: profil?.kecamatan || '',
+    kelurahan: profil?.kelurahan || '',
+    kabupaten_kota: profil?.kabupaten_kota || '',
+    provinsi: profil?.provinsi || '',
+    latitude: profil?.latitude ?? '',
+    longitude: profil?.longitude ?? '',
     telepon: profil?.telepon || '',
     email: profil?.email || '',
     logo: profil?.logo || '',
@@ -18,7 +25,7 @@ export default function EditProfilModal({ profil, onClose, onSaved }) {
     instagram: profil?.sosial_media?.instagram || '',
     youtube: profil?.sosial_media?.youtube || '',
   })
-  const [saving, setSaving] = useState(false)
+  const [saving, setSaving] = useState(false)/*  */
   const [error, setError] = useState('')
 
   async function handleSubmit(e) {
@@ -26,7 +33,12 @@ export default function EditProfilModal({ profil, onClose, onSaved }) {
     setSaving(true)
     setError('')
     try {
-      await api.updateProfil(form)
+      const payload = {
+        ...form,
+        latitude: form.latitude !== '' ? Number(form.latitude) : null,
+        longitude: form.longitude !== '' ? Number(form.longitude) : null,
+      }
+      await api.updateProfil(payload)
       onSaved()
     } catch (err) {
       setError(err.message)
@@ -40,8 +52,9 @@ export default function EditProfilModal({ profil, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-navy/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6">
+    <div className="fixed inset-0 z-[100] bg-teal-950/50 backdrop-blur-[2px] flex items-center justify-center p-4">
+      <div className="tm-panel relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white rounded-3xl max-w-lg w-full shadow-2xl shadow-teal-900/20 max-h-[90vh] overflow-y-auto p-6">
+<ModalCloseButton onClose={onClose} />
         <h2 className="text-lg font-bold text-navy mb-4">Edit Profil Landing Page</h2>
 
         {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
@@ -77,6 +90,64 @@ export default function EditProfilModal({ profil, onClose, onSaved }) {
               className="input"
             />
           </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Kelurahan">
+              <input
+                type="text"
+                value={form.kelurahan}
+                onChange={(e) => update('kelurahan', e.target.value)}
+                className="input"
+              />
+            </Field>
+            <Field label="Kecamatan">
+              <input
+                type="text"
+                value={form.kecamatan}
+                onChange={(e) => update('kecamatan', e.target.value)}
+                className="input"
+              />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Kabupaten/Kota">
+              <input
+                type="text"
+                value={form.kabupaten_kota}
+                onChange={(e) => update('kabupaten_kota', e.target.value)}
+                className="input"
+              />
+            </Field>
+            <Field label="Provinsi">
+              <input
+                type="text"
+                value={form.provinsi}
+                onChange={(e) => update('provinsi', e.target.value)}
+                className="input"
+              />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Latitude">
+              <input
+                type="number"
+                step="any"
+                value={form.latitude}
+                onChange={(e) => update('latitude', e.target.value)}
+                className="input"
+                placeholder="-6.914744"
+              />
+            </Field>
+            <Field label="Longitude">
+              <input
+                type="number"
+                step="any"
+                value={form.longitude}
+                onChange={(e) => update('longitude', e.target.value)}
+                className="input"
+                placeholder="107.609810"
+              />
+            </Field>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Telepon">
               <input
@@ -192,7 +263,7 @@ export default function EditProfilModal({ profil, onClose, onSaved }) {
             <button
               type="submit"
               disabled={saving}
-              className="bg-navy hover:bg-navy-light text-white text-sm font-semibold px-5 py-2 rounded-md disabled:opacity-50"
+              className="bg-gradient-to-r from-teal-600 to-emerald-500 hover:from-teal-700 hover:to-emerald-600 shadow-md shadow-teal-600/30 text-white text-sm font-semibold px-5 py-2 rounded-md disabled:opacity-50"
             >
               {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
             </button>

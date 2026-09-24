@@ -1,3 +1,5 @@
+import { IS_CENTRAL_DOMAIN, SUPER_ADMIN_URL } from '../lib/api'
+
 export default function Footer({ profil }) {
   const sosmed = profil?.sosial_media || {}
 
@@ -46,8 +48,15 @@ export default function Footer({ profil }) {
         </div>
       </div>
 
-      <div className="mt-12 pt-6 border-t border-white/10 text-center text-xs">
-        © {new Date().getFullYear()} {profil?.nama_sekolah || 'Nama Sekolah'}. Seluruh hak cipta dilindungi.
+      <div className="mt-12 pt-6 border-t border-white/10 text-center text-xs flex flex-col items-center gap-2">
+        <p>
+          © {new Date().getFullYear()} {profil?.nama_sekolah || 'Nama Sekolah'}. Seluruh hak cipta dilindungi.
+        </p>
+        {!IS_CENTRAL_DOMAIN && (
+          <a href={SUPER_ADMIN_URL} className="text-white/40 hover:text-white/70">
+            Portal Super Admin
+          </a>
+        )}
       </div>
     </footer>
   )

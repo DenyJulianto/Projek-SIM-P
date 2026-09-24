@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import CompleteNameForm from '../components/CompleteNameForm'
 import PasswordInput from '../components/PasswordInput'
 import { useAuth } from '../lib/AuthContext'
-import { api } from '../lib/api'
+import { api, IS_CENTRAL_DOMAIN } from '../lib/api'
 import {
   WavyBackground,
   AuthHeroPanel,
@@ -30,6 +30,7 @@ export default function Register() {
   const [background, setBackground] = useState('')
 
   useEffect(() => {
+    if (IS_CENTRAL_DOMAIN) return
     api.getProfil().then((p) => setBackground(p.auth_background || '')).catch(() => {})
   }, [])
 
