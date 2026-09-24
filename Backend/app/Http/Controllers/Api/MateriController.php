@@ -36,7 +36,11 @@ class MateriController extends Controller
             'judul' => ['required', 'string', 'max:255'],
             'deskripsi' => ['nullable', 'string'],
             'tautan' => ['nullable', 'string', 'max:500'],
-            'file' => ['nullable', 'file', 'max:10240'],
+            'file' => ['nullable', 'file', 'mimes:pdf,doc,docx,jpg,jpeg,png,mp4,mov,webm', 'max:20480'],
+        ], [
+            'file.mimes' => 'File harus berformat PDF, DOCX, JPG, PNG, atau video (MP4, MOV, WEBM).',
+            'file.max' => 'Ukuran file maksimal 20 MB.',
+            'file.uploaded' => 'File gagal diunggah. Ukuran file maksimal 20 MB.',
         ]);
 
         if ($request->hasFile('file')) {

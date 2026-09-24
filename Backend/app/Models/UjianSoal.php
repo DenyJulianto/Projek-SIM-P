@@ -11,7 +11,11 @@ class UjianSoal extends Model
 {
     protected $table = 'ujian_soal';
 
-    protected $fillable = ['ujian_id', 'pertanyaan', 'pilihan_a', 'pilihan_b', 'pilihan_c', 'pilihan_d', 'jawaban_benar', 'urutan'];
+    public const TIPE_PILIHAN_GANDA = 'pilihan_ganda';
+
+    public const TIPE_ESSAY = 'essay';
+
+    protected $fillable = ['ujian_id', 'tipe', 'bobot', 'pertanyaan', 'pilihan_a', 'pilihan_b', 'pilihan_c', 'pilihan_d', 'jawaban_benar', 'urutan'];
 
     public function ujian(): BelongsTo
     {

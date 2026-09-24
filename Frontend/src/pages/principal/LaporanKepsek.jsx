@@ -101,7 +101,7 @@ function Section({ title, children }) {
 
 function StatBox({ label, value }) {
   return (
-    <div className="bg-white rounded-2xl border border-navy/10 p-4">
+    <div className="bg-emerald-50/70 rounded-2xl border border-emerald-100 p-4">
       <p className="text-xl font-extrabold text-navy">{value}</p>
       <p className="text-xs text-navy/50 uppercase tracking-wide mt-1">{label}</p>
     </div>
@@ -110,10 +110,10 @@ function StatBox({ label, value }) {
 
 function Table({ columns, rows, render }) {
   return (
-    <div className="bg-white rounded-2xl border border-navy/10 overflow-hidden">
+    <div className="bg-emerald-50/70 rounded-2xl border border-emerald-100 overflow-hidden">
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-navy/5 text-navy/60 text-xs uppercase text-left">
+          <tr className="bg-gradient-to-r from-navy-light to-emerald-600 text-white text-xs uppercase text-left">
             {columns.map((c) => (
               <th key={c} className="px-4 py-3">{c}</th>
             ))}
@@ -126,7 +126,7 @@ function Table({ columns, rows, render }) {
             </tr>
           ) : (
             rows.map((r, i) => (
-              <tr key={i} className="border-t border-navy/5">
+              <tr key={i} className="border-t border-emerald-100 odd:bg-white/80 even:bg-emerald-100/50 hover:bg-emerald-200/50 transition-colors">
                 {render(r).map((cell, j) => (
                   <td key={j} className="px-4 py-3 text-navy/70">{cell}</td>
                 ))}

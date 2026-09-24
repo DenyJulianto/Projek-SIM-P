@@ -53,4 +53,9 @@ class GuruPengganti extends Model
     {
         return $this->belongsTo(User::class, 'diputuskan_oleh');
     }
+
+    public function pengaju(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'dibuat_oleh');
+    }
 }

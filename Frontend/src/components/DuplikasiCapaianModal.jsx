@@ -24,8 +24,8 @@ export default function DuplikasiCapaianModal({ cp, tahunAjaranList, onClose, on
   }
 
   return (
-    <div className="fixed inset-0 bg-navy/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] bg-teal-950/50 backdrop-blur-[2px] flex items-center justify-center p-4" onClick={onClose}>
+      <form onSubmit={handleSubmit} className="tm-panel relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white rounded-3xl max-w-sm w-full shadow-2xl shadow-teal-900/20 p-6" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-lg font-extrabold text-navy mb-1">Duplikasi CP</h2>
         <p className="text-xs text-navy/50 mb-4">
           Menyalin CP "{cp.mata_pelajaran?.nama_mapel} — Fase {cp.fase} — {cp.elemen}" ke tahun ajaran lain. Hasil

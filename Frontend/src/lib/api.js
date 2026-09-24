@@ -730,6 +730,15 @@ export const api = {
     return requestForm('/me/avatar', formData)
   },
 
+  getMyStaffProfil: () => request('/me/profil-staf'),
+  updateMyStaffProfil: (data) => request('/me/profil-staf', { method: 'PUT', body: JSON.stringify(data) }),
+  uploadMyStaffSertifikat: (files) => {
+    const formData = new FormData()
+    files.forEach((f) => formData.append('files[]', f))
+    return requestForm('/me/profil-staf/sertifikat', formData)
+  },
+  deleteMyStaffSertifikat: (id) => request(`/me/profil-staf/sertifikat/${id}`, { method: 'DELETE' }),
+
   getMySiswaProfil: () => request('/me/siswa'),
   getMySiswaJadwal: () => request('/me/siswa/jadwal'),
   getMySiswaNilai: () => request('/me/siswa/nilai'),
@@ -741,6 +750,7 @@ export const api = {
     request('/me/siswa/absensi/ajukan', { method: 'POST', body: JSON.stringify(data) }),
   updateKeteranganAbsensiSaya: (absensiId, keterangan) =>
     request(`/me/siswa/absensi/${absensiId}/keterangan`, { method: 'PUT', body: JSON.stringify({ keterangan }) }),
+  getMySiswaSaldo: () => request('/me/siswa/saldo'),
   getMySiswaTagihan: () => request('/me/siswa/tagihan'),
   getMySiswaPrestasi: () => request('/me/siswa/prestasi'),
   submitPrestasiSaya: ({ judul, tingkat, tanggal, keterangan, file }) => {
@@ -829,6 +839,19 @@ export const api = {
   deleteSiswa: (id) => request(`/siswa/${id}`, { method: 'DELETE' }),
 
   getMyGuruProfil: () => request('/me/guru'),
+  listModulAjar: () => request('/me/guru/modul-ajar'),
+  createModulAjar: (data) => request('/me/guru/modul-ajar', { method: 'POST', body: JSON.stringify(data) }),
+  updateModulAjar: (id, data) => request(`/me/guru/modul-ajar/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteModulAjar: (id) => request(`/me/guru/modul-ajar/${id}`, { method: 'DELETE' }),
+  uploadMyGuruSertifikat: (files) => {
+    const formData = new FormData()
+    files.forEach((f) => formData.append('files[]', f))
+    return requestForm('/me/guru/sertifikat', formData)
+  },
+  deleteMyGuruSertifikat: (id) => request(`/me/guru/sertifikat/${id}`, { method: 'DELETE' }),
+  updateMyGuruProfilProfesional: (data) => request('/me/guru/profil-profesional', { method: 'PUT', body: JSON.stringify(data) }),
+  updateMyGuruTugasTambahan: (tugasTambahan) =>
+    request('/me/guru/tugas-tambahan', { method: 'PUT', body: JSON.stringify({ tugas_tambahan: tugasTambahan }) }),
   getMyGuruJadwal: () => request('/me/guru/jadwal'),
   getMyGuruKelas: () => request('/me/guru/kelas'),
   getMyGuruMataPelajaran: () => request('/me/guru/mata-pelajaran'),
@@ -836,6 +859,12 @@ export const api = {
 
   getMyKelasBinaan: () => request('/me/wali-kelas'),
   getKelasBinaanSiswa: (kelasId) => request(`/me/wali-kelas/${kelasId}/siswa`),
+  createKelasBinaanSiswa: (kelasId, data) =>
+    request(`/me/wali-kelas/${kelasId}/siswa`, { method: 'POST', body: JSON.stringify(data) }),
+  updateKelasBinaanSiswa: (kelasId, siswaId, data) =>
+    request(`/me/wali-kelas/${kelasId}/siswa/${siswaId}`, { method: 'PUT', body: JSON.stringify(data) }),
+  keluarkanKelasBinaanSiswa: (kelasId, siswaId, data) =>
+    request(`/me/wali-kelas/${kelasId}/siswa/${siswaId}`, { method: 'DELETE', body: JSON.stringify(data) }),
   getKelasBinaanStruktur: (kelasId) => request(`/me/wali-kelas/${kelasId}/struktur`),
   createKelasBinaanStruktur: (kelasId, data) =>
     request(`/me/wali-kelas/${kelasId}/struktur`, { method: 'POST', body: JSON.stringify(data) }),
@@ -845,22 +874,17 @@ export const api = {
   getKelasBinaanRekapNilai: (kelasId) => request(`/me/wali-kelas/${kelasId}/rekap-nilai`),
   getKelasBinaanPerkembangan: (kelasId) => request(`/me/wali-kelas/${kelasId}/perkembangan-akademik`),
   getKelasBinaanStatusNilai: (kelasId) => request(`/me/wali-kelas/${kelasId}/status-nilai`),
-  getKelasBinaanCatatanSiswa: (kelasId, params = {}) => {
-    const query = new URLSearchParams(params).toString()
-    return request(`/me/wali-kelas/${kelasId}/catatan-siswa${query ? `?${query}` : ''}`)
-  },
-  createCatatanSiswa: (data) =>
-    request('/me/wali-kelas/catatan-siswa', { method: 'POST', body: JSON.stringify(data) }),
-  updateCatatanSiswa: (id, data) =>
-    request(`/me/wali-kelas/catatan-siswa/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  deleteCatatanSiswa: (id) => request(`/me/wali-kelas/catatan-siswa/${id}`, { method: 'DELETE' }),
   getKelasBinaanKonsultasiBk: (kelasId) => request(`/me/wali-kelas/${kelasId}/konsultasi-bk`),
   getKelasBinaanPengumuman: (kelasId) => request(`/me/wali-kelas/${kelasId}/pengumuman`),
   createPengumumanKelas: (kelasId, data) =>
     request(`/me/wali-kelas/${kelasId}/pengumuman`, { method: 'POST', body: JSON.stringify(data) }),
+  updatePengumumanKelas: (kelasId, pengumumanId, data) =>
+    request(`/me/wali-kelas/${kelasId}/pengumuman/${pengumumanId}`, { method: 'PUT', body: JSON.stringify(data) }),
   deletePengumumanKelas: (kelasId, pengumumanId) =>
     request(`/me/wali-kelas/${kelasId}/pengumuman/${pengumumanId}`, { method: 'DELETE' }),
   getKelasBinaanKomunikasiOrtu: (kelasId) => request(`/me/wali-kelas/${kelasId}/komunikasi-ortu`),
+  updateKontakWali: (kelasId, siswaId, data) =>
+    request(`/me/wali-kelas/${kelasId}/komunikasi-ortu/${siswaId}`, { method: 'PUT', body: JSON.stringify(data) }),
   updateCatatanWaliKelasRapor: (raporId, data) =>
     request(`/rapor-pengesahan/${raporId}/catatan-wali-kelas`, { method: 'PUT', body: JSON.stringify(data) }),
 
@@ -1038,6 +1062,17 @@ export const api = {
   rpExport: (siswaId, params, format) =>
     downloadFile(`/rekap-pembinaan/siswa/${siswaId}/laporan/export?${new URLSearchParams({ ...params, format }).toString()}`, `rekap-pembinaan.${format}`),
   rpCatatCetak: (siswaId, params) => request(`/rekap-pembinaan/siswa/${siswaId}/laporan/cetak?${new URLSearchParams(params).toString()}`, { method: 'POST' }),
+
+  // Wakil Kepala Sekolah
+  wakDashboard: () => request('/wakasek/dashboard'),
+  wakGuruTendik: (params = {}) => request(`/wakasek/guru-tendik?${new URLSearchParams(params).toString()}`),
+  wakAktivitasGuru: (params = {}) => request(`/wakasek/aktivitas-guru?${new URLSearchParams(params).toString()}`),
+  wakRekapKehadiran: (params = {}) => request(`/wakasek/rekap-kehadiran?${new URLSearchParams(params).toString()}`),
+  wakPersetujuan: (params = {}) => request(`/wakasek/persetujuan?${new URLSearchParams(params).toString()}`),
+  wakLaporan: (jenis, params = {}) => request(`/wakasek/laporan/${jenis}?${new URLSearchParams(params).toString()}`),
+  wakExport: (jenis, params, format) =>
+    downloadFile(`/wakasek/laporan/${jenis}/export?${new URLSearchParams({ ...params, format }).toString()}`, `laporan-${jenis}.${format}`),
+  wakCatatCetak: (jenis, params = {}) => request(`/wakasek/laporan/${jenis}/cetak?${new URLSearchParams(params).toString()}`, { method: 'POST' }),
 
   // Ekstrakurikuler
   ekskulOpsi: () => request('/ekskul/opsi'),
@@ -1366,6 +1401,7 @@ export const api = {
   getBkLaporan: () => request('/bk/laporan'),
 
   // Kepala Sekolah — data pemantauan (read-only)
+  getWakasek: (name) => request(`/wakasek/${name}`),
   getPrincipalDashboard: () => request('/principal/dashboard'),
   getPrincipalAkademik: () => request('/principal/akademik'),
   getPrincipalKesiswaan: () => request('/principal/kesiswaan'),
@@ -1382,13 +1418,15 @@ export const api = {
   },
   createTagihan: (data) => request('/tagihan', { method: 'POST', body: JSON.stringify(data) }),
   updateTagihan: (id, data) => request(`/tagihan/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  deleteTagihan: (id) => request(`/tagihan/${id}`, { method: 'DELETE' }),
+  getTagihanRingkasan: () => request('/tagihan-ringkasan'),
+  batalkanTagihan: (id, alasan) =>
+    request(`/tagihan/${id}/batalkan`, { method: 'POST', body: JSON.stringify({ alasan }) }),
   listPembayaran: (params = {}) => {
     const query = new URLSearchParams(params).toString()
     return request(`/pembayaran${query ? `?${query}` : ''}`)
   },
-  createPembayaran: (tagihanId, data) =>
-    request(`/tagihan/${tagihanId}/pembayaran`, { method: 'POST', body: JSON.stringify(data) }),
+  downloadKuitansi: (id, nomor) =>
+    downloadFile(`/pembayaran/${id}/kuitansi`, `kuitansi-${nomor.replaceAll('/', '-')}.pdf`),
   deletePembayaran: (tagihanId, pembayaranId) =>
     request(`/tagihan/${tagihanId}/pembayaran/${pembayaranId}`, { method: 'DELETE' }),
 
@@ -1416,6 +1454,14 @@ export const api = {
   getRealisasiAnggaran: () => request('/realisasi-anggaran'),
 
   // Laporan Keuangan (Bendahara)
+  getMyStaffProfil: () => request('/me/profil-staf'),
+  updateMyStaffProfil: (data) => request('/me/profil-staf', { method: 'PUT', body: JSON.stringify(data) }),
+  uploadMyStaffSertifikat: (files) => {
+    const formData = new FormData()
+    files.forEach((f) => formData.append('files[]', f))
+    return requestForm('/me/profil-staf/sertifikat', formData)
+  },
+  deleteMyStaffSertifikat: (id) => request(`/me/profil-staf/sertifikat/${id}`, { method: 'DELETE' }),
   getLaporanPenerimaan: (params = {}) => {
     const query = new URLSearchParams(params).toString()
     return request(`/laporan-keuangan/penerimaan${query ? `?${query}` : ''}`)
@@ -1467,6 +1513,7 @@ export const api = {
     return request(`/rapor-pengesahan${query ? `?${query}` : ''}`)
   },
   ajukanRapor: (data) => request('/rapor-pengesahan', { method: 'POST', body: JSON.stringify(data) }),
+  deleteRapor: (id) => request(`/rapor-pengesahan/${id}`, { method: 'DELETE' }),
   sahkanRapor: (id, data = {}) =>
     request(`/rapor-pengesahan/${id}/sahkan`, { method: 'POST', body: JSON.stringify(data) }),
   tolakRapor: (id, data) =>
@@ -1526,4 +1573,7 @@ export const api = {
     request(`/ujian-soal/${soalId}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteUjianSoal: (soalId) => request(`/ujian-soal/${soalId}`, { method: 'DELETE' }),
   listUjianAttempts: (ujianId) => request(`/ujian/${ujianId}/attempts`),
+  getUjianAttemptDetail: (ujianId, attemptId) => request(`/ujian/${ujianId}/attempts/${attemptId}`),
+  nilaiUjianEssay: (jawabanId, data) =>
+    request(`/ujian-jawaban/${jawabanId}/nilai`, { method: 'POST', body: JSON.stringify(data) }),
 }

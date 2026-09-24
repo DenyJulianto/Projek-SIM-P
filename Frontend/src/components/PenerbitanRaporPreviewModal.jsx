@@ -1,3 +1,4 @@
+import ModalCloseButton from './ModalCloseButton'
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 import PenerbitanRaporPrint from './PenerbitanRaporPrint'
@@ -64,8 +65,9 @@ export default function PenerbitanRaporPreviewModal({ row, params, hak, onClose,
   }
 
   return (
-    <div className="fixed inset-0 bg-navy/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[92vh] overflow-y-auto p-5" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] bg-teal-950/50 backdrop-blur-[2px] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="tm-panel relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white rounded-3xl max-w-5xl w-full shadow-2xl shadow-teal-900/20 max-h-[92vh] overflow-y-auto p-5" onClick={(e) => e.stopPropagation()}>
+<ModalCloseButton onClose={onClose} />
         <div className="flex items-start justify-between mb-3">
           <div>
             <h2 className="text-lg font-extrabold text-navy">Rapor {row.siswa.nama}</h2>

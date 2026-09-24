@@ -93,7 +93,7 @@ class ParentSelfController extends Controller
     {
         $this->authorizeAnak($request, $siswa);
 
-        $tagihan = Tagihan::where('siswa_id', $siswa->id)
+        $tagihan = Tagihan::aktif()->where('siswa_id', $siswa->id)
             ->orderByDesc('created_at')
             ->get();
 
@@ -170,6 +170,12 @@ class ParentSelfController extends Controller
 
         $config = $this->pembayaranOnline->config();
         abort_if(empty($config['qris_statis']), 422, 'Sekolah belum mengaktifkan pembayaran via QRIS.');
+
+        if ($tagihan->status === 'dibatalkan') {
+            throw ValidationException::withMessages([
+                'tagihan_id' => ['Tagihan ini sudah dibatalkan.'],
+            ]);
+        }
 
         if ($tagihan->status === 'lunas') {
             throw ValidationException::withMessages([

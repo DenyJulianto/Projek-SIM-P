@@ -16,7 +16,9 @@ use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\GuruController;
 use App\Http\Controllers\Api\GuruPenggantiController;
 use App\Http\Controllers\Api\GuruSelfController;
+use App\Http\Controllers\Api\StaffProfileController;
 use App\Http\Controllers\Api\MonitoringNilaiController;
+use App\Http\Controllers\Api\ModulAjarController;
 use App\Http\Controllers\Api\NotifikasiSelfController;
 use App\Http\Controllers\Api\PenerbitanRaporController;
 use App\Http\Controllers\Api\PenguncianNilaiController;
@@ -37,6 +39,7 @@ use App\Http\Controllers\Api\LaporanKesiswaanController;
 use App\Http\Controllers\Api\MutasiSiswaController;
 use App\Http\Controllers\Api\PembinaanTindakLanjutController;
 use App\Http\Controllers\Api\RekapPembinaanController;
+use App\Http\Controllers\Api\WakasekController;
 use App\Http\Controllers\Api\PpdbPemantauController;
 use App\Http\Controllers\Api\PpdbPendaftarController;
 use App\Http\Controllers\Api\PpdbPenerimaanController;
@@ -120,8 +123,10 @@ Route::middleware([
     Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
     Route::get('avatar/{path}', [AvatarController::class, 'show'])->where('path', '.*');
+    Route::get('sertifikat-staf-file/{path}', [StaffProfileController::class, 'showSertifikatFile'])->where('path', '.*');
     Route::get('surat-file/{path}', [SuratController::class, 'showFile'])->where('path', '.*');
     Route::get('arsip-file/{path}', [ArsipDokumenController::class, 'showFile'])->where('path', '.*');
+    Route::get('sertifikat-file/{path}', [GuruSelfController::class, 'showSertifikatFile'])->where('path', '.*');
     Route::get('materi-file/{path}', [MateriController::class, 'showFile'])->where('path', '.*');
     Route::get('tugas-file/{path}', [TugasController::class, 'showFile'])->where('path', '.*');
     Route::get('tugas-jawaban-file/{path}', [TugasController::class, 'showJawabanFile'])->where('path', '.*');
@@ -141,6 +146,11 @@ Route::middleware([
         Route::put('/me', [AuthController::class, 'updateMe']);
         Route::post('/me/avatar', [AuthController::class, 'updateAvatar']);
 
+        Route::get('/me/profil-staf', [StaffProfileController::class, 'profil']);
+        Route::put('/me/profil-staf', [StaffProfileController::class, 'update']);
+        Route::post('/me/profil-staf/sertifikat', [StaffProfileController::class, 'storeSertifikat']);
+        Route::delete('/me/profil-staf/sertifikat/{sertifikat}', [StaffProfileController::class, 'destroySertifikat']);
+
         Route::get('/me/siswa', [StudentSelfController::class, 'profil']);
         Route::get('/me/siswa/jadwal', [StudentSelfController::class, 'jadwal']);
         Route::get('/me/siswa/nilai', [StudentSelfController::class, 'nilai']);
@@ -148,6 +158,7 @@ Route::middleware([
         Route::post('/me/siswa/absensi/ajukan', [StudentSelfController::class, 'ajukanAbsensi']);
         Route::put('/me/siswa/absensi/{absensi}/keterangan', [StudentSelfController::class, 'updateKeteranganAbsensi']);
         Route::get('/me/siswa/tagihan', [StudentSelfController::class, 'tagihan']);
+        Route::get('/me/siswa/saldo', [StudentSelfController::class, 'saldo']);
         Route::get('/me/siswa/prestasi', [StudentSelfController::class, 'prestasi']);
         Route::post('/me/siswa/prestasi', [StudentSelfController::class, 'submitPrestasi']);
         Route::delete('/me/siswa/prestasi/{prestasi}', [StudentSelfController::class, 'destroyPrestasi']);
@@ -184,6 +195,14 @@ Route::middleware([
         Route::post('/me/notifikasi/{id}/baca', [NotifikasiSelfController::class, 'baca']);
 
         Route::get('/me/guru', [GuruSelfController::class, 'profil']);
+        Route::get('/me/guru/modul-ajar', [ModulAjarController::class, 'index']);
+        Route::post('/me/guru/modul-ajar', [ModulAjarController::class, 'store']);
+        Route::put('/me/guru/modul-ajar/{modul}', [ModulAjarController::class, 'update']);
+        Route::delete('/me/guru/modul-ajar/{modul}', [ModulAjarController::class, 'destroy']);
+        Route::post('/me/guru/sertifikat', [GuruSelfController::class, 'storeSertifikat']);
+        Route::delete('/me/guru/sertifikat/{sertifikat}', [GuruSelfController::class, 'destroySertifikat']);
+        Route::put('/me/guru/profil-profesional', [GuruSelfController::class, 'updateProfilProfesional']);
+        Route::put('/me/guru/tugas-tambahan', [GuruSelfController::class, 'updateTugasTambahan']);
         Route::get('/me/guru/jadwal', [GuruSelfController::class, 'jadwal']);
         Route::get('/me/guru/kelas', [GuruSelfController::class, 'kelas']);
         Route::get('/me/guru/mata-pelajaran', [GuruSelfController::class, 'mataPelajaran']);
@@ -191,6 +210,9 @@ Route::middleware([
 
         Route::get('/me/wali-kelas', [WaliKelasSelfController::class, 'kelasBinaan']);
         Route::get('/me/wali-kelas/{kelas}/siswa', [WaliKelasSelfController::class, 'daftarSiswa']);
+        Route::post('/me/wali-kelas/{kelas}/siswa', [WaliKelasSelfController::class, 'storeSiswa']);
+        Route::put('/me/wali-kelas/{kelas}/siswa/{siswa}', [WaliKelasSelfController::class, 'updateSiswa']);
+        Route::delete('/me/wali-kelas/{kelas}/siswa/{siswa}', [WaliKelasSelfController::class, 'keluarkanSiswa']);
         Route::get('/me/wali-kelas/{kelas}/struktur', [WaliKelasSelfController::class, 'getStruktur']);
         Route::post('/me/wali-kelas/{kelas}/struktur', [WaliKelasSelfController::class, 'storeStruktur']);
         Route::delete('/me/wali-kelas/{kelas}/struktur/{struktur}', [WaliKelasSelfController::class, 'destroyStruktur']);
@@ -198,15 +220,13 @@ Route::middleware([
         Route::get('/me/wali-kelas/{kelas}/rekap-nilai', [WaliKelasSelfController::class, 'rekapNilai']);
         Route::get('/me/wali-kelas/{kelas}/perkembangan-akademik', [WaliKelasSelfController::class, 'perkembanganAkademik']);
         Route::get('/me/wali-kelas/{kelas}/status-nilai', [WaliKelasSelfController::class, 'statusNilai']);
-        Route::get('/me/wali-kelas/{kelas}/catatan-siswa', [WaliKelasSelfController::class, 'catatanSiswa']);
-        Route::post('/me/wali-kelas/catatan-siswa', [WaliKelasSelfController::class, 'storeCatatanSiswa']);
-        Route::put('/me/wali-kelas/catatan-siswa/{catatanSiswa}', [WaliKelasSelfController::class, 'updateCatatanSiswa']);
-        Route::delete('/me/wali-kelas/catatan-siswa/{catatanSiswa}', [WaliKelasSelfController::class, 'destroyCatatanSiswa']);
         Route::get('/me/wali-kelas/{kelas}/konsultasi-bk', [WaliKelasSelfController::class, 'konsultasiBk']);
         Route::get('/me/wali-kelas/{kelas}/pengumuman', [WaliKelasSelfController::class, 'pengumumanKelas']);
         Route::post('/me/wali-kelas/{kelas}/pengumuman', [WaliKelasSelfController::class, 'storePengumumanKelas']);
+        Route::put('/me/wali-kelas/{kelas}/pengumuman/{pengumuman}', [WaliKelasSelfController::class, 'updatePengumumanKelas']);
         Route::delete('/me/wali-kelas/{kelas}/pengumuman/{pengumuman}', [WaliKelasSelfController::class, 'destroyPengumumanKelas']);
         Route::get('/me/wali-kelas/{kelas}/komunikasi-ortu', [WaliKelasSelfController::class, 'komunikasiOrtu']);
+        Route::put('/me/wali-kelas/{kelas}/komunikasi-ortu/{siswa}', [WaliKelasSelfController::class, 'updateKontakWali']);
 
         Route::get('kurikulum/dashboard', [KurikulumDashboardController::class, 'summary'])
             ->middleware('permission:kurikulum.manage');
@@ -604,7 +624,13 @@ Route::middleware([
         Route::get('guru/export', [GuruController::class, 'export'])
             ->middleware('permission:pegawai.manage');
 
+        // Daftar & detail guru juga dibaca pemantau kehadiran guru (mis. Wakil Kepala Sekolah); perubahan tetap khusus pegawai.manage.
         Route::apiResource('guru', GuruController::class)
+            ->only(['index', 'show'])
+            ->middleware('permission:pegawai.manage|monitoring-guru.absensi-guru');
+
+        Route::apiResource('guru', GuruController::class)
+            ->except(['index', 'show'])
             ->middleware('permission:pegawai.manage');
 
         Route::apiResource('siswa', SiswaController::class)
@@ -759,6 +785,8 @@ Route::middleware([
             Route::put('ujian-soal/{soal}', [UjianController::class, 'updateSoal']);
             Route::delete('ujian-soal/{soal}', [UjianController::class, 'destroySoal']);
             Route::get('ujian/{ujian}/attempts', [UjianController::class, 'attempts']);
+            Route::get('ujian/{ujian}/attempts/{attempt}', [UjianController::class, 'attemptDetail']);
+            Route::post('ujian-jawaban/{jawaban}/nilai', [UjianController::class, 'nilaiEssay']);
         });
 
         Route::middleware('permission:pengguna.manage')->group(function () {
@@ -836,6 +864,15 @@ Route::middleware([
             });
         });
 
+        Route::middleware('permission:laporan.dashboard|dashboard.view-all')->prefix('wakasek')->group(function () {
+            foreach ([
+                'dashboard', 'kepala-sekolah', 'kurikulum', 'pembelajaran', 'nilai-rapor', 'siswa', 'pelanggaran', 'prestasi',
+                'guru', 'beban-mengajar', 'aktivitas-guru', 'kehadiran', 'jadwal', 'jam-pelajaran', 'persetujuan',
+            ] as $endpoint) {
+                Route::get($endpoint, [WakasekController::class, \Illuminate\Support\Str::camel($endpoint)]);
+            }
+        });
+
         Route::middleware('permission:dashboard.view-all')->prefix('principal')->group(function () {
             Route::get('dashboard', [PrincipalController::class, 'dashboard']);
             Route::get('akademik', [PrincipalController::class, 'akademik']);
@@ -852,9 +889,12 @@ Route::middleware([
             Route::middleware('permission:tagihan.manage')->group(function () {
                 Route::apiResource('tagihan', TagihanController::class)
                     ->only(['index', 'store', 'update', 'destroy']);
+                Route::post('tagihan/{tagihan}/batalkan', [TagihanController::class, 'batalkan']);
+                Route::get('tagihan-ringkasan', [TagihanController::class, 'ringkasan']);
             });
             Route::middleware('permission:pembayaran.manage')->group(function () {
                 Route::get('pembayaran', [PembayaranController::class, 'index']);
+                Route::get('pembayaran/{pembayaran}/kuitansi', [PembayaranController::class, 'kuitansi'])->whereNumber('pembayaran');
                 Route::post('tagihan/{tagihan}/pembayaran', [PembayaranController::class, 'store']);
                 Route::delete('tagihan/{tagihan}/pembayaran/{pembayaran}', [PembayaranController::class, 'destroy']);
 
@@ -930,6 +970,7 @@ Route::middleware([
         Route::middleware('permission:rapor-kelas.manage|rapor.publish|kurikulum.manage')->group(function () {
             Route::post('rapor-pengesahan', [RaporPengesahanController::class, 'ajukan']);
             Route::put('rapor-pengesahan/{rapor}/catatan-wali-kelas', [RaporPengesahanController::class, 'updateCatatanWaliKelas']);
+            Route::delete('rapor-pengesahan/{rapor}', [RaporPengesahanController::class, 'destroy']);
         });
         Route::middleware('permission:rapor.approve')->group(function () {
             Route::post('rapor-pengesahan/{rapor}/sahkan', [RaporPengesahanController::class, 'sahkan']);

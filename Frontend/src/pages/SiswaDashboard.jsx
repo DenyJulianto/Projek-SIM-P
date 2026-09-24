@@ -1,10 +1,10 @@
+import logoLambang from '../assets/logo-sim-lambang.png'
 import { useEffect, useRef, useState } from 'react'
 import ComingSoon from '../components/ComingSoon'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import { useAuth } from '../lib/AuthContext'
 import { api, BASE_URL } from '../lib/api'
 import MyProfile from './MyProfile'
-import LogoHorizontal from '../components/LogoHorizontal'
 
 const MENU_GROUPS = [
   { section: null, items: [{ key: 'home', label: 'Dashboard', icon: HomeIcon }] },
@@ -27,7 +27,10 @@ const MENU_GROUPS = [
   },
   {
     section: 'Keuangan',
-    items: [{ key: 'tagihan', label: 'Tagihan', icon: BillIcon }],
+    items: [
+      { key: 'tagihan', label: 'Tagihan', icon: BillIcon },
+      { key: 'saldo', label: 'Saldo', icon: WalletIcon },
+    ],
   },
   {
     section: 'Kesiswaan',
@@ -106,13 +109,13 @@ export default function SiswaDashboard() {
       <header className="relative z-30 shrink-0 bg-gradient-to-r from-navy via-navy to-navy-light shadow-lg flex items-center justify-between gap-4 px-6 h-16">
         <div className="flex items-center gap-6 min-w-0 flex-1">
           <div className="flex items-center gap-3 shrink-0">
-            <LogoHorizontal
-              badgeClassName="h-11 w-11"
-              iconClassName="h-6 w-6"
-              textClassName="text-base"
-              subtitle="Teman Digital untuk Perjalanan Belajarmu"
-              className="shrink-0"
-            />
+            <div className="h-12 w-12 rounded-full bg-white ring-2 ring-white/40 shadow-md overflow-hidden shrink-0">
+              <img src={logoLambang} alt="Logo SIM Pendidikan" className="h-full w-full object-cover" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-bold tracking-wide text-sm text-white">SIM Pendidikan</p>
+              <p className="text-[11px] leading-snug mt-0.5 text-white/60 whitespace-nowrap">Teman Digital untuk Perjalanan Belajarmu</p>
+            </div>
           </div>
 
           <nav className="hidden lg:flex items-center gap-1">
@@ -240,6 +243,7 @@ export default function SiswaDashboard() {
         {view === 'erapor' && <ERaporView onBack={() => setView('home')} siswa={siswa} />}
         {view === 'absensi' && <AbsensiSayaView onBack={() => setView('home')} />}
         {view === 'tagihan' && <TagihanSayaView onBack={() => setView('home')} />}
+        {view === 'saldo' && <SaldoSayaView onBack={() => setView('home')} />}
         {view === 'prestasi' && <PrestasiSayaView onBack={() => setView('home')} />}
         {view === 'materi' && <MateriSayaView onBack={() => setView('home')} />}
         {view === 'tugas' && <TugasSayaView onBack={() => setView('home')} />}
@@ -299,13 +303,16 @@ function SiswaHome({ user, siswa, onNavigate }) {
 
   return (
     <div className="space-y-5">
-      <div className="relative overflow-hidden bg-gradient-to-br from-navy to-navy-light rounded-2xl p-6">
+      <div
+        className="relative overflow-hidden rounded-2xl p-6 shadow-lg shadow-emerald-700/20"
+        style={{ backgroundImage: 'linear-gradient(135deg, #059669 0%, #0D9488 100%)' }}
+      >
         <div className="pointer-events-none absolute -right-8 -top-10 h-36 w-36 rounded-full bg-white/10" />
         <div className="pointer-events-none absolute right-20 -bottom-10 h-24 w-24 rounded-full bg-white/10" />
         <h1 className="relative text-xl font-extrabold text-white mb-1.5">
           Hai, {siswa?.nama || user?.name} 👋
         </h1>
-        <p className="relative text-white/70 text-sm">Siap belajar hal baru hari ini?</p>
+        <p className="relative text-white/85 text-sm">Siap belajar hal baru hari ini?</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)] gap-5 items-start">
@@ -1348,6 +1355,143 @@ function TagihanSayaView({ onBack }) {
   )
 }
 
+function formatTanggalWaktu(value) {
+  if (!value) return '-'
+  return new Date(value).toLocaleString('id-ID', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Asia/Jakarta',
+  })
+}
+
+function rupiah(value) {
+  return `Rp ${Number(value || 0).toLocaleString('id-ID')}`
+}
+
+function SaldoSayaView({ onBack }) {
+  const [data, setData] = useState(null)
+
+  useEffect(() => {
+    api.getMySiswaSaldo().then(setData).catch(() => setData({ saldo: 0, total_masuk: 0, total_keluar: 0, riwayat: [] }))
+  }, [])
+
+  const riwayat = data?.riwayat || []
+  const terakhirMasuk = riwayat.find((r) => r.jenis === 'masuk')
+  const jumlahIsi = riwayat.filter((r) => r.jenis === 'masuk').length
+
+  return (
+    <div>
+      <LearningHeaderCard
+        onBack={onBack}
+        icon={WalletIcon}
+        title="Saldo Saya"
+        subtitle="Saldo uang jajan digital yang diisi oleh orang tuamu, lengkap dengan riwayatnya."
+        tagline={
+          <>
+            Jajan bijak,
+            <br />
+            menabung lebih asyik.
+          </>
+        }
+      />
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
+        <div
+          className="lg:col-span-2 relative overflow-hidden rounded-2xl p-6 text-white shadow-lg shadow-emerald-700/20"
+          style={{ backgroundImage: 'linear-gradient(135deg, #059669 0%, #0D9488 100%)' }}
+        >
+          <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-white/10" />
+          <div className="pointer-events-none absolute right-32 -bottom-14 h-28 w-28 rounded-full bg-white/10" />
+          <p className="relative text-sm text-white/85">Saldo Saat Ini</p>
+          <p className="relative text-4xl font-extrabold mt-1">{data ? rupiah(data.saldo) : '-'}</p>
+          {terakhirMasuk ? (
+            <div className="relative mt-4 inline-flex items-center gap-2 rounded-full bg-white/20 backdrop-blur px-3.5 py-1.5 text-xs font-semibold">
+              <span className="h-5 w-5 rounded-full bg-white text-emerald-700 flex items-center justify-center text-sm leading-none">+</span>
+              Terakhir diterima {rupiah(terakhirMasuk.jumlah)} dari {terakhirMasuk.diisi_oleh?.name || 'orang tua'} ·{' '}
+              {formatTanggalWaktu(terakhirMasuk.created_at)}
+            </div>
+          ) : (
+            <p className="relative mt-4 text-xs text-white/80">Belum ada saldo yang diisi oleh orang tua.</p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-1 gap-4">
+          <div className="bg-white rounded-2xl border border-navy/10 p-4">
+            <p className="text-[11px] text-navy/50 uppercase tracking-wide">Total Diterima</p>
+            <p className="text-xl font-extrabold text-emerald-700 mt-1">{data ? rupiah(data.total_masuk) : '-'}</p>
+            <p className="text-[11px] text-navy/40 mt-0.5">{data ? `${jumlahIsi} kali pengisian` : ''}</p>
+          </div>
+          <div className="bg-white rounded-2xl border border-navy/10 p-4">
+            <p className="text-[11px] text-navy/50 uppercase tracking-wide">Total Terpakai</p>
+            <p className="text-xl font-extrabold text-navy mt-1">{data ? rupiah(data.total_keluar) : '-'}</p>
+            <p className="text-[11px] text-navy/40 mt-0.5">Pengeluaran dari saldo</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-navy/10 overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-navy/5">
+          <p className="text-sm font-bold text-navy">Riwayat Saldo</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gradient-to-r from-emerald-50 to-emerald-100/70 text-emerald-800 text-xs uppercase tracking-wide">
+              <tr>
+                <th className="text-left px-5 py-3.5">Tanggal</th>
+                <th className="text-left px-5 py-3.5">Keterangan</th>
+                <th className="text-left px-5 py-3.5">Diisi Oleh</th>
+                <th className="text-left px-5 py-3.5">Jenis</th>
+                <th className="text-right px-5 py-3.5">Jumlah</th>
+                <th className="text-right px-5 py-3.5">Saldo Setelah</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-navy/5">
+              {riwayat.map((r) => (
+                <tr key={r.id} className="hover:bg-emerald-50/40 transition-colors">
+                  <td className="px-5 py-3.5 text-navy/70 whitespace-nowrap">{formatTanggalWaktu(r.created_at)}</td>
+                  <td className="px-5 py-3.5 font-medium text-navy">{r.keterangan || '-'}</td>
+                  <td className="px-5 py-3.5 text-navy/70">{r.diisi_oleh?.name || '-'}</td>
+                  <td className="px-5 py-3.5">
+                    <span
+                      className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                        r.jenis === 'masuk' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                      }`}
+                    >
+                      {r.jenis === 'masuk' ? 'Saldo Masuk' : 'Terpakai'}
+                    </span>
+                  </td>
+                  <td
+                    className={`px-5 py-3.5 text-right font-semibold whitespace-nowrap ${
+                      r.jenis === 'masuk' ? 'text-emerald-700' : 'text-navy'
+                    }`}
+                  >
+                    {r.jenis === 'masuk' ? '+' : '-'}
+                    {rupiah(r.jumlah)}
+                  </td>
+                  <td className="px-5 py-3.5 text-right text-navy/70 whitespace-nowrap">{rupiah(r.saldo_setelah)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {data && riwayat.length === 0 && (
+          <div className="text-center py-14">
+            <div className="mx-auto h-16 w-16 rounded-2xl bg-emerald-50 flex items-center justify-center mb-4">
+              <WalletIcon className="h-7 w-7 text-emerald-500" />
+            </div>
+            <p className="text-sm font-bold text-navy">Belum ada riwayat saldo.</p>
+            <p className="text-xs text-navy/40 mt-1">Saldo yang diisi orang tuamu akan muncul di sini.</p>
+          </div>
+        )}
+        {data === null && <EmptyState text="Memuat..." />}
+      </div>
+    </div>
+  )
+}
+
 const PRESTASI_TINGKAT_OPTIONS = [
   { value: 'sekolah', label: 'Sekolah' },
   { value: 'kecamatan', label: 'Kecamatan' },
@@ -2128,7 +2272,8 @@ function UjianSayaView({ onBack }) {
       const res = await api.mulaiMySiswaUjian(ujian.id)
       const jawaban = {}
       res.soal.forEach((s) => {
-        if (s.jawaban_dipilih) jawaban[s.id] = s.jawaban_dipilih
+        const isi = s.tipe === 'essay' ? s.jawaban_essay : s.jawaban_dipilih
+        if (isi) jawaban[s.id] = isi
       })
       setSession({ ujian, attempt: res.attempt, soal: res.soal, jawaban })
     } catch (err) {
@@ -2147,10 +2292,28 @@ function UjianSayaView({ onBack }) {
     }
   }
 
+  function handleEssayChange(soalId, teks) {
+    setSession((prev) => ({ ...prev, jawaban: { ...prev.jawaban, [soalId]: teks } }))
+  }
+
+  async function handleEssaySimpan(soalId) {
+    try {
+      await api.jawabMySiswaUjian(session.ujian.id, { ujian_soal_id: soalId, jawaban_essay: session.jawaban[soalId] || '' })
+    } catch {
+      // akan dicoba lagi saat kolom kehilangan fokus berikutnya / saat ujian diselesaikan
+    }
+  }
+
   async function handleSelesai() {
     if (!window.confirm('Selesaikan ujian sekarang? Jawaban tidak bisa diubah lagi setelah ini.')) return
     setBusy(true)
     try {
+      // pastikan semua jawaban essay yang masih di layar ikut tersimpan
+      await Promise.all(
+        session.soal
+          .filter((s) => s.tipe === 'essay' && session.jawaban[s.id])
+          .map((s) => api.jawabMySiswaUjian(session.ujian.id, { ujian_soal_id: s.id, jawaban_essay: session.jawaban[s.id] }))
+      )
       await api.selesaiMySiswaUjian(session.ujian.id)
       setSession(null)
       load()
@@ -2172,7 +2335,7 @@ function UjianSayaView({ onBack }) {
   }
 
   if (session) {
-    const terjawab = Object.keys(session.jawaban).length
+    const terjawab = Object.values(session.jawaban).filter((v) => v && String(v).trim() !== '').length
     return (
       <div>
         <p className="text-sm text-navy/50 mb-1">{session.ujian.mata_pelajaran?.nama_mapel}</p>
@@ -2184,9 +2347,24 @@ function UjianSayaView({ onBack }) {
         <div className="space-y-4">
           {session.soal.map((s, i) => (
             <div key={s.id} className="bg-white rounded-2xl border border-navy/10 p-5">
-              <p className="font-semibold text-navy mb-3">
+              <p className="font-semibold text-navy mb-3 whitespace-pre-line">
                 {i + 1}. {s.pertanyaan}
+                {s.tipe === 'essay' && (
+                  <span className="ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 align-middle">
+                    Essay
+                  </span>
+                )}
               </p>
+              {s.tipe === 'essay' ? (
+                <textarea
+                  rows={5}
+                  value={session.jawaban[s.id] || ''}
+                  onChange={(e) => handleEssayChange(s.id, e.target.value)}
+                  onBlur={() => handleEssaySimpan(s.id)}
+                  placeholder="Tulis jawaban Anda di sini..."
+                  className="w-full border border-navy/15 rounded-xl px-3.5 py-3 text-sm text-navy focus:outline-none focus:border-emerald-400"
+                />
+              ) : (
               <div className="space-y-2">
                 {['a', 'b', 'c', 'd'].map((opt) => (
                   <label
@@ -2209,6 +2387,7 @@ function UjianSayaView({ onBack }) {
                   </label>
                 ))}
               </div>
+              )}
             </div>
           ))}
         </div>
@@ -2231,14 +2410,44 @@ function UjianSayaView({ onBack }) {
       <PageShell title={`Hasil — ${hasil.ujian.judul}`} onBack={() => setHasil(null)}>
         <div className="bg-white rounded-2xl border border-navy/10 p-6 mb-5 text-center">
           <p className="text-4xl font-extrabold text-navy">{hasil.attempt.nilai}</p>
-          <p className="text-sm text-navy/50 mt-1">Nilai Ujian</p>
+          <p className="text-sm text-navy/50 mt-1">Nilai Ujian &middot; KKM {hasil.kkm}</p>
+          {hasil.lulus !== null && hasil.lulus !== undefined && (
+            <span
+              className={`inline-block mt-3 text-xs font-bold px-3 py-1 rounded-full ${
+                hasil.lulus ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'
+              }`}
+            >
+              {hasil.lulus ? 'Tuntas' : 'Belum Tuntas'}
+            </span>
+          )}
+          {hasil.essay_belum_dinilai > 0 && (
+            <p className="text-xs text-amber-700 mt-3">
+              {hasil.essay_belum_dinilai} jawaban essay Anda belum dinilai guru — nilai akhir bisa berubah.
+            </p>
+          )}
         </div>
         <div className="space-y-3">
           {hasil.review.map((r, i) => (
             <div key={r.soal.id} className="bg-white rounded-2xl border border-navy/10 p-4">
-              <p className="text-sm font-semibold text-navy mb-2">
+              <p className="text-sm font-semibold text-navy mb-2 whitespace-pre-line">
                 {i + 1}. {r.soal.pertanyaan}
               </p>
+              {r.soal.tipe === 'essay' ? (
+                <div>
+                  <div className="bg-navy/[0.03] rounded-lg px-3 py-2 text-sm text-navy/80 whitespace-pre-line">
+                    {r.jawaban_essay || <span className="text-navy/35 italic">Tidak dijawab.</span>}
+                  </div>
+                  <p className="text-xs mt-2">
+                    <span
+                      className={`px-2.5 py-1 rounded-full font-semibold ${
+                        r.nilai_essay != null ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                      }`}
+                    >
+                      {r.nilai_essay != null ? `Nilai: ${r.nilai_essay} / ${r.soal.bobot}` : 'Belum dinilai guru'}
+                    </span>
+                  </p>
+                </div>
+              ) : (
               <div className="flex flex-wrap gap-2 text-xs">
                 <span className={`px-2.5 py-1 rounded-full font-semibold ${r.benar ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
                   Jawabanmu: {r.jawaban_dipilih ? r.jawaban_dipilih.toUpperCase() : '-'}
@@ -2249,6 +2458,7 @@ function UjianSayaView({ onBack }) {
                   </span>
                 )}
               </div>
+              )}
             </div>
           ))}
         </div>

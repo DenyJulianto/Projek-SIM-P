@@ -26,7 +26,7 @@ class NilaiController extends Controller
                 'tahun_ajaran',
             )
             ->allowedSorts('created_at', 'nilai')
-            ->allowedIncludes('siswa', 'mataPelajaran', 'guru')
+            ->allowedIncludes('siswa', 'siswa.kelas', 'mataPelajaran', 'guru')
             ->paginate($request->integer('per_page', 15));
 
         return response()->json($nilai);

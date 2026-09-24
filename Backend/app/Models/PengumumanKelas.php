@@ -11,7 +11,7 @@ class PengumumanKelas extends Model
 {
     protected $table = 'pengumuman_kelas';
 
-    protected $fillable = ['kelas_id', 'guru_id', 'judul', 'konten'];
+    protected $fillable = ['kelas_id', 'guru_id', 'judul', 'konten', 'kategori'];
 
     public function kelas(): BelongsTo
     {

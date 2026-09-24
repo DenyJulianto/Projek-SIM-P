@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\SumberDana;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class SumberDanaController extends Controller
 {
@@ -27,6 +28,7 @@ class SumberDanaController extends Controller
         $data = $request->validate([
             'tahun_ajaran' => ['required', 'string', 'max:20'],
             'nama' => ['required', 'string', 'max:255'],
+            'kategori' => ['required', Rule::in(array_keys(SumberDana::KATEGORI))],
             'keterangan' => ['nullable', 'string'],
             'jumlah' => ['required', 'numeric', 'min:0'],
         ]);
@@ -43,6 +45,7 @@ class SumberDanaController extends Controller
         $data = $request->validate([
             'tahun_ajaran' => ['required', 'string', 'max:20'],
             'nama' => ['required', 'string', 'max:255'],
+            'kategori' => ['required', Rule::in(array_keys(SumberDana::KATEGORI))],
             'keterangan' => ['nullable', 'string'],
             'jumlah' => ['required', 'numeric', 'min:0'],
         ]);
