@@ -808,6 +808,8 @@ Route::middleware([
             Route::put('ujian-soal/{soal}', [UjianController::class, 'updateSoal']);
             Route::delete('ujian-soal/{soal}', [UjianController::class, 'destroySoal']);
             Route::get('ujian/{ujian}/attempts', [UjianController::class, 'attempts']);
+            Route::get('ujian/{ujian}/attempts/{attempt}', [UjianController::class, 'attemptDetail']);
+            Route::post('ujian-jawaban/{jawaban}/nilai', [UjianController::class, 'nilaiEssay']);
         });
 
         Route::middleware('permission:pengguna.manage')->group(function () {

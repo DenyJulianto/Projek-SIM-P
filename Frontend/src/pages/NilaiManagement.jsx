@@ -32,7 +32,7 @@ const KELAS_TONE = [
   'bg-pink-100 text-pink-700',
 ]
 
-export default function NilaiManagement({ onBack, title = 'Nilai', description }) {
+export default function NilaiManagement({ onBack, title = 'Nilai', description, scope }) {
   const [guru, setGuru] = useState(null)
   const [items, setItems] = useState(null)
   const [error, setError] = useState('')
@@ -52,7 +52,17 @@ export default function NilaiManagement({ onBack, title = 'Nilai', description }
     setSelected(new Set())
     api
       .listNilai({ 'filter[guru_id]': guruId, include: 'siswa,siswa.kelas,mataPelajaran', per_page: 200 })
-      .then((res) => setItems(res.data))
+      .then((res) =>
+        setItems(
+          scope
+            ? res.data.filter(
+                (n) =>
+                  (n.siswa?.kelas_id ?? n.siswa?.kelas?.id) === scope.kelas_id &&
+                  n.mata_pelajaran_id === scope.mata_pelajaran_id
+              )
+            : res.data
+        )
+      )
       .catch((err) => setError(err.message))
   }
 
@@ -333,7 +343,19 @@ export default function NilaiManagement({ onBack, title = 'Nilai', description }
       </div>
 
       {showForm && guru && (
-        <NilaiFormModal item={editingItem} guruId={guru.id} onClose={() => setShowForm(false)} onSaved={handleSaved} />
+        <NilaiFormModal item={editingItem} guruId={guru.id} defaults={scope} onClose={() => setShowForm(false)} onSaved={handleSaved} />
+      )}
+
+      {detailGroup && (
+        <DetailGroupModal
+          group={detailGroup}
+          onClose={() => setDetailGroup(null)}
+          onEditEntry={(entry) => {
+            setDetailGroup(null)
+            openEdit(entry)
+          }}
+          onDeleteEntry={handleDelete}
+        />
       )}
 
       {detailGroup && (

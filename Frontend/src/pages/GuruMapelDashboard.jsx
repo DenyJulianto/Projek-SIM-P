@@ -1,15 +1,16 @@
+import logoLambang from '../assets/logo-sim-lambang.png'
 import { useEffect, useState } from 'react'
 import ComingSoon from '../components/ComingSoon'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
-import NotifikasiPanel from '../components/NotifikasiPanel'
 import { useAuth } from '../lib/AuthContext'
 import { api, BASE_URL } from '../lib/api'
-import AttendanceRecap from './AttendanceRecap'
+import KehadiranGuruMapel from './KehadiranGuruMapel'
 import MyProfile from './MyProfile'
 import NilaiManagement from './NilaiManagement'
 import NilaiSikapManagement from './NilaiSikapManagement'
-import LogoHorizontal from '../components/LogoHorizontal'
-import NotifBell from '../components/NotifBell'
+import ModulAjarManagement from './ModulAjarManagement'
+import MiniCalendar from '../components/MiniCalendar'
+import { ThemedInfoModal, ThemedModalShell, useThemedConfirm } from '../components/ThemedModal'
 
 const MENU_GROUPS = [
   { section: null, items: [{ key: 'home', label: 'Dashboard', icon: GridIcon }] },
@@ -19,6 +20,7 @@ const MENU_GROUPS = [
       { key: 'jadwal-mengajar', label: 'Jadwal Mengajar', icon: CalendarIcon },
       { key: 'kelas-saya', label: 'Kelas Saya', icon: ClassIcon },
       { key: 'mapel-saya', label: 'Mata Pelajaran Saya', icon: BookIcon },
+      { key: 'modul-ajar', label: 'Manajemen RPP / Modul Ajar', icon: DocIcon },
     ],
   },
   {
@@ -71,28 +73,49 @@ export default function GuruMapelDashboard() {
     setOpenSection((prev) => (prev === section ? null : section))
   }
 
-  const itemClass = (active) =>
-    `w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors text-left ${
-      active ? 'bg-emerald-50 text-navy font-semibold shadow-sm' : 'text-white/80 hover:bg-white/10 hover:text-white'
-    }`
-
   return (
-    <div className="h-screen bg-[#f4faf7] flex overflow-hidden">
-      <aside className="w-64 shrink-0 bg-gradient-to-b from-[#0d5c40] to-[#0a3f2c] text-white flex flex-col pt-6 h-screen">
-        <div className="flex items-center gap-2 px-6 mb-5">
-          <LogoHorizontal />
+    <div className="h-screen bg-gradient-to-br from-teal-500 via-emerald-400 to-cyan-300 flex overflow-hidden">
+      <aside className="relative w-64 shrink-0 text-white flex flex-col py-6 px-4 h-screen overflow-hidden bg-gradient-to-b from-teal-700 via-teal-600 to-emerald-600 shadow-xl shadow-teal-900/20">
+        <div className="absolute -bottom-10 -left-8 h-40 w-40 rounded-full bg-amber-200/30 blur-3xl pointer-events-none" />
+        <div className="absolute top-1/3 -right-10 h-32 w-32 rounded-full bg-white/10 blur-3xl pointer-events-none" />
+
+        <div className="relative px-2 mb-8">
+          <button
+            type="button"
+            onClick={() => setView('home')}
+            title="Ke Dashboard"
+            className="flex items-center gap-2.5 w-full min-w-0 text-left hover:opacity-90 transition-opacity"
+          >
+            <div className="h-16 w-16 rounded-full bg-white ring-2 ring-white/40 shadow-md overflow-hidden shrink-0">
+              <img src={logoLambang} alt="Logo SIM Pendidikan" className="h-full w-full object-cover" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-bold tracking-wide text-sm">SIM Pendidikan</p>
+              <p className="text-[11px] leading-snug mt-1 text-white/60">
+                Membimbing dengan Hati, Membentuk Generasi Berprestasi
+              </p>
+            </div>
+          </button>
         </div>
 
-        <nav className="flex-1 space-y-1.5 overflow-y-auto px-3">
-          <p className="px-4 pb-1 text-[11px] font-bold uppercase tracking-wider text-white/55">Menu</p>
+        <nav className="relative flex-1 space-y-1.5 overflow-y-auto">
           {MENU_GROUPS.map((group, gi) => {
             if (!group.section) {
               return (
                 <div key={gi} className="space-y-1.5 pb-1.5">
                   {group.items.map((item) => {
                     const Icon = item.icon
+                    const active = view === item.key
                     return (
-                      <button key={item.key} onClick={() => setView(item.key)} className={itemClass(view === item.key)}>
+                      <button
+                        key={item.key}
+                        onClick={() => setView(item.key)}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors text-left ${
+                          active
+                            ? 'bg-white text-navy shadow-sm'
+                            : 'text-white/90 hover:bg-white/15 hover:text-white'
+                        }`}
+                      >
                         <Icon className="h-4.5 w-4.5 shrink-0" />
                         <span className="truncate min-w-0">{item.label}</span>
                       </button>
@@ -110,7 +133,7 @@ export default function GuruMapelDashboard() {
                 <button
                   onClick={() => toggleSection(group.section)}
                   className={`w-full flex items-center justify-between gap-2 px-4 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider transition-colors ${
-                    hasActiveItem ? 'text-white' : 'text-white/55 hover:text-white/85'
+                    hasActiveItem ? 'text-white' : 'text-white/70 hover:text-white'
                   }`}
                 >
                   <span className="truncate min-w-0">{group.section}</span>
@@ -120,8 +143,17 @@ export default function GuruMapelDashboard() {
                   <div className="space-y-1.5 mt-1">
                     {group.items.map((item) => {
                       const Icon = item.icon
+                      const active = view === item.key
                       return (
-                        <button key={item.key} onClick={() => setView(item.key)} className={itemClass(view === item.key)}>
+                        <button
+                          key={item.key}
+                          onClick={() => setView(item.key)}
+                          className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors text-left ${
+                            active
+                              ? 'bg-white text-navy shadow-sm'
+                              : 'text-white/90 hover:bg-white/15 hover:text-white'
+                          }`}
+                        >
                           <Icon className="h-4.5 w-4.5 shrink-0" />
                           <span className="truncate min-w-0">{item.label}</span>
                         </button>
@@ -134,40 +166,34 @@ export default function GuruMapelDashboard() {
           })}
         </nav>
 
-        <div className="mt-2 px-4 py-4 border-t border-white/10 flex items-center gap-3">
-          <Avatar user={user} className="h-10 w-10" />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold truncate">{user?.name}</p>
-            <p className="text-xs text-white/60 truncate">Guru Mata Pelajaran</p>
-          </div>
-          <button onClick={() => setConfirmingLogout(true)} title="Keluar" className="p-2 rounded-full text-white/70 hover:bg-white/10 hover:text-white transition-colors">
-            <LogoutIcon className="h-5 w-5" />
-          </button>
-        </div>
+        <button
+          onClick={() => setConfirmingLogout(true)}
+          className="relative flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium text-white/85 hover:bg-white/10 hover:text-white transition-colors mt-2"
+        >
+          <LogoutIcon className="h-4.5 w-4.5 shrink-0" />
+          Keluar
+        </button>
       </aside>
 
-      <main className="flex-1 p-6 sm:p-8 overflow-y-auto">
-        <TopBar user={user} onNavigate={setView} />
+      <main className="relative flex-1 overflow-y-auto">
+        <GuruMapelDoodleBackground />
+
+        <div className="relative p-6 sm:p-8">
         {view === 'home' && <GuruMapelHome user={user} onNavigate={setView} />}
         {view === 'jadwal-mengajar' && <JadwalMengajarView onBack={() => setView('home')} />}
         {view === 'kelas-saya' && <KelasSayaView onBack={() => setView('home')} />}
         {view === 'mapel-saya' && <MapelSayaView onBack={() => setView('home')} />}
-        {view === 'absensi-siswa' && <AttendanceRecap onBack={() => setView('home')} canSiswa canGuru={false} />}
+        {view === 'modul-ajar' && <ModulAjarManagement onBack={() => setView('home')} />}
+        {view === 'absensi-siswa' && <KehadiranGuruMapel onBack={() => setView('home')} />}
         {view === 'nilai' && <NilaiManagement onBack={() => setView('home')} title="Nilai" />}
         {view === 'sikap' && <NilaiSikapManagement onBack={() => setView('home')} />}
         {view === 'rekap-nilai' && <RekapNilaiView onBack={() => setView('home')} />}
-        {view === 'input-rapor' && (
-          <NilaiManagement
-            onBack={() => setView('home')}
-            title="Input Nilai Rapor"
-            description="Nilai yang diinput di sini otomatis menjadi sumber data E-Rapor siswa untuk semester & tahun ajaran yang dipilih."
-          />
-        )}
+        {view === 'input-rapor' && <InputRaporView onBack={() => setView('home')} />}
         {view === 'materi' && <MateriManagement onBack={() => setView('home')} />}
-        {view === 'tugas' && <TugasManagement onBack={() => setView('home')} />}
-        {view === 'ujian' && <UjianManagement onBack={() => setView('home')} />}
+        {view === 'tugas' && <TugasPerKelas onBack={() => setView('home')} />}
+        {view === 'ujian' && <UjianPerKelas onBack={() => setView('home')} />}
         {view === 'pengumuman' && <PengumumanView onBack={() => setView('home')} />}
-        {view === 'profile' && <MyProfile onBack={() => setView('home')} />}
+        {view === 'profile' && <MyProfile onBack={() => setView('home')} guruProfile roleLabel="Guru Mata Pelajaran" />}
         {COMING_SOON_LABEL[view] && (
           <div>
             <button onClick={() => setView('home')} className="text-sm text-navy/50 hover:text-navy mb-1">
@@ -176,6 +202,7 @@ export default function GuruMapelDashboard() {
             <ComingSoon title={COMING_SOON_LABEL[view][0]} description={COMING_SOON_LABEL[view][1]} />
           </div>
         )}
+        </div>
       </main>
 
       {confirmingLogout && (
@@ -185,216 +212,147 @@ export default function GuruMapelDashboard() {
   )
 }
 
-function Avatar({ user, className = 'h-10 w-10' }) {
-  return user?.avatar_url ? (
-    <img src={`${BASE_URL}${user.avatar_url}`} alt={user.name} className={`${className} rounded-full object-cover shrink-0 bg-white`} />
-  ) : (
-    <div className={`${className} rounded-full bg-emerald-100 text-navy font-bold flex items-center justify-center shrink-0`}>
-      {(user?.name ?? '?').trim().charAt(0).toUpperCase()}
-    </div>
-  )
-}
-
-/** Bilah atas: pencarian menu, notifikasi, dan profil pengguna. */
-function TopBar({ user, onNavigate }) {
-  const [q, setQ] = useState('')
-  const [fokus, setFokus] = useState(false)
-  const semua = MENU_GROUPS.flatMap((g) => g.items.map((i) => ({ ...i, grup: g.section })))
-  const hasil = q.trim() ? semua.filter((i) => `${i.label} ${i.grup ?? ''}`.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 6) : []
-
-  return (
-    <header className="flex items-center gap-4 mb-5">
-      <div className="relative flex-1 max-w-xl">
-        <div className="flex items-center gap-3 bg-white rounded-full shadow-sm px-5 py-3">
-          <SearchIcon className="h-5 w-5 text-navy/50 shrink-0" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onFocus={() => setFokus(true)}
-            onBlur={() => setTimeout(() => setFokus(false), 150)}
-            placeholder="Cari menu atau fitur…"
-            className="flex-1 min-w-0 bg-transparent text-sm text-navy placeholder:text-navy/40 outline-none"
-          />
-        </div>
-        {fokus && q.trim() && (
-          <div className="absolute left-0 right-0 mt-2 bg-white rounded-2xl shadow-lg border border-navy/10 z-30 overflow-hidden">
-            {hasil.length === 0 ? (
-              <p className="px-4 py-4 text-xs text-navy/40 text-center">Tidak ada menu yang cocok.</p>
-            ) : (
-              hasil.map((i) => {
-                const Icon = i.icon
-                return (
-                  <button
-                    key={i.key}
-                    onMouseDown={() => {
-                      onNavigate(i.key)
-                      setQ('')
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-emerald-50"
-                  >
-                    <Icon className="h-4.5 w-4.5 text-navy" />
-                    <span className="text-sm font-semibold text-navy">{i.label}</span>
-                    {i.grup && <span className="text-[11px] text-navy/40">{i.grup}</span>}
-                  </button>
-                )
-              })
-            )}
-          </div>
-        )}
-      </div>
-      <span className="flex-1" />
-      <NotifBell />
-      <button onClick={() => onNavigate('profile')} title="Profil Saya" className="flex items-center gap-3 bg-white rounded-full shadow-sm pl-2 pr-5 py-2 hover:bg-emerald-50">
-        <Avatar user={user} className="h-9 w-9" />
-        <span className="text-sm font-bold text-navy max-w-40 truncate">{user?.name}</span>
-      </button>
-    </header>
-  )
-}
-
-const HARI = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
-
-function salam() {
-  const jam = new Date().getHours()
-  return jam < 11 ? 'Selamat Pagi' : jam < 15 ? 'Selamat Siang' : jam < 18 ? 'Selamat Sore' : 'Selamat Malam'
-}
-
 function GuruMapelHome({ user, onNavigate }) {
   const [kelas, setKelas] = useState(null)
   const [mapel, setMapel] = useState(null)
   const [jadwal, setJadwal] = useState(null)
-  const [rekapNilai, setRekapNilai] = useState(null)
-  const [pengumuman, setPengumuman] = useState(null)
-  const [absensi, setAbsensi] = useState(null)
+  const [rekap, setRekap] = useState(null)
 
   useEffect(() => {
-    api.getMyGuruKelas().then(setKelas).catch(() => setKelas([]))
-    api.getMyGuruMataPelajaran().then(setMapel).catch(() => setMapel([]))
+    api.getMyGuruKelas().then(setKelas).catch(() => {})
+    api.getMyGuruMataPelajaran().then(setMapel).catch(() => {})
     api.getMyGuruJadwal().then(setJadwal).catch(() => setJadwal([]))
-    api.getMyGuruRekapNilai().then(setRekapNilai).catch(() => setRekapNilai([]))
-    api.getPengumuman().then((r) => setPengumuman(r.data ?? r)).catch(() => setPengumuman([]))
+    api.getMyGuruRekapNilai().then(setRekap).catch(() => setRekap([]))
   }, [])
 
-  // Absensi hari ini per kelas yang diampu: berapa kelas yang sudah diisi dan persentase hadir.
-  useEffect(() => {
-    if (!kelas) return
-    const hariIni = new Date().toISOString().slice(0, 10)
-    Promise.all(kelas.map((k) => api.getRekapAbsensiSiswa(hariIni, k.id).catch(() => null))).then((hasil) => {
-      const ada = hasil.filter((r) => r && r.total > 0)
-      const hadir = ada.reduce((n, r) => n + r.hadir, 0)
-      const total = ada.reduce((n, r) => n + r.total, 0)
-      setAbsensi({ terisi: ada.length, persen: total ? Math.round((hadir / total) * 100) : null })
-    })
-  }, [kelas])
-
-  const hariIni = HARI[new Date().getDay()]
-  const jadwalHariIni = (jadwal ?? []).filter((j) => j.hari === hariIni).sort((a, b) => a.jam_mulai.localeCompare(b.jam_mulai))
-  const rentang = jadwalHariIni.length ? `${jadwalHariIni[0].jam_mulai.slice(0, 5)} - ${jadwalHariIni.at(-1).jam_selesai.slice(0, 5)}` : null
-  const jumlahNilai = (rekapNilai ?? []).reduce((n, r) => n + (r.jumlah_nilai ?? 0), 0)
-  const tanggal = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const jadwalMingguIni = [...(jadwal || [])]
+    .sort((a, b) => HARI_ORDER.indexOf(a.hari) - HARI_ORDER.indexOf(b.hari) || a.jam_mulai.localeCompare(b.jam_mulai))
+    .slice(0, 5)
 
   return (
-    <div className="space-y-5">
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-100 via-emerald-50 to-white border border-emerald-100 p-7">
-        <BookIcon className="absolute -right-6 -bottom-8 h-56 w-56 text-emerald-200/50" />
-        <div className="relative flex items-center gap-5">
-          <div className="h-16 w-16 rounded-2xl bg-emerald-200/70 text-emerald-800 flex items-center justify-center shrink-0">
-            <ProfileIcon className="h-8 w-8" />
+    <div>
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-800 via-emerald-700 to-emerald-500 p-6 sm:p-7 min-h-[150px] mb-6">
+        <div className="relative z-10 flex items-center gap-5 max-w-xl">
+          <div className="h-20 w-20 rounded-full bg-white/95 flex items-center justify-center shrink-0 shadow-lg">
+            <UsersGroupIcon className="h-10 w-10 text-emerald-700" />
           </div>
           <div>
-            <p className="text-sm text-navy/70">{salam()},</p>
-            <h1 className="text-3xl font-extrabold text-navy leading-tight">Selamat datang, {user?.name}!</h1>
-            <p className="text-sm text-navy/60 mt-1 max-w-lg">Kelola jadwal mengajar, absensi, nilai, dan penilaian sikap siswa dari sini.</p>
+            <p className="text-white/80 text-sm">Selamat datang,</p>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white leading-tight">{user?.name || 'Guru Mata Pelajaran'}!</h1>
+            <span className="inline-flex items-center gap-2 mt-2 rounded-full bg-white/20 backdrop-blur px-3.5 py-1 text-sm font-bold text-white">
+              Guru Mata Pelajaran
+            </span>
+            <p className="text-white/75 text-sm mt-1.5">
+              Kelola jadwal, materi, absensi, dan nilai mata pelajaran Anda dengan mudah dan efisien.
+            </p>
           </div>
         </div>
+        <SchoolIllustration className="hidden md:block absolute right-0 bottom-0 h-full w-[46%] pointer-events-none" />
+        <p className="hidden lg:block absolute right-[27%] top-5 text-white/90 italic font-semibold text-center leading-snug -rotate-6 text-sm">
+          Bersama<br />Membentuk Generasi<br />Berprestasi
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatCard label="Kelas Diampu" value={kelas?.length} icon={ClassIcon} sub={kelas?.length ? kelas.map((k) => k.nama_kelas).join(', ') : 'Belum ada kelas'} onClick={() => onNavigate('kelas-saya')} />
-        <StatCard label="Mata Pelajaran" value={mapel?.length} icon={BookIcon} sub={mapel?.length ? mapel.map((m) => m.nama_mapel).join(', ') : 'Belum ada mata pelajaran'} onClick={() => onNavigate('mapel-saya')} />
-        <StatCard label="Jam Mengajar / Minggu" value={jadwal?.length} icon={ClockIcon} sub={jadwal ? `${jadwal.length} sesi terjadwal per minggu` : ''} onClick={() => onNavigate('jadwal-mengajar')} />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <StatIllustrationCard
+          label="Kelas Diampu"
+          value={kelas?.length}
+          icon={ComputerIcon}
+          iconTone="bg-emerald-50 text-emerald-600"
+          illustration={<TeachingIllustration className="h-16 w-24" />}
+          onClick={() => onNavigate('kelas-saya')}
+        />
+        <StatIllustrationCard
+          label="Mata Pelajaran"
+          value={mapel?.length}
+          icon={BookIcon}
+          iconTone="bg-blue-50 text-blue-600"
+          illustration={<BooksIllustration className="h-16 w-20" />}
+          onClick={() => onNavigate('mapel-saya')}
+        />
+        <StatIllustrationCard
+          label="Jam Mengajar / Minggu"
+          value={jadwal?.length}
+          icon={CalendarIcon}
+          iconTone="bg-amber-50 text-amber-600"
+          illustration={<ClockIllustration className="h-16 w-16" />}
+          onClick={() => onNavigate('jadwal-mengajar')}
+        />
       </div>
 
-      <NotifikasiPanel />
+      <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5 mb-6">
+        <h2 className="text-sm font-bold text-navy mb-4">Pintasan Cepat</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <ShortcutTile eyebrow="Guru Mapel" label="Input Nilai (Mata Pelajaran)" icon={ChartIcon} onClick={() => onNavigate('nilai')} />
+          <ShortcutTile eyebrow="Guru Mapel" label="Materi Pembelajaran" icon={FolderIcon} onClick={() => onNavigate('materi')} />
+          <ShortcutTile eyebrow="Guru Mapel" label="Daftar Hadir Siswa" icon={AttendanceIcon} onClick={() => onNavigate('absensi-siswa')} />
+          <ShortcutTile eyebrow="Guru Mapel" label="Pengumuman Mata Pelajaran" icon={MegaphoneIcon} onClick={() => onNavigate('pengumuman')} />
+        </div>
+      </div>
 
-      <section className="bg-white rounded-3xl border border-emerald-100 shadow-sm p-5">
-        <div className="flex items-center gap-3 mb-4 flex-wrap">
-          <CalendarIcon className="h-6 w-6 text-navy" />
-          <h2 className="text-lg font-extrabold text-navy">Aktivitas Hari Ini</h2>
-          <span className="text-sm text-navy-light">{tanggal}</span>
-          <span className="flex-1" />
-          <button onClick={() => onNavigate('jadwal-mengajar')} className="flex items-center gap-1 text-xs font-semibold text-navy bg-emerald-50 hover:bg-emerald-100 rounded-full px-4 py-2">
-            Lihat Semua <ChevronRightIcon className="h-3.5 w-3.5" />
-          </button>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+        <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5">
+          <h2 className="text-sm font-bold text-navy mb-4">Jadwal Mengajar Mapel Minggu Ini</h2>
+          {jadwal === null && <EmptyState text="Memuat..." />}
+          {jadwal !== null && jadwalMingguIni.length === 0 && <EmptyState text="Belum ada jadwal mengajar." />}
+          {jadwalMingguIni.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-navy/45 text-xs uppercase tracking-wide">
+                  <tr>
+                    <th className="text-left pb-2 font-semibold">Kelas</th>
+                    <th className="text-left pb-2 font-semibold">Subjek</th>
+                    <th className="text-left pb-2 font-semibold">Hari</th>
+                    <th className="text-left pb-2 font-semibold">Waktu</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-navy/5">
+                  {jadwalMingguIni.map((j) => (
+                    <tr key={j.id}>
+                      <td className="py-2.5 font-medium text-navy whitespace-nowrap">{j.kelas?.nama_kelas ?? '-'}</td>
+                      <td className="py-2.5 text-navy/70 whitespace-nowrap">{j.mata_pelajaran?.nama_mapel ?? '-'}</td>
+                      <td className="py-2.5 text-navy/70 whitespace-nowrap">{j.hari}</td>
+                      <td className="py-2.5 text-navy/70 whitespace-nowrap">
+                        {jamKe(j.jam_mulai)} - {jamKe(j.jam_selesai)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-          <AktivitasCard
-            tone="hijau" icon={CalendarIcon} judul="Jadwal Mengajar" onClick={() => onNavigate('jadwal-mengajar')}
-            teks={jadwal === null ? 'Memuat…' : jadwalHariIni.length ? `${jadwalHariIni.length} sesi mengajar hari ini` : `Tidak ada jadwal hari ${hariIni}`}
-            chip={rentang}
-          />
-          <AktivitasCard
-            tone="teal" icon={AttendanceIcon} judul="Absensi Siswa" onClick={() => onNavigate('absensi-siswa')}
-            teks={absensi === null ? 'Memuat…' : `${absensi.terisi} dari ${kelas?.length ?? 0} kelas sudah diisi`}
-            chip={absensi?.persen !== null && absensi?.persen !== undefined ? `${absensi.persen}% hadir` : 'Belum ada data hari ini'}
-          />
-          <AktivitasCard
-            tone="kuning" icon={DocIcon} judul="Input Nilai" onClick={() => onNavigate('nilai')}
-            teks={rekapNilai === null ? 'Memuat…' : `${jumlahNilai} nilai sudah diinput`}
-            chip={rekapNilai ? `Dari ${rekapNilai.length} mata pelajaran` : null}
-          />
-          <AktivitasCard
-            tone="biru" icon={MegaphoneIcon} judul="Pengumuman" onClick={() => onNavigate('pengumuman')}
-            teks={pengumuman === null ? 'Memuat…' : pengumuman.length ? `${pengumuman.length} pengumuman tersedia` : 'Belum ada pengumuman'}
-            chip={pengumuman?.length ? 'Lihat detail' : null}
-          />
-        </div>
-      </section>
 
-      <section className="bg-white rounded-3xl border border-emerald-100 shadow-sm p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <BoltIcon className="h-5 w-5 text-navy" />
-          <h2 className="text-lg font-extrabold text-navy">Pintasan Cepat</h2>
+        <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5">
+          <h2 className="text-sm font-bold text-navy mb-4">Rata-rata Nilai per Mata Pelajaran</h2>
+          {rekap === null && <EmptyState text="Memuat..." />}
+          {rekap !== null && rekap.length === 0 && <EmptyState text="Belum ada nilai yang diinput." />}
+          {rekap && rekap.length > 0 && (
+            <div className="space-y-4">
+              {rekap.map((r, i) => (
+                <div key={i}>
+                  <div className="flex items-center justify-between text-sm mb-1.5 gap-2">
+                    <span className="font-medium text-navy truncate">{r.mata_pelajaran}</span>
+                    <span className="text-navy/50 text-xs shrink-0">{r.rata_rata}</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-navy/5 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${PROGRESS_TONES[i % PROGRESS_TONES.length]}`}
+                      style={{ width: `${Math.min(100, Math.max(0, Number(r.rata_rata) || 0))}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          <ShortcutTile label="Input Nilai" sub="Masukkan dan kelola nilai siswa" icon={DocIcon} onClick={() => onNavigate('nilai')} />
-          <ShortcutTile label="Penilaian Sikap" sub="Kelola penilaian sikap siswa" icon={HeartIcon} onClick={() => onNavigate('sikap')} />
-          <ShortcutTile label="Absensi Siswa" sub="Lihat dan kelola kehadiran siswa" icon={AttendanceIcon} onClick={() => onNavigate('absensi-siswa')} />
-          <ShortcutTile label="Pengumuman" sub="Lihat pengumuman terbaru" icon={MegaphoneIcon} onClick={() => onNavigate('pengumuman')} />
-        </div>
-      </section>
+      </div>
     </div>
   )
 }
 
-const TONE_AKTIVITAS = {
-  hijau: { kotak: 'from-emerald-50 to-white border-emerald-100', ikon: 'bg-emerald-100 text-emerald-700', chip: 'bg-emerald-100 text-emerald-800' },
-  teal: { kotak: 'from-teal-50 to-white border-teal-100', ikon: 'bg-teal-100 text-teal-700', chip: 'bg-teal-100 text-teal-800' },
-  kuning: { kotak: 'from-amber-50 to-white border-amber-100', ikon: 'bg-amber-100 text-amber-600', chip: 'bg-amber-100 text-amber-800' },
-  biru: { kotak: 'from-sky-50 to-white border-sky-100', ikon: 'bg-sky-100 text-sky-700', chip: 'bg-sky-100 text-sky-800' },
-}
-
-function AktivitasCard({ tone, icon: Icon, judul, teks, chip, onClick }) {
-  const t = TONE_AKTIVITAS[tone]
-  return (
-    <button onClick={onClick} className={`relative text-left rounded-2xl border bg-gradient-to-br ${t.kotak} p-4 hover:shadow-md transition-shadow`}>
-      <div className="flex items-start gap-3">
-        <span className={`h-11 w-11 rounded-xl flex items-center justify-center shrink-0 ${t.ikon}`}>
-          <Icon className="h-5.5 w-5.5" />
-        </span>
-        <div className="min-w-0">
-          <p className="text-sm font-extrabold text-navy">{judul}</p>
-          <p className="text-xs text-navy/60 mt-0.5">{teks}</p>
-        </div>
-      </div>
-      <div className="flex items-center justify-between mt-3 min-h-7">
-        {chip ? <span className={`text-[11px] font-semibold rounded-full px-3 py-1 ${t.chip}`}>{chip}</span> : <span />}
-        <span className="h-7 w-7 rounded-full bg-white/80 flex items-center justify-center text-navy">
-          <ChevronRightIcon className="h-4 w-4" />
-        </span>
-      </div>
-    </button>
-  )
+function BareShell({ children }) {
+  return <div>{children}</div>
 }
 
 function PageShell({ title, onBack, children }) {
@@ -414,6 +372,8 @@ function EmptyState({ text }) {
 }
 
 const HARI_ORDER = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']
+
+const PROGRESS_TONES = ['bg-emerald-500', 'bg-blue-500', 'bg-rose-500', 'bg-amber-500', 'bg-violet-500']
 
 const JADWAL_TONES = [
   { icon: 'bg-gradient-to-br from-rose-400 to-pink-500', badge: 'bg-rose-50 text-rose-600', ring: 'border-rose-100' },
@@ -550,7 +510,7 @@ export function JadwalMengajarView({ onBack }) {
             {sorted.map((j) => {
               const tone = toneFor(j.mata_pelajaran?.nama_mapel)
               return (
-                <div key={j.id} className="bg-white rounded-2xl border border-navy/10 p-4">
+                <div key={j.id} className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-4">
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <span className={`h-11 w-11 rounded-xl flex items-center justify-center shrink-0 ${tone.icon}`}>
                       <tone.Icon className="h-7 w-7" />
@@ -592,7 +552,7 @@ export function KelasSayaView({ onBack, title = 'Kelas Saya' }) {
     <PageShell title={title} onBack={onBack}>
       <div className="grid sm:grid-cols-3 gap-4">
         {(kelas || []).map((k) => (
-          <div key={k.id} className="bg-white rounded-2xl border border-navy/10 p-5">
+          <div key={k.id} className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5">
             <p className="font-bold text-navy text-lg">{k.nama_kelas}</p>
             <p className="text-xs text-navy/50 mt-1">{k.tahun_ajaran}</p>
             <p className="text-sm text-navy/60 mt-3">{k.jumlah_siswa} siswa</p>
@@ -616,7 +576,7 @@ function MapelSayaView({ onBack }) {
     <PageShell title="Mata Pelajaran Saya" onBack={onBack}>
       <div className="grid sm:grid-cols-3 gap-4">
         {(mapel || []).map((m) => (
-          <div key={m.id} className="bg-white rounded-2xl border border-navy/10 p-5">
+          <div key={m.id} className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5">
             <p className="font-bold text-navy">{m.nama_mapel}</p>
           </div>
         ))}
@@ -636,7 +596,7 @@ function RekapNilaiView({ onBack }) {
 
   return (
     <PageShell title="Rekap Nilai" onBack={onBack}>
-      <div className="bg-white rounded-2xl border border-navy/10 overflow-hidden">
+      <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-navy/5 text-navy/60 text-xs uppercase tracking-wide">
             <tr>
@@ -666,31 +626,180 @@ function RekapNilaiView({ onBack }) {
   )
 }
 
+const KATEGORI_PENGUMUMAN_GURU = [
+  { value: 'umum', label: 'Umum', icon: ChatBubbleMiniIcon, tone: 'bg-blue-100 text-blue-600', pill: 'bg-blue-50 text-blue-600' },
+  { value: 'akademik', label: 'Akademik', icon: BookBadgeMiniIcon, tone: 'bg-rose-100 text-rose-600', pill: 'bg-rose-50 text-rose-600' },
+  { value: 'kegiatan', label: 'Kegiatan', icon: MegaphoneIcon, tone: 'bg-emerald-100 text-emerald-600', pill: 'bg-emerald-50 text-emerald-600' },
+  { value: 'penting', label: 'Penting', icon: AlertMiniIcon, tone: 'bg-amber-100 text-amber-600', pill: 'bg-amber-50 text-amber-600' },
+]
+
+function kategoriInfoGuru(value) {
+  return KATEGORI_PENGUMUMAN_GURU.find((k) => k.value === value) ?? KATEGORI_PENGUMUMAN_GURU[0]
+}
+
+// Pengumuman sekolah tidak punya kolom kategori (dikelola Admin/Kepala Sekolah), jadi
+// kategorinya ditebak dari judul & isi supaya tampilannya tetap konsisten dengan
+// Pengumuman Kelas di Wali Kelas.
+function tebakKategoriPengumuman(judul = '', konten = '') {
+  const text = `${judul} ${konten}`.toLowerCase()
+  if (/penting|darurat|wajib|segera|perhatian/.test(text)) return 'penting'
+  if (/ujian|nilai|rapor|akademik|kurikulum|jadwal pelajaran/.test(text)) return 'akademik'
+  if (/kegiatan|acara|lomba|ekstrakurikuler|study tour|pentas|perpisahan/.test(text)) return 'kegiatan'
+  return 'umum'
+}
+
 function PengumumanView({ onBack }) {
   const [pengumuman, setPengumuman] = useState(null)
+  const [search, setSearch] = useState('')
+  const [filterKategori, setFilterKategori] = useState('')
+  const [sortDir, setSortDir] = useState('desc')
 
   useEffect(() => {
     api.getPengumuman().then((r) => setPengumuman(r.data ?? r)).catch(() => setPengumuman([]))
   }, [])
 
+  const withKategori = (pengumuman || []).map((p) => ({ ...p, kategori: tebakKategoriPengumuman(p.judul, p.konten) }))
+
+  const filtered = withKategori
+    .filter((p) => !filterKategori || p.kategori === filterKategori)
+    .filter((p) => {
+      if (!search.trim()) return true
+      const q = search.trim().toLowerCase()
+      return p.judul?.toLowerCase().includes(q) || p.konten?.toLowerCase().includes(q)
+    })
+    .sort((a, b) => {
+      const ta = new Date(a.tanggal_publish ?? a.created_at)
+      const tb = new Date(b.tanggal_publish ?? b.created_at)
+      return sortDir === 'desc' ? tb - ta : ta - tb
+    })
+
+  const jumlahPerKategori = (val) => withKategori.filter((p) => p.kategori === val).length
+
   return (
-    <PageShell title="Pengumuman" onBack={onBack}>
-      <div className="space-y-4">
-        {(pengumuman || []).map((p) => (
-          <div key={p.id} className="bg-white rounded-2xl border border-navy/10 p-5">
-            <div className="flex items-center justify-between mb-1.5">
-              <p className="font-bold text-navy">{p.judul}</p>
-              <span className="text-xs text-navy/40">
-                {p.tanggal_publish ? new Date(p.tanggal_publish).toLocaleDateString('id-ID') : ''}
-              </span>
-            </div>
-            <p className="text-sm text-navy/60 whitespace-pre-line">{p.konten}</p>
-          </div>
+    <div>
+      <button onClick={onBack} className="text-sm text-navy/50 hover:text-navy mb-1 block">
+        ← Kembali ke Dashboard
+      </button>
+      <h1 className="text-xl font-extrabold text-navy mb-1">Pengumuman</h1>
+      <p className="text-sm text-navy/45 mb-5">Pengumuman dari sekolah untuk seluruh guru dan siswa.</p>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div className="relative flex-1 min-w-[200px] max-w-xs">
+          <SearchMiniIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-navy/30" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari pengumuman..."
+            className="w-full border border-navy/10 rounded-full pl-10 pr-4 py-2 text-sm text-navy placeholder:text-navy/35 focus:outline-none focus:border-emerald-400"
+          />
+        </div>
+        <select
+          value={sortDir}
+          onChange={(e) => setSortDir(e.target.value)}
+          className="border border-navy/10 rounded-full px-4 py-2 text-sm text-navy/70 focus:outline-none focus:border-emerald-400"
+        >
+          <option value="desc">Terbaru</option>
+          <option value="asc">Terlama</option>
+        </select>
+      </div>
+
+      <div className="flex flex-wrap gap-2.5 mb-5">
+        <button
+          onClick={() => setFilterKategori('')}
+          className={`flex flex-col items-center gap-1.5 rounded-2xl border-2 px-4 py-2.5 transition-colors ${
+            !filterKategori ? 'border-emerald-500 bg-emerald-50' : 'border-transparent bg-white hover:bg-navy/5'
+          }`}
+        >
+          <span className="h-9 w-9 rounded-xl bg-gradient-to-br from-violet-500 via-emerald-500 to-amber-400 flex items-center justify-center">
+            <AllDotsMiniIcon className="h-4.5 w-4.5 text-white" />
+          </span>
+          <span className="text-[11px] font-semibold text-navy/70">Semua</span>
+        </button>
+        {KATEGORI_PENGUMUMAN_GURU.map((k) => (
+          <button
+            key={k.value}
+            onClick={() => setFilterKategori(k.value)}
+            className={`flex flex-col items-center gap-1.5 rounded-2xl border-2 px-4 py-2.5 transition-colors ${
+              filterKategori === k.value ? 'border-emerald-500 bg-emerald-50' : 'border-transparent bg-white hover:bg-navy/5'
+            }`}
+          >
+            <span className={`h-9 w-9 rounded-xl flex items-center justify-center ${k.tone}`}>
+              <k.icon className="h-4.5 w-4.5" />
+            </span>
+            <span className="text-[11px] font-semibold text-navy/70">
+              {k.label} ({jumlahPerKategori(k.value)})
+            </span>
+          </button>
         ))}
       </div>
-      {pengumuman && pengumuman.length === 0 && <EmptyState text="Belum ada pengumuman." />}
+
+      <div className="space-y-3">
+        {filtered.map((p) => {
+          const kat = kategoriInfoGuru(p.kategori)
+          return (
+            <div key={p.id} className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-4">
+              <div className="flex items-start gap-3.5">
+                <span className={`h-11 w-11 rounded-xl flex items-center justify-center shrink-0 ${kat.tone}`}>
+                  <kat.icon className="h-5 w-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap min-w-0">
+                    <p className="font-bold text-navy truncate">{p.judul}</p>
+                    <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full whitespace-nowrap ${kat.pill}`}>
+                      {kat.label}
+                    </span>
+                  </div>
+                  <p className="text-sm text-navy/60 mt-1 whitespace-pre-line">{p.konten}</p>
+                  <p className="text-[11px] text-navy/35 mt-2">{formatTanggalPendek(p.tanggal_publish ?? p.created_at)}</p>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      {pengumuman && filtered.length === 0 && (
+        <EmptyState text={pengumuman.length === 0 ? 'Belum ada pengumuman.' : 'Pengumuman tidak ditemukan.'} />
+      )}
       {pengumuman === null && <EmptyState text="Memuat..." />}
-    </PageShell>
+    </div>
+  )
+}
+
+function ChatBubbleMiniIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12a8 8 0 1 1-3.2-6.4L21 4l-1 4.5A8 8 0 0 1 21 12Z" />
+      <path d="M8 10h8M8 13h5" />
+    </svg>
+  )
+}
+
+function BookBadgeMiniIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 5.5C4 4.7 4.7 4 5.5 4H12v16H5.5A1.5 1.5 0 0 1 4 18.5Z" />
+      <path d="M20 5.5c0-.8-.7-1.5-1.5-1.5H12v16h6.5a1.5 1.5 0 0 0 1.5-1.5Z" />
+    </svg>
+  )
+}
+
+function AlertMiniIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m12 3 9.5 17H2.5Z" />
+      <path d="M12 10v4M12 17.5h.01" />
+    </svg>
+  )
+}
+
+function AllDotsMiniIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="currentColor">
+      <circle cx="6" cy="6" r="2.3" />
+      <circle cx="18" cy="6" r="2.3" />
+      <circle cx="6" cy="18" r="2.3" />
+      <circle cx="18" cy="18" r="2.3" />
+    </svg>
   )
 }
 
@@ -772,7 +881,7 @@ function formatTanggalPendek(value) {
   return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-function ListToolbar({ title, subtitle, search, onSearch, onAdd, addLabel, showFilter, onToggleFilter, filterPanel }) {
+function ListToolbar({ title, subtitle, search, onSearch, onAdd, addLabel, showFilter, onToggleFilter, filterPanel, hideFilter }) {
   return (
     <div className="mb-4">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-1">
@@ -790,14 +899,16 @@ function ListToolbar({ title, subtitle, search, onSearch, onAdd, addLabel, showF
               className="border border-navy/10 rounded-full pl-10 pr-4 py-2 text-sm text-navy placeholder:text-navy/35 focus:outline-none focus:border-emerald-400 w-48 sm:w-56"
             />
           </div>
-          <button
-            onClick={onToggleFilter}
-            className={`h-9 w-9 rounded-full border flex items-center justify-center transition-colors ${
-              showFilter ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-navy/10 text-navy/50 hover:bg-navy/5'
-            }`}
-          >
-            <FilterMiniIcon className="h-4 w-4" />
-          </button>
+          {!hideFilter && (
+            <button
+              onClick={onToggleFilter}
+              className={`h-9 w-9 rounded-full border flex items-center justify-center transition-colors ${
+                showFilter ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-navy/10 text-navy/50 hover:bg-navy/5'
+              }`}
+            >
+              <FilterMiniIcon className="h-4 w-4" />
+            </button>
+          )}
           <button
             onClick={onAdd}
             className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-full whitespace-nowrap transition-colors"
@@ -812,7 +923,135 @@ function ListToolbar({ title, subtitle, search, onSearch, onAdd, addLabel, showF
   )
 }
 
+const MATERI_FILE_EXT = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'mp4', 'mov', 'webm']
+const MATERI_FILE_MAX_MB = 20
+
+function formatUkuranFile(bytes) {
+  return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`
+}
+
+const PREVIEW_IMAGE_EXT = ['jpg', 'jpeg', 'png']
+const PREVIEW_VIDEO_EXT = ['mp4', 'mov', 'webm']
+
+function MateriPreviewModal({ materi, onClose }) {
+  const url = fileUrl('materi', materi.file)
+  const ext = (materi.file || '').split('.').pop().toLowerCase()
+  let content
+  if (PREVIEW_IMAGE_EXT.includes(ext)) {
+    content = <img src={url} alt={materi.judul} className="max-h-[70vh] mx-auto rounded-xl" />
+  } else if (PREVIEW_VIDEO_EXT.includes(ext)) {
+    content = <video src={url} controls autoPlay className="w-full max-h-[70vh] rounded-xl bg-black" />
+  } else if (ext === 'pdf') {
+    content = <iframe src={url} title={materi.judul} className="w-full h-[70vh] rounded-xl bg-white" />
+  } else {
+    content = (
+      <div className="text-center py-10">
+        <p className="text-sm text-navy/60 mb-4">
+          File berformat {ext.toUpperCase()} tidak bisa ditampilkan langsung di browser. Silakan unduh untuk membukanya.
+        </p>
+        <a
+          href={url}
+          download
+          className="inline-flex items-center gap-1.5 text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-full px-5 py-2.5"
+        >
+          <DownloadMiniIcon className="h-4 w-4" />
+          Unduh File
+        </a>
+      </div>
+    )
+  }
+
+  return (
+    <ThemedModalShell onClose={onClose} maxWidth="max-w-4xl">
+      <div className="p-6">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="min-w-0">
+            <h2 className="text-xl font-bold text-teal-900 truncate">{materi.judul}</h2>
+            <p className="text-xs text-navy/50 mt-0.5">
+              {materi.kelas?.nama_kelas} &middot; {materi.mata_pelajaran?.nama_mapel}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <a
+              href={url}
+              download
+              className="inline-flex items-center gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-full px-3.5 py-1.5"
+            >
+              <DownloadMiniIcon className="h-3.5 w-3.5" />
+              Unduh
+            </a>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full bg-white/80 hover:bg-white border border-teal-200 text-teal-800 text-xs font-semibold px-3.5 py-1.5"
+            >
+              Tutup
+            </button>
+          </div>
+        </div>
+        {content}
+      </div>
+    </ThemedModalShell>
+  )
+}
+
+function MateriFilePicker({ file, onChange, onError }) {
+  function handlePick(e) {
+    const picked = e.target.files?.[0] || null
+    e.target.value = ''
+    if (!picked) return
+    const ext = picked.name.split('.').pop().toLowerCase()
+    if (!MATERI_FILE_EXT.includes(ext)) {
+      onError('File harus berformat PDF, DOCX, JPG, PNG, atau video (MP4, MOV, WEBM).')
+      return
+    }
+    if (picked.size > MATERI_FILE_MAX_MB * 1024 * 1024) {
+      onError(`Ukuran file maksimal ${MATERI_FILE_MAX_MB} MB.`)
+      return
+    }
+    onError('')
+    onChange(picked)
+  }
+
+  return (
+    <div>
+      {file ? (
+        <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-3">
+          <DocMiniIcon className="h-5 w-5 text-emerald-700 shrink-0" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-navy truncate">{file.name}</p>
+            <p className="text-[11px] text-navy/45">{formatUkuranFile(file.size)}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => onChange(null)}
+            className="text-xs font-semibold text-red-500 hover:text-red-700 shrink-0"
+          >
+            Hapus
+          </button>
+        </div>
+      ) : (
+        <label className="flex flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50/40 hover:bg-emerald-50 px-4 py-5 cursor-pointer text-center transition-colors">
+          <DownloadMiniIcon className="h-5 w-5 text-emerald-700 rotate-180" />
+          <span className="text-sm font-semibold text-navy">Klik untuk memilih file</span>
+          <span className="text-[11px] text-navy/45">
+            DOCX, PDF, JPG, PNG, atau video (MP4, MOV, WEBM) &middot; maks. {MATERI_FILE_MAX_MB} MB
+          </span>
+          <input
+            type="file"
+            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.mp4,.mov,.webm,image/jpeg,image/png,video/mp4,video/quicktime,video/webm,application/pdf"
+            onChange={handlePick}
+            className="hidden"
+          />
+        </label>
+      )}
+    </div>
+  )
+}
+
 export function MateriManagement({ onBack, bare }) {
+  const [previewMateri, setPreviewMateri] = useState(null)
+  const [askConfirm, confirmModal] = useThemedConfirm()
   const { guru, pilihan } = useGuruContext()
   const [items, setItems] = useState(null)
   const [showForm, setShowForm] = useState(false)
@@ -849,6 +1088,10 @@ export function MateriManagement({ onBack, bare }) {
       setError('Pilih kelas & mata pelajaran terlebih dahulu.')
       return
     }
+    if (!guru) {
+      setError('Data guru belum termuat, coba lagi sebentar.')
+      return
+    }
     setBusy(true)
     setError('')
     try {
@@ -871,14 +1114,15 @@ export function MateriManagement({ onBack, bare }) {
     }
   }
 
-  async function handleDelete(m) {
-    if (!window.confirm(`Hapus materi "${m.judul}"?`)) return
-    try {
-      await api.deleteMateri(m.id)
-      load()
-    } catch (err) {
-      window.alert(err.message)
-    }
+  function handleDelete(m) {
+    askConfirm({ title: 'Hapus materi', message: <>Yakin ingin menghapus materi <span className="font-semibold text-navy">{m.judul}</span>?</> }, async () => {
+      try {
+        await api.deleteMateri(m.id)
+        load()
+      } catch (err) {
+        window.alert(err.message)
+      }
+    })
   }
 
   const kelasOptions = [...new Map((pilihan || []).map((p) => [p.kelas_id, p.nama_kelas])).entries()]
@@ -896,6 +1140,8 @@ export function MateriManagement({ onBack, bare }) {
 
   const body = (
     <>
+      {confirmModal}
+      {previewMateri && <MateriPreviewModal materi={previewMateri} onClose={() => setPreviewMateri(null)} />}
       <ListToolbar
         title="Daftar Materi"
         subtitle="Berikut adalah daftar materi yang telah diunggah."
@@ -925,7 +1171,7 @@ export function MateriManagement({ onBack, bare }) {
       />
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-navy/10 p-5 mb-5 space-y-3">
+        <form onSubmit={handleSubmit} className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5 mb-5 space-y-3">
           <KelasMapelSelect pilihan={pilihan || []} value={kelasMapel} onChange={setKelasMapel} />
           <input
             type="text"
@@ -949,7 +1195,7 @@ export function MateriManagement({ onBack, bare }) {
             placeholder="Tautan (opsional, mis. video/link eksternal)"
             className="input"
           />
-          <input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} className="text-xs text-navy/60" />
+          <MateriFilePicker file={file} onChange={setFile} onError={setError} />
           {error && <p className="text-xs text-red-500">{error}</p>}
           <button
             type="submit"
@@ -1008,35 +1254,72 @@ export function MateriManagement({ onBack, bare }) {
                     )}
                   </div>
                   <div className="flex items-center gap-2 mt-3">
-                    <a
-                      href={url || undefined}
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-disabled={!url}
-                      onClick={(e) => !url && e.preventDefault()}
-                      className={`inline-flex items-center gap-1.5 text-xs font-semibold border rounded-full px-3.5 py-1.5 transition-colors ${
-                        url ? 'border-navy/15 text-navy hover:bg-navy/5' : 'border-navy/10 text-navy/30 cursor-not-allowed'
-                      }`}
-                    >
-                      <EyeMiniIcon className="h-3.5 w-3.5" />
-                      Lihat
-                    </a>
-                    {m.file && (
+                    {m.file ? (
+                      <button
+                        type="button"
+                        onClick={() => setPreviewMateri(m)}
+                        title="Lihat"
+                        aria-label="Lihat materi"
+                        className="h-9 w-9 rounded-full flex items-center justify-center bg-teal-50 text-teal-700 hover:bg-teal-100 transition-colors"
+                      >
+                        <EyeMiniIcon className="h-4.5 w-4.5" />
+                      </button>
+                    ) : url ? (
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Lihat tautan"
+                        aria-label="Lihat tautan"
+                        className="h-9 w-9 rounded-full flex items-center justify-center bg-teal-50 text-teal-700 hover:bg-teal-100 transition-colors"
+                      >
+                        <EyeMiniIcon className="h-4.5 w-4.5" />
+                      </a>
+                    ) : (
+                      <span
+                        title="Belum ada file"
+                        className="h-9 w-9 rounded-full flex items-center justify-center bg-navy/5 text-navy/25 cursor-not-allowed"
+                      >
+                        <EyeMiniIcon className="h-4.5 w-4.5" />
+                      </span>
+                    )}
+                    {m.file && m.tautan && (
+                      <a
+                        href={m.tautan}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Buka tautan"
+                        aria-label="Buka tautan"
+                        className="h-9 w-9 rounded-full flex items-center justify-center bg-sky-50 text-sky-700 hover:bg-sky-100 transition-colors"
+                      >
+                        <LinkMiniIcon className="h-4.5 w-4.5" />
+                      </a>
+                    )}
+                    {m.file ? (
                       <a
                         href={fileUrl('materi', m.file)}
                         download
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-full px-3.5 py-1.5 transition-colors"
+                        title="Unduh"
+                        aria-label="Unduh materi"
+                        className="h-9 w-9 rounded-full flex items-center justify-center bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
                       >
-                        <DownloadMiniIcon className="h-3.5 w-3.5" />
-                        Unduh
+                        <DownloadMiniIcon className="h-4.5 w-4.5" />
                       </a>
+                    ) : (
+                      <span
+                        title="Belum ada file"
+                        className="h-9 w-9 rounded-full flex items-center justify-center bg-navy/5 text-navy/25 cursor-not-allowed"
+                      >
+                        <DownloadMiniIcon className="h-4.5 w-4.5" />
+                      </span>
                     )}
                     <button
                       onClick={() => handleDelete(m)}
-                      title="Hapus Materi"
-                      className="ml-auto h-8 w-8 rounded-full flex items-center justify-center text-navy/30 hover:bg-red-50 hover:text-red-600 transition-colors"
+                      title="Hapus"
+                      aria-label="Hapus materi"
+                      className="ml-auto h-9 w-9 rounded-full flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 transition-colors"
                     >
-                      <TrashMiniIcon className="h-4 w-4" />
+                      <TrashMiniIcon className="h-4.5 w-4.5" />
                     </button>
                   </div>
                 </div>
@@ -1056,11 +1339,192 @@ export function MateriManagement({ onBack, bare }) {
   return <PageShell title="Materi" onBack={onBack}>{body}</PageShell>
 }
 
-export function TugasManagement({ onBack, bare }) {
+// Alur kelas -> mata pelajaran -> isi (dipakai Tugas & Ujian). `loadItems(guruId)` harus
+// mengembalikan promise berisi daftar item ber-kelas_id & mata_pelajaran_id.
+function KelasMapelFlow({ onBack, title, itemLabel, sumLabel, sumOf, loadItems, renderContent }) {
+  const { guru, pilihan } = useGuruContext()
+  const [kelasList, setKelasList] = useState(null)
+  const [tugas, setTugas] = useState(null)
+  const [kelas, setKelas] = useState(null)
+  const [mapel, setMapel] = useState(null)
+
+  useEffect(() => {
+    api.getMyGuruKelas().then(setKelasList).catch(() => setKelasList([]))
+  }, [])
+
+  useEffect(() => {
+    if (!guru) return
+    loadItems(guru.id).then(setTugas).catch(() => setTugas([]))
+  }, [guru, mapel])
+
+  const tugasDi = (kelasId, mapelId) =>
+    (tugas || []).filter((t) => t.kelas_id === kelasId && (mapelId === undefined || t.mata_pelajaran_id === mapelId))
+  const jumlahTugas = (kelasId, mapelId) => tugasDi(kelasId, mapelId).length
+  const jumlahJawaban = (kelasId, mapelId) =>
+    tugasDi(kelasId, mapelId).reduce((sum, t) => sum + sumOf(t), 0)
+
+  const mapelKelas = (pilihan || []).filter((p) => kelas && p.kelas_id === kelas.id)
+
+  const crumbs = [
+    {
+      label: title,
+      onClick: kelas
+        ? () => {
+            setKelas(null)
+            setMapel(null)
+          }
+        : null,
+    },
+    kelas && { label: kelas.nama_kelas, onClick: mapel ? () => setMapel(null) : null },
+    mapel && { label: mapel.nama_mapel },
+  ].filter(Boolean)
+
+  return (
+    <div>
+      <button onClick={onBack} className="text-sm text-navy/50 hover:text-navy mb-1">
+        ← Kembali ke Dashboard
+      </button>
+      <div className="flex items-center gap-1.5 text-xs text-navy/45 mb-3">
+        {crumbs.map((c, i) => (
+          <span key={i} className="inline-flex items-center gap-1.5">
+            {i > 0 && <span>/</span>}
+            {c.onClick ? (
+              <button onClick={c.onClick} className="font-semibold text-emerald-700 hover:underline">
+                {c.label}
+              </button>
+            ) : (
+              <span className="font-semibold text-navy/70">{c.label}</span>
+            )}
+          </span>
+        ))}
+      </div>
+
+      {!kelas && (
+        <>
+          <h1 className="text-xl font-extrabold text-navy mb-1">{title}</h1>
+          <p className="text-sm text-navy/45 mb-5">Pilih kelas untuk melihat {itemLabel.toLowerCase()} dan hasil siswa.</p>
+          {kelasList === null && <EmptyState text="Memuat..." />}
+          {kelasList !== null && kelasList.length === 0 && <EmptyState text="Belum ada kelas yang Anda ampu." />}
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            {(kelasList || []).map((k, i) => {
+              const tone = toneAt(i)
+              return (
+                <button
+                  key={k.id}
+                  onClick={() => setKelas(k)}
+                  className={`text-left bg-white rounded-2xl border border-l-4 ${tone.border} border-navy/10 p-5 hover:shadow-md transition-shadow`}
+                >
+                  <div className="flex items-start gap-3.5">
+                    <span className={`h-11 w-11 rounded-xl flex items-center justify-center shrink-0 ${tone.icon}`}>
+                      <UsersMiniIcon className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-navy text-lg leading-tight">{k.nama_kelas}</p>
+                      <p className="text-xs text-navy/45 mt-0.5">
+                        {k.tahun_ajaran} &middot; {k.jumlah_siswa ?? 0} siswa
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 mt-4">
+                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700">
+                      {tugas === null ? '-' : jumlahTugas(k.id)} {itemLabel}
+                    </span>
+                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-violet-100 text-violet-700">
+                      {tugas === null ? '-' : jumlahJawaban(k.id)} {sumLabel}
+                    </span>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </>
+      )}
+
+      {kelas && !mapel && (
+        <>
+          <h1 className="text-xl font-extrabold text-navy mb-1">Mata Pelajaran · {kelas.nama_kelas}</h1>
+          <p className="text-sm text-navy/45 mb-5">Pilih mata pelajaran untuk melihat {itemLabel.toLowerCase()} yang sudah dibuat.</p>
+          {pilihan === null && <EmptyState text="Memuat..." />}
+          {pilihan !== null && mapelKelas.length === 0 && <EmptyState text="Belum ada mata pelajaran di kelas ini." />}
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            {mapelKelas.map((p) => {
+              const tone = toneFor(p.nama_mapel)
+              return (
+                <button
+                  key={p.mata_pelajaran_id}
+                  onClick={() => setMapel(p)}
+                  className={`text-left relative overflow-hidden rounded-2xl border ${tone.ring} bg-white p-5 hover:shadow-md transition-shadow`}
+                >
+                  <div className="flex items-start gap-4">
+                    <span className={`h-14 w-14 rounded-2xl flex items-center justify-center shrink-0 ${tone.icon}`}>
+                      <tone.Icon className="h-8 w-8" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-navy leading-tight">{p.nama_mapel}</p>
+                      <p className="text-xs text-navy/50 mt-0.5">{kelas.nama_kelas}</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 mt-4">
+                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700">
+                      {tugas === null ? '-' : jumlahTugas(kelas.id, p.mata_pelajaran_id)} {itemLabel}
+                    </span>
+                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-violet-100 text-violet-700">
+                      {tugas === null ? '-' : jumlahJawaban(kelas.id, p.mata_pelajaran_id)} {sumLabel}
+                    </span>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </>
+      )}
+
+      {kelas && mapel && (
+        <>
+          <h1 className="text-xl font-extrabold text-navy mb-4">
+            {mapel.nama_mapel} · {kelas.nama_kelas}
+          </h1>
+          {renderContent(mapel)}
+        </>
+      )}
+    </div>
+  )
+}
+
+function TugasPerKelas({ onBack }) {
+  return (
+    <KelasMapelFlow
+      onBack={onBack}
+      title="Tugas"
+      itemLabel="Tugas"
+      sumLabel="Jawaban"
+      sumOf={(t) => t.jawaban_count ?? 0}
+      loadItems={(guruId) => api.listTugas({ 'filter[guru_id]': guruId, per_page: 200 }).then((r) => r.data)}
+      renderContent={(scope) => <TugasManagement bare scope={scope} />}
+    />
+  )
+}
+
+function UjianPerKelas({ onBack }) {
+  return (
+    <KelasMapelFlow
+      onBack={onBack}
+      title="Ujian"
+      itemLabel="Ujian"
+      sumLabel="Mengerjakan"
+      sumOf={(u) => u.attempts_count ?? 0}
+      loadItems={(guruId) => api.listUjian({ 'filter[guru_id]': guruId, per_page: 200 }).then((r) => r.data)}
+      renderContent={(scope) => <UjianManagement bare scope={scope} />}
+    />
+  )
+}
+
+export function TugasManagement({ onBack, bare, scope }) {
+  const [askConfirm, confirmModal] = useThemedConfirm()
   const { guru, pilihan } = useGuruContext()
   const [items, setItems] = useState(null)
   const [showForm, setShowForm] = useState(false)
-  const [kelasMapel, setKelasMapel] = useState(null)
+  const [kelasMapel, setKelasMapel] = useState(scope ?? null)
   const [judul, setJudul] = useState('')
   const [deskripsi, setDeskripsi] = useState('')
   const [deadline, setDeadline] = useState('')
@@ -1081,7 +1545,7 @@ export function TugasManagement({ onBack, bare }) {
   useEffect(load, [guru])
 
   function resetForm() {
-    setKelasMapel(null)
+    setKelasMapel(scope ?? null)
     setJudul('')
     setDeskripsi('')
     setDeadline('')
@@ -1093,6 +1557,10 @@ export function TugasManagement({ onBack, bare }) {
     e.preventDefault()
     if (!kelasMapel) {
       setError('Pilih kelas & mata pelajaran terlebih dahulu.')
+      return
+    }
+    if (!guru) {
+      setError('Data guru belum termuat, coba lagi sebentar.')
       return
     }
     setBusy(true)
@@ -1117,14 +1585,15 @@ export function TugasManagement({ onBack, bare }) {
     }
   }
 
-  async function handleDelete(t) {
-    if (!window.confirm(`Hapus tugas "${t.judul}"?`)) return
-    try {
-      await api.deleteTugas(t.id)
-      load()
-    } catch (err) {
-      window.alert(err.message)
-    }
+  function handleDelete(t) {
+    askConfirm({ title: 'Hapus tugas', message: <>Yakin ingin menghapus tugas <span className="font-semibold text-navy">{t.judul}</span>?</> }, async () => {
+      try {
+        await api.deleteTugas(t.id)
+        load()
+      } catch (err) {
+        window.alert(err.message)
+      }
+    })
   }
 
   function reloadJawaban(tugasId) {
@@ -1144,6 +1613,7 @@ export function TugasManagement({ onBack, bare }) {
   const kelasOptions = [...new Map((pilihan || []).map((p) => [p.kelas_id, p.nama_kelas])).entries()]
 
   const filtered = (items || []).filter((t) => {
+    if (scope && (t.kelas_id !== scope.kelas_id || t.mata_pelajaran_id !== scope.mata_pelajaran_id)) return false
     if (filterKelas && String(t.kelas_id) !== String(filterKelas)) return false
     if (!search.trim()) return true
     const q = search.trim().toLowerCase()
@@ -1156,6 +1626,7 @@ export function TugasManagement({ onBack, bare }) {
 
   const body = (
     <>
+      {confirmModal}
       <ListToolbar
         title="Daftar Tugas"
         subtitle="Berikut adalah daftar tugas yang telah diberikan."
@@ -1166,6 +1637,7 @@ export function TugasManagement({ onBack, bare }) {
           setShowForm((v) => !v)
         }}
         addLabel={showForm ? 'Batal' : 'Tambah Tugas'}
+        hideFilter={Boolean(scope)}
         showFilter={showFilter}
         onToggleFilter={() => setShowFilter((v) => !v)}
         filterPanel={
@@ -1185,8 +1657,8 @@ export function TugasManagement({ onBack, bare }) {
       />
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-navy/10 p-5 mb-5 space-y-3">
-          <KelasMapelSelect pilihan={pilihan || []} value={kelasMapel} onChange={setKelasMapel} />
+        <form onSubmit={handleSubmit} className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5 mb-5 space-y-3">
+          {!scope && <KelasMapelSelect pilihan={pilihan || []} value={kelasMapel} onChange={setKelasMapel} />}
           <input
             type="text"
             value={judul}
@@ -1502,47 +1974,66 @@ function TugasJawabanRow({ jawaban, onGraded }) {
   )
 }
 
-function UjianManagement({ onBack }) {
+function UjianManagement({ onBack, bare, scope }) {
+  const [askConfirm, confirmModal] = useThemedConfirm()
   const { guru, pilihan } = useGuruContext()
   const [items, setItems] = useState(null)
   const [showForm, setShowForm] = useState(false)
-  const [kelasMapel, setKelasMapel] = useState(null)
+  const [kelasMapel, setKelasMapel] = useState(scope ?? null)
   const [judul, setJudul] = useState('')
   const [deskripsi, setDeskripsi] = useState('')
   const [waktuMulai, setWaktuMulai] = useState('')
   const [waktuSelesai, setWaktuSelesai] = useState('')
   const [durasi, setDurasi] = useState(60)
+  const [kkm, setKkm] = useState(75)
+  const [draftSoal, setDraftSoal] = useState([])
+  const [editingDraft, setEditingDraft] = useState(null)
+  const [peringatanSoal, setPeringatanSoal] = useState(false)
+  const [showSoalForm, setShowSoalForm] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [openId, setOpenId] = useState(null)
 
   function load() {
     if (!guru) return
-    api.listUjian({ 'filter[guru_id]': guru.id, per_page: 50 }).then((r) => setItems(r.data)).catch(() => setItems([]))
+    api.listUjian({ 'filter[guru_id]': guru.id, per_page: 200 }).then((r) => setItems(r.data)).catch(() => setItems([]))
   }
 
   useEffect(load, [guru])
 
   function resetForm() {
-    setKelasMapel(null)
+    setKelasMapel(scope ?? null)
     setJudul('')
     setDeskripsi('')
     setWaktuMulai('')
     setWaktuSelesai('')
     setDurasi(60)
+    setKkm(75)
+    setDraftSoal([])
+    setEditingDraft(null)
+    setShowSoalForm(false)
     setError('')
   }
 
   async function handleSubmit(e) {
     e.preventDefault()
+    if (draftSoal.length === 0) {
+      setPeringatanSoal(true)
+      return
+    }
     if (!kelasMapel) {
       setError('Pilih kelas & mata pelajaran terlebih dahulu.')
       return
     }
+    if (!guru) {
+      setError('Data guru belum termuat, coba lagi sebentar.')
+      return
+    }
     setBusy(true)
     setError('')
+    let ujianBaru = null
     try {
-      await api.createUjian({
+      ujianBaru = await api.createUjian({
         kelas_id: kelasMapel.kelas_id,
         mata_pelajaran_id: kelasMapel.mata_pelajaran_id,
         guru_id: guru.id,
@@ -1551,29 +2042,52 @@ function UjianManagement({ onBack }) {
         waktu_mulai: waktuMulai,
         waktu_selesai: waktuSelesai,
         durasi_menit: Number(durasi),
+        kkm: Math.round(Number(kkm)),
       })
+      for (const soal of draftSoal) {
+        await api.createUjianSoal(ujianBaru.id, soal)
+      }
       setShowForm(false)
       resetForm()
       load()
     } catch (err) {
-      setError(err.message)
+      setError(
+        ujianBaru
+          ? `Ujian tersimpan, tetapi sebagian soal gagal disimpan (${err.message}). Lengkapi lewat tombol Kelola.`
+          : err.message
+      )
+      if (ujianBaru) load()
     } finally {
       setBusy(false)
     }
   }
 
-  async function handleDelete(u) {
-    if (!window.confirm(`Hapus ujian "${u.judul}"?`)) return
-    try {
-      await api.deleteUjian(u.id)
-      load()
-    } catch (err) {
-      window.alert(err.message)
-    }
+  function handleDelete(u) {
+    askConfirm({ title: 'Hapus ujian', message: <>Yakin ingin menghapus ujian <span className="font-semibold text-navy">{u.judul}</span>?</> }, async () => {
+      try {
+        await api.deleteUjian(u.id)
+        load()
+      } catch (err) {
+        window.alert(err.message)
+      }
+    })
   }
 
+  const Shell = bare ? BareShell : PageShell
+
   return (
-    <PageShell title="Ujian" onBack={onBack}>
+    <Shell title="Ujian" onBack={onBack}>
+      {confirmModal}
+      {peringatanSoal && (
+        <ThemedInfoModal
+          title="Tambahkan soal dulu"
+          message="Tambahkan soal sebelum menyimpan ujian. Klik “+ Tambah Soal” untuk membuat soal pilihan ganda atau essay."
+          onClose={() => {
+            setPeringatanSoal(false)
+            setShowSoalForm(true)
+          }}
+        />
+      )}
       <div className="flex justify-end mb-4">
         <button
           onClick={() => {
@@ -1587,8 +2101,8 @@ function UjianManagement({ onBack }) {
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-navy/10 p-5 mb-5 space-y-3">
-          <KelasMapelSelect pilihan={pilihan || []} value={kelasMapel} onChange={setKelasMapel} />
+        <form onSubmit={handleSubmit} className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5 mb-5 space-y-3">
+          {!scope && <KelasMapelSelect pilihan={pilihan || []} value={kelasMapel} onChange={setKelasMapel} />}
           <input
             type="text"
             value={judul}
@@ -1604,7 +2118,7 @@ function UjianManagement({ onBack }) {
             rows={2}
             className="w-full border border-navy/15 rounded-lg px-3 py-2 text-sm"
           />
-          <div className="grid sm:grid-cols-3 gap-3">
+          <div className="grid sm:grid-cols-4 gap-3">
             <div>
               <label className="block text-xs font-semibold text-navy/60 mb-1">Waktu Mulai</label>
               <input
@@ -1636,6 +2150,102 @@ function UjianManagement({ onBack }) {
                 className="input"
               />
             </div>
+            <div>
+              <label className="block text-xs font-semibold text-navy/60 mb-1">Nilai KKM</label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                value={kkm}
+                onChange={(e) => setKkm(e.target.value)}
+                required
+                className="input"
+              />
+            </div>
+          </div>
+          <div className="border-t border-navy/10 pt-3 space-y-2.5">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <p className="text-sm font-bold text-navy">
+                Soal Ujian <span className="text-navy/40 font-medium">({draftSoal.length} soal)</span>
+              </p>
+              {!showSoalForm && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingDraft(null)
+                    setShowSoalForm(true)
+                  }}
+                  className="text-xs font-semibold text-emerald-700 border border-emerald-300 rounded-full px-4 py-1.5 hover:bg-emerald-50 transition-colors"
+                >
+                  + Tambah Soal (Pilihan Ganda / Essay)
+                </button>
+              )}
+            </div>
+            {draftSoal.map((s, i) =>
+              editingDraft === i ? (
+                <SoalEditor
+                  key={i}
+                  initial={s}
+                  submitLabel="Simpan Perubahan"
+                  onSubmit={async (payload) => {
+                    setDraftSoal((list) => list.map((item, idx) => (idx === i ? payload : item)))
+                    setEditingDraft(null)
+                  }}
+                  onCancel={() => setEditingDraft(null)}
+                />
+              ) : (
+              <div key={i} className="bg-navy/[0.03] rounded-xl p-3 flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                    <TipeBadge tipe={s.tipe} />
+                    <span className="text-[10px] font-semibold text-navy/45">Bobot {s.bobot}</span>
+                    {s.tipe === 'pilihan_ganda' && (
+                      <span className="text-[10px] font-semibold text-emerald-700">Kunci: {s.jawaban_benar.toUpperCase()}</span>
+                    )}
+                  </div>
+                  <p className="text-sm font-semibold text-navy whitespace-pre-line">
+                    {i + 1}. {s.pertanyaan}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowSoalForm(false)
+                      setEditingDraft(i)
+                    }}
+                    className="text-[11px] font-semibold text-emerald-700 hover:underline"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingDraft(null)
+                      setDraftSoal((list) => list.filter((_, idx) => idx !== i))
+                    }}
+                    className="text-[11px] font-semibold text-red-600 hover:underline"
+                  >
+                    Hapus
+                  </button>
+                </div>
+              </div>
+              )
+            )}
+            {showSoalForm && (
+              <SoalEditor
+                submitLabel="Tambahkan ke Ujian"
+                onSubmit={async (payload) => {
+                  setDraftSoal((list) => [...list, payload])
+                  setShowSoalForm(false)
+                }}
+                onCancel={() => setShowSoalForm(false)}
+              />
+            )}
+            {draftSoal.length === 0 && !showSoalForm && (
+              <p className="text-xs text-navy/40">Tambahkan minimal satu soal sebelum menyimpan ujian.</p>
+            )}
           </div>
           {error && <p className="text-xs text-red-500">{error}</p>}
           <button
@@ -1649,14 +2259,16 @@ function UjianManagement({ onBack }) {
       )}
 
       <div className="space-y-3">
-        {(items || []).map((u) => (
-          <div key={u.id} className="bg-white rounded-2xl border border-navy/10 p-4">
+        {(items || [])
+          .filter((u) => !scope || (u.kelas_id === scope.kelas_id && u.mata_pelajaran_id === scope.mata_pelajaran_id))
+          .map((u) => (
+          <div key={u.id} className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-4">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="font-bold text-navy">{u.judul}</p>
                 <p className="text-xs text-navy/50 mt-0.5">
                   {u.kelas?.nama_kelas} &middot; {u.mata_pelajaran?.nama_mapel} &middot; {u.soal_count ?? 0} soal &middot;{' '}
-                  {u.attempts_count ?? 0} siswa mengerjakan
+                  {u.attempts_count ?? 0} siswa mengerjakan &middot; KKM {u.kkm ?? 75}
                 </p>
                 <p className="text-xs text-navy/40 mt-0.5">
                   {new Date(u.waktu_mulai).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })} —{' '}
@@ -1685,60 +2297,68 @@ function UjianManagement({ onBack }) {
       </div>
       {items && items.length === 0 && <EmptyState text="Belum ada ujian yang dibuat." />}
       {items === null && <EmptyState text="Memuat..." />}
-    </PageShell>
+    </Shell>
   )
 }
 
-function UjianDetail({ ujian, onChanged }) {
-  const [tab, setTab] = useState('soal')
-  const [soal, setSoal] = useState(null)
-  const [attempts, setAttempts] = useState(null)
-  const [showForm, setShowForm] = useState(false)
-  const [pertanyaan, setPertanyaan] = useState('')
-  const [pilihanA, setPilihanA] = useState('')
-  const [pilihanB, setPilihanB] = useState('')
-  const [pilihanC, setPilihanC] = useState('')
-  const [pilihanD, setPilihanD] = useState('')
-  const [jawabanBenar, setJawabanBenar] = useState('a')
+const SOAL_TIPE = [
+  { value: 'pilihan_ganda', label: 'Pilihan Ganda' },
+  { value: 'essay', label: 'Essay' },
+]
+
+function TipeBadge({ tipe }) {
+  return tipe === 'essay' ? (
+    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">Essay</span>
+  ) : (
+    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Pilihan Ganda</span>
+  )
+}
+
+function SoalEditor({ onSubmit, onCancel, submitLabel = 'Simpan Soal', initial }) {
+  const [tipe, setTipe] = useState(initial?.tipe ?? 'pilihan_ganda')
+  const [pertanyaan, setPertanyaan] = useState(initial?.pertanyaan ?? '')
+  const [bobot, setBobot] = useState(initial?.bobot ?? 1)
+  const [pilihanA, setPilihanA] = useState(initial?.pilihan_a ?? '')
+  const [pilihanB, setPilihanB] = useState(initial?.pilihan_b ?? '')
+  const [pilihanC, setPilihanC] = useState(initial?.pilihan_c ?? '')
+  const [pilihanD, setPilihanD] = useState(initial?.pilihan_d ?? '')
+  const [jawabanBenar, setJawabanBenar] = useState(initial?.jawaban_benar ?? 'a')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
-  function loadSoal() {
-    api.listUjianSoal(ujian.id).then(setSoal).catch(() => setSoal([]))
-  }
-
-  useEffect(() => {
-    if (tab === 'soal') loadSoal()
-    if (tab === 'hasil') api.listUjianAttempts(ujian.id).then(setAttempts).catch(() => setAttempts([]))
-  }, [tab])
-
-  function resetForm() {
-    setPertanyaan('')
-    setPilihanA('')
-    setPilihanB('')
-    setPilihanC('')
-    setPilihanD('')
-    setJawabanBenar('a')
-    setError('')
-  }
-
-  async function handleAddSoal(e) {
-    e.preventDefault()
+  async function handleSubmit() {
+    if (!pertanyaan.trim()) {
+      setError('Pertanyaan wajib diisi.')
+      return
+    }
+    if (tipe === 'pilihan_ganda' && ![pilihanA, pilihanB, pilihanC, pilihanD].every((v) => v.trim())) {
+      setError('Isi semua pilihan jawaban (A sampai D).')
+      return
+    }
+    const payload = { tipe, pertanyaan: pertanyaan.trim(), bobot: Number(bobot) || 1 }
+    if (tipe === 'pilihan_ganda') {
+      Object.assign(payload, {
+        pilihan_a: pilihanA.trim(),
+        pilihan_b: pilihanB.trim(),
+        pilihan_c: pilihanC.trim(),
+        pilihan_d: pilihanD.trim(),
+        jawaban_benar: jawabanBenar,
+      })
+    }
     setBusy(true)
     setError('')
     try {
-      await api.createUjianSoal(ujian.id, {
-        pertanyaan,
-        pilihan_a: pilihanA,
-        pilihan_b: pilihanB,
-        pilihan_c: pilihanC,
-        pilihan_d: pilihanD,
-        jawaban_benar: jawabanBenar,
-      })
-      resetForm()
-      setShowForm(false)
-      loadSoal()
-      onChanged()
+      await onSubmit(payload)
+      if (!initial) {
+        setTipe('pilihan_ganda')
+        setPertanyaan('')
+        setBobot(1)
+        setPilihanA('')
+        setPilihanB('')
+        setPilihanC('')
+        setPilihanD('')
+        setJawabanBenar('a')
+      }
     } catch (err) {
       setError(err.message)
     } finally {
@@ -1746,120 +2366,287 @@ function UjianDetail({ ujian, onChanged }) {
     }
   }
 
-  async function handleDeleteSoal(s) {
-    if (!window.confirm('Hapus soal ini?')) return
+  return (
+      <div
+      onKeyDown={(e) => {
+        // cegah Enter di dalam editor ikut mengirim form ujian di sekitarnya
+        if (e.key === 'Enter' && e.target.tagName === 'INPUT') e.preventDefault()
+      }}
+      className="bg-white border border-navy/10 rounded-xl p-3.5 space-y-2.5"
+    >
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex gap-1.5">
+            {SOAL_TIPE.filter((t) => !initial || t.value === tipe).map((t) => (
+              <button
+                key={t.value}
+                type="button"
+                onClick={() => setTipe(t.value)}
+                className={`text-xs font-semibold px-3.5 py-1.5 rounded-full transition-colors ${
+                  tipe === t.value ? 'bg-emerald-600 text-white' : 'bg-navy/5 text-navy/60 hover:bg-navy/10'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <label className="block ml-auto">
+            <span className="block text-[11px] font-semibold text-navy/50 mb-0.5">Bobot nilai</span>
+            <input
+              type="number"
+              min="1"
+              max="100"
+              value={bobot}
+              onChange={(e) => setBobot(e.target.value)}
+              className="input !w-24"
+            />
+          </label>
+        </div>
+        <textarea
+          value={pertanyaan}
+          onChange={(e) => setPertanyaan(e.target.value)}
+          placeholder={tipe === 'essay' ? 'Pertanyaan essay' : 'Pertanyaan'}
+          rows={tipe === 'essay' ? 3 : 2}
+          className="w-full border border-navy/15 rounded-lg px-3 py-2 text-sm"
+        />
+        {tipe === 'pilihan_ganda' &&
+          [
+            ['a', pilihanA, setPilihanA],
+            ['b', pilihanB, setPilihanB],
+            ['c', pilihanC, setPilihanC],
+            ['d', pilihanD, setPilihanD],
+          ].map(([opt, val, setVal]) => (
+            <div key={opt} className="flex items-center gap-2">
+              <input
+                type="radio"
+                checked={jawabanBenar === opt}
+                onChange={() => setJawabanBenar(opt)}
+                title="Tandai sebagai jawaban benar"
+              />
+              <span className="text-xs font-bold text-navy/60 uppercase w-4">{opt}</span>
+              <input
+                type="text"
+                value={val}
+                onChange={(e) => setVal(e.target.value)}
+                placeholder={`Pilihan ${opt.toUpperCase()}`}
+                      className="input flex-1"
+              />
+            </div>
+          ))}
+        {tipe === 'pilihan_ganda' && (
+          <p className="text-[11px] text-navy/40">Pilih tombol bulat di samping jawaban yang benar.</p>
+        )}
+        {tipe === 'essay' && (
+          <p className="text-[11px] text-navy/40">
+            Siswa menjawab dengan teks. Anda memberi nilai 0 sampai {Number(bobot) || 1} pada tab Hasil Siswa.
+          </p>
+        )}
+        {error && <p className="text-xs text-red-500">{error}</p>}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={busy}
+            className="text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-full px-4 py-2 disabled:opacity-50"
+          >
+            {busy ? 'Menyimpan...' : submitLabel}
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="text-xs font-semibold text-navy/60 px-4 py-2"
+          >
+            Batal
+          </button>
+        </div>
+      </div>
+  )
+}
+
+function UjianDetail({ ujian, onChanged }) {
+  const [askConfirm, confirmModal] = useThemedConfirm()
+  const [tab, setTab] = useState('soal')
+  const [soal, setSoal] = useState(null)
+  const [attempts, setAttempts] = useState(null)
+  const [koreksi, setKoreksi] = useState(null) // attempt yang sedang dikoreksi
+  const [showForm, setShowForm] = useState(false)
+  const [editingSoalId, setEditingSoalId] = useState(null)
+  const [kkm, setKkm] = useState(ujian.kkm ?? 75)
+  const [kkmBusy, setKkmBusy] = useState(false)
+  const [kkmSaved, setKkmSaved] = useState(false)
+
+  function loadSoal() {
+    api.listUjianSoal(ujian.id).then(setSoal).catch(() => setSoal([]))
+  }
+
+  function loadAttempts() {
+    api.listUjianAttempts(ujian.id).then(setAttempts).catch(() => setAttempts([]))
+  }
+
+  useEffect(() => {
+    if (tab === 'soal') loadSoal()
+    if (tab === 'hasil') loadAttempts()
+  }, [tab])
+
+  async function handleSimpanKkm() {
+    setKkmBusy(true)
+    setKkmSaved(false)
     try {
-      await api.deleteUjianSoal(s.id)
-      loadSoal()
+      await api.updateUjian(ujian.id, { kkm: Math.round(Number(kkm)) })
+      setKkmSaved(true)
       onChanged()
     } catch (err) {
       window.alert(err.message)
+    } finally {
+      setKkmBusy(false)
     }
   }
 
+  function handleDeleteSoal(s) {
+    askConfirm({ title: 'Hapus soal', message: 'Yakin ingin menghapus soal ini?' }, async () => {
+      try {
+        await api.deleteUjianSoal(s.id)
+        loadSoal()
+        onChanged()
+      } catch (err) {
+        window.alert(err.message)
+      }
+    })
+  }
+
+  const totalBobot = (soal || []).reduce((sum, s) => sum + (s.bobot ?? 1), 0)
+
   return (
     <div className="mt-4 pt-4 border-t border-navy/10">
+      {confirmModal}
+
+      <div className="flex flex-wrap items-end gap-3 mb-4 bg-emerald-50/60 border border-emerald-100 rounded-xl p-3.5">
+        <label className="block">
+          <span className="block text-xs font-semibold text-navy/60 mb-1">Nilai KKM</span>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            step="1"
+            value={kkm}
+            onChange={(e) => {
+              setKkm(e.target.value)
+              setKkmSaved(false)
+            }}
+            className="input !w-28"
+          />
+        </label>
+        <button
+          onClick={handleSimpanKkm}
+          disabled={kkmBusy || Number(kkm) === Number(ujian.kkm ?? 75)}
+          className="text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-full px-4 py-2 disabled:opacity-40"
+        >
+          {kkmBusy ? 'Menyimpan...' : 'Simpan KKM'}
+        </button>
+        {kkmSaved && <span className="text-xs text-emerald-700 font-semibold">KKM tersimpan.</span>}
+        <p className="text-xs text-navy/50 ml-auto">
+          Siswa dinyatakan tuntas jika nilai ≥ KKM. Total bobot soal: <b>{totalBobot}</b>
+        </p>
+      </div>
+
       <div className="flex gap-2 mb-3">
-        <button
-          onClick={() => setTab('soal')}
-          className={`text-xs font-semibold px-3.5 py-1.5 rounded-full transition-colors ${
-            tab === 'soal' ? 'bg-navy text-white' : 'bg-navy/5 text-navy/60'
-          }`}
-        >
-          Soal
-        </button>
-        <button
-          onClick={() => setTab('hasil')}
-          className={`text-xs font-semibold px-3.5 py-1.5 rounded-full transition-colors ${
-            tab === 'hasil' ? 'bg-navy text-white' : 'bg-navy/5 text-navy/60'
-          }`}
-        >
-          Hasil Siswa
-        </button>
+        {[
+          ['soal', 'Soal'],
+          ['hasil', 'Hasil Siswa'],
+        ].map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => {
+              setTab(key)
+              setKoreksi(null)
+            }}
+            className={`text-xs font-semibold px-3.5 py-1.5 rounded-full transition-colors ${
+              tab === key ? 'bg-navy text-white' : 'bg-navy/5 text-navy/60'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {tab === 'soal' && (
         <div className="space-y-2.5">
-          {(soal || []).map((s, i) => (
+          {(soal || []).map((s, i) =>
+            editingSoalId === s.id ? (
+              <SoalEditor
+                key={s.id}
+                initial={s}
+                submitLabel="Simpan Perubahan"
+                onSubmit={async (payload) => {
+                  await api.updateUjianSoal(s.id, payload)
+                  setEditingSoalId(null)
+                  loadSoal()
+                  onChanged()
+                }}
+                onCancel={() => setEditingSoalId(null)}
+              />
+            ) : (
             <div key={s.id} className="bg-navy/[0.03] rounded-xl p-3.5">
               <div className="flex items-start justify-between gap-3">
-                <p className="text-sm font-semibold text-navy">
-                  {i + 1}. {s.pertanyaan}
-                </p>
-                <button
-                  onClick={() => handleDeleteSoal(s)}
-                  className="text-[11px] font-semibold text-red-600 hover:underline shrink-0"
-                >
-                  Hapus
-                </button>
-              </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 text-xs text-navy/60">
-                {['a', 'b', 'c', 'd'].map((opt) => (
-                  <p key={opt} className={s.jawaban_benar === opt ? 'font-bold text-emerald-700' : ''}>
-                    {opt.toUpperCase()}. {s[`pilihan_${opt}`]}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <TipeBadge tipe={s.tipe} />
+                    <span className="text-[10px] font-semibold text-navy/45">Bobot {s.bobot ?? 1}</span>
+                  </div>
+                  <p className="text-sm font-semibold text-navy whitespace-pre-line">
+                    {i + 1}. {s.pertanyaan}
                   </p>
-                ))}
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <button
+                    onClick={() => {
+                      setShowForm(false)
+                      setEditingSoalId(s.id)
+                    }}
+                    className="text-[11px] font-semibold text-emerald-700 hover:underline"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDeleteSoal(s)}
+                    className="text-[11px] font-semibold text-red-600 hover:underline"
+                  >
+                    Hapus
+                  </button>
+                </div>
               </div>
+              {s.tipe === 'essay' ? (
+                <p className="text-xs text-navy/45 italic mt-2">Jawaban uraian — dinilai manual oleh guru.</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 text-xs text-navy/60">
+                  {['a', 'b', 'c', 'd'].map((opt) => (
+                    <p key={opt} className={s.jawaban_benar === opt ? 'font-bold text-emerald-700' : ''}>
+                      {opt.toUpperCase()}. {s[`pilihan_${opt}`]}
+                    </p>
+                  ))}
+                </div>
+              )}
             </div>
-          ))}
+            )
+          )}
           {soal && soal.length === 0 && <p className="text-sm text-navy/40 text-center py-4">Belum ada soal.</p>}
           {soal === null && <p className="text-sm text-navy/40 text-center py-4">Memuat...</p>}
 
           {showForm ? (
-            <form onSubmit={handleAddSoal} className="bg-white border border-navy/10 rounded-xl p-3.5 space-y-2.5">
-              <textarea
-                value={pertanyaan}
-                onChange={(e) => setPertanyaan(e.target.value)}
-                placeholder="Pertanyaan"
-                rows={2}
-                required
-                className="w-full border border-navy/15 rounded-lg px-3 py-2 text-sm"
-              />
-              {[
-                ['a', pilihanA, setPilihanA],
-                ['b', pilihanB, setPilihanB],
-                ['c', pilihanC, setPilihanC],
-                ['d', pilihanD, setPilihanD],
-              ].map(([opt, val, setVal]) => (
-                <div key={opt} className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    checked={jawabanBenar === opt}
-                    onChange={() => setJawabanBenar(opt)}
-                    title="Tandai sebagai jawaban benar"
-                  />
-                  <span className="text-xs font-bold text-navy/60 uppercase w-4">{opt}</span>
-                  <input
-                    type="text"
-                    value={val}
-                    onChange={(e) => setVal(e.target.value)}
-                    placeholder={`Pilihan ${opt.toUpperCase()}`}
-                    required
-                    className="input flex-1"
-                  />
-                </div>
-              ))}
-              {error && <p className="text-xs text-red-500">{error}</p>}
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  disabled={busy}
-                  className="text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-full px-4 py-2 disabled:opacity-50"
-                >
-                  {busy ? 'Menyimpan...' : 'Simpan Soal'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowForm(false)}
-                  className="text-xs font-semibold text-navy/60 px-4 py-2"
-                >
-                  Batal
-                </button>
-              </div>
-            </form>
+            <SoalEditor
+              onSubmit={async (payload) => {
+                await api.createUjianSoal(ujian.id, payload)
+                setShowForm(false)
+                loadSoal()
+                onChanged()
+              }}
+              onCancel={() => setShowForm(false)}
+            />
           ) : (
             <button
-              onClick={() => setShowForm(true)}
+              onClick={() => {
+                setEditingSoalId(null)
+                setShowForm(true)
+              }}
               className="text-xs font-semibold text-navy border border-navy/20 rounded-full px-4 py-2 hover:bg-navy hover:text-white transition-colors"
             >
               + Tambah Soal
@@ -1868,94 +2655,544 @@ function UjianDetail({ ujian, onChanged }) {
         </div>
       )}
 
-      {tab === 'hasil' && (
+      {tab === 'hasil' && !koreksi && (
         <div className="space-y-2">
           {(attempts || []).map((a) => (
-            <div key={a.id} className="bg-navy/[0.03] rounded-xl p-3 flex items-center justify-between">
-              <p className="text-sm font-semibold text-navy">{a.siswa?.nama}</p>
-              <p className="text-xs text-navy/60">
-                {a.finished_at ? `Nilai: ${a.nilai}` : 'Sedang mengerjakan...'}
-              </p>
+            <div key={a.id} className="bg-navy/[0.03] rounded-xl p-3 flex items-center justify-between gap-3 flex-wrap">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-navy">{a.siswa?.nama}</p>
+                <p className="text-xs text-navy/50">
+                  {a.finished_at ? `Nilai: ${a.nilai}` : 'Sedang mengerjakan...'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                {a.essay_belum_dinilai > 0 && (
+                  <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">
+                    {a.essay_belum_dinilai} essay belum dinilai
+                  </span>
+                )}
+                {a.finished_at && a.lulus !== null && (
+                  <span
+                    className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
+                      a.lulus ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-600'
+                    }`}
+                  >
+                    {a.lulus ? 'Tuntas' : 'Belum Tuntas'}
+                  </span>
+                )}
+                {a.finished_at && (
+                  <button
+                    onClick={() => setKoreksi(a)}
+                    className="text-xs font-semibold text-navy border border-navy/20 rounded-full px-3.5 py-1.5 hover:bg-navy hover:text-white transition-colors"
+                  >
+                    Lihat / Koreksi
+                  </button>
+                )}
+              </div>
             </div>
           ))}
-          {attempts && attempts.length === 0 && <p className="text-sm text-navy/40 text-center py-4">Belum ada siswa yang mengerjakan.</p>}
+          {attempts && attempts.length === 0 && (
+            <p className="text-sm text-navy/40 text-center py-4">Belum ada siswa yang mengerjakan.</p>
+          )}
           {attempts === null && <p className="text-sm text-navy/40 text-center py-4">Memuat...</p>}
         </div>
+      )}
+
+      {tab === 'hasil' && koreksi && (
+        <UjianKoreksi
+          ujian={ujian}
+          attempt={koreksi}
+          onBack={() => {
+            setKoreksi(null)
+            loadAttempts()
+            onChanged()
+          }}
+        />
       )}
     </div>
   )
 }
 
-function StatCard({ label, value, sub, icon: Icon, onClick }) {
+function UjianKoreksi({ ujian, attempt, onBack }) {
+  const [detail, setDetail] = useState(null)
+  const [nilaiInput, setNilaiInput] = useState({})
+  const [savingId, setSavingId] = useState(null)
+  const [error, setError] = useState('')
+  const [nilaiAkhir, setNilaiAkhir] = useState(attempt.nilai)
+
+  useEffect(() => {
+    api
+      .getUjianAttemptDetail(ujian.id, attempt.id)
+      .then((r) => {
+        setDetail(r)
+        setNilaiInput(
+          Object.fromEntries(
+            r.items.filter((it) => it.jawaban?.nilai_essay != null).map((it) => [it.jawaban.id, String(it.jawaban.nilai_essay)])
+          )
+        )
+      })
+      .catch((err) => setError(err.message))
+  }, [])
+
+  async function handleNilai(jawaban) {
+    setSavingId(jawaban.id)
+    setError('')
+    try {
+      const res = await api.nilaiUjianEssay(jawaban.id, { nilai_essay: Number(nilaiInput[jawaban.id]) })
+      setNilaiAkhir(res.nilai_akhir)
+      setDetail((prev) => ({
+        ...prev,
+        items: prev.items.map((it) =>
+          it.jawaban?.id === jawaban.id ? { ...it, jawaban: { ...it.jawaban, nilai_essay: res.jawaban.nilai_essay } } : it
+        ),
+      }))
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  const lulus = nilaiAkhir != null ? Number(nilaiAkhir) >= Number(ujian.kkm ?? 75) : null
+
   return (
-    <button onClick={onClick} className="relative overflow-hidden text-left rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-5 hover:shadow-md transition-shadow">
-      <div className="flex items-center gap-4">
-        <span className="h-16 w-16 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-          <Icon className="h-8 w-8" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-4xl font-extrabold text-navy leading-none">{value ?? '-'}</p>
-          <p className="text-sm font-bold text-navy uppercase mt-2">{label}</p>
-          {sub && <p className="text-xs text-navy/50 mt-0.5 truncate">{sub}</p>}
+    <div>
+      <button onClick={onBack} className="text-xs font-semibold text-emerald-700 hover:underline mb-3">
+        ← Kembali ke daftar hasil
+      </button>
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+        <div>
+          <p className="font-bold text-navy">{attempt.siswa?.nama}</p>
+          <p className="text-xs text-navy/50">
+            Nilai akhir: <b className="text-navy">{nilaiAkhir ?? '-'}</b> &middot; KKM {ujian.kkm ?? 75}
+          </p>
         </div>
-        <span className="h-8 w-8 rounded-full bg-white shadow-sm flex items-center justify-center text-navy shrink-0">
-          <ChevronRightIcon className="h-4 w-4" />
-        </span>
+        {lulus !== null && (
+          <span
+            className={`text-xs font-bold px-3 py-1 rounded-full ${
+              lulus ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-600'
+            }`}
+          >
+            {lulus ? 'Tuntas' : 'Belum Tuntas'}
+          </span>
+        )}
       </div>
-    </button>
+      {error && <p className="text-xs text-red-500 mb-2">{error}</p>}
+      {detail === null && !error && <p className="text-sm text-navy/40 text-center py-4">Memuat...</p>}
+      <div className="space-y-2.5">
+        {(detail?.items || []).map(({ soal, jawaban }, i) => (
+          <div key={soal.id} className="bg-navy/[0.03] rounded-xl p-3.5">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <TipeBadge tipe={soal.tipe} />
+              <span className="text-[10px] font-semibold text-navy/45">Bobot {soal.bobot ?? 1}</span>
+            </div>
+            <p className="text-sm font-semibold text-navy whitespace-pre-line">
+              {i + 1}. {soal.pertanyaan}
+            </p>
+            {soal.tipe === 'essay' ? (
+              <div className="mt-2">
+                <div className="bg-white border border-navy/10 rounded-lg px-3 py-2 text-sm text-navy/80 whitespace-pre-line min-h-[2.5rem]">
+                  {jawaban?.jawaban_essay || <span className="text-navy/35 italic">Tidak dijawab.</span>}
+                </div>
+                <div className="flex items-center gap-2 mt-2 flex-wrap">
+                  <span className="text-xs text-navy/50">Nilai (0 – {soal.bobot ?? 1}):</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max={soal.bobot ?? 1}
+                    step="0.5"
+                    disabled={!jawaban}
+                    value={jawaban ? nilaiInput[jawaban.id] ?? '' : ''}
+                    onChange={(e) => jawaban && setNilaiInput((prev) => ({ ...prev, [jawaban.id]: e.target.value }))}
+                    className="input !w-24"
+                  />
+                  <button
+                    onClick={() => jawaban && handleNilai(jawaban)}
+                    disabled={!jawaban || savingId === jawaban.id || nilaiInput[jawaban?.id] === undefined || nilaiInput[jawaban?.id] === ''}
+                    className="text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-full px-4 py-1.5 disabled:opacity-40"
+                  >
+                    {jawaban && savingId === jawaban.id ? 'Menyimpan...' : 'Simpan Nilai'}
+                  </button>
+                  {jawaban?.nilai_essay != null && (
+                    <span className="text-[11px] font-semibold text-emerald-700">Dinilai: {jawaban.nilai_essay}</span>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 text-xs">
+                {['a', 'b', 'c', 'd'].map((opt) => {
+                  const dipilih = jawaban?.jawaban_dipilih === opt
+                  const kunci = soal.jawaban_benar === opt
+                  return (
+                    <p
+                      key={opt}
+                      className={
+                        kunci
+                          ? 'font-bold text-emerald-700'
+                          : dipilih
+                            ? 'font-bold text-rose-600'
+                            : 'text-navy/55'
+                      }
+                    >
+                      {opt.toUpperCase()}. {soal[`pilihan_${opt}`]}
+                      {dipilih && <span className="ml-1.5 text-[10px]">(dipilih siswa)</span>}
+                      {kunci && <span className="ml-1.5 text-[10px]">(kunci)</span>}
+                    </p>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 
-function ShortcutTile({ label, sub, icon: Icon, onClick }) {
+const RAPOR_CARD_TONES = [
+  {
+    card: 'bg-gradient-to-br from-violet-50 via-white to-violet-100 border-violet-100',
+    dot: 'bg-violet-400',
+    accent: 'text-violet-700',
+    button: 'bg-violet-500 hover:bg-violet-600',
+    chip: 'bg-violet-100 text-violet-700',
+    screen: '#8b5cf6',
+    screenSoft: '#c4b5fd',
+  },
+  {
+    card: 'bg-gradient-to-br from-fuchsia-50 via-white to-pink-100 border-pink-100',
+    dot: 'bg-pink-400',
+    accent: 'text-pink-700',
+    button: 'bg-pink-500 hover:bg-pink-600',
+    chip: 'bg-pink-100 text-pink-700',
+    screen: '#d946ef',
+    screenSoft: '#f0abfc',
+  },
+  {
+    card: 'bg-gradient-to-br from-rose-50 via-white to-orange-100 border-rose-100',
+    dot: 'bg-rose-400',
+    accent: 'text-rose-700',
+    button: 'bg-rose-500 hover:bg-rose-600',
+    chip: 'bg-rose-100 text-rose-700',
+    screen: '#f43f5e',
+    screenSoft: '#fda4af',
+  },
+  {
+    card: 'bg-gradient-to-br from-emerald-50 via-white to-teal-100 border-emerald-100',
+    dot: 'bg-emerald-400',
+    accent: 'text-emerald-700',
+    button: 'bg-emerald-500 hover:bg-emerald-600',
+    chip: 'bg-emerald-100 text-emerald-700',
+    screen: '#10b981',
+    screenSoft: '#6ee7b7',
+  },
+]
+
+function RaporCardIllustration({ tone, className }) {
   return (
-    <button onClick={onClick} className="text-left rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-4 hover:shadow-md transition-shadow">
-      <span className="h-12 w-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
-        <Icon className="h-6 w-6" />
+    <svg className={className} viewBox="0 0 160 110" fill="none">
+      <circle cx="18" cy="26" r="5" fill="none" stroke={tone.screenSoft} strokeWidth="2" />
+      <circle cx="30" cy="12" r="4" fill={tone.screenSoft} />
+      <circle cx="148" cy="58" r="3" fill={tone.screenSoft} />
+      <rect x="34" y="14" width="86" height="58" rx="6" fill="#fff" stroke="#334155" strokeWidth="3" />
+      <rect x="40" y="20" width="74" height="46" rx="3" fill={tone.screen} />
+      <rect x="46" y="27" width="34" height="5" rx="2.5" fill="#fff" opacity=".85" />
+      <rect x="46" y="37" width="52" height="4" rx="2" fill="#fff" opacity=".55" />
+      <rect x="46" y="45" width="44" height="4" rx="2" fill="#fff" opacity=".55" />
+      <rect x="46" y="53" width="26" height="6" rx="3" fill="#fff" opacity=".85" />
+      <rect x="66" y="72" width="26" height="8" fill="#94a3b8" />
+      <rect x="54" y="80" width="50" height="5" rx="2.5" fill="#334155" />
+      <rect x="104" y="46" width="34" height="42" rx="4" fill="#fff" stroke="#334155" strokeWidth="3" />
+      <rect x="109" y="52" width="24" height="24" rx="2" fill={tone.screenSoft} />
+      <circle cx="121" cy="82" r="2.2" fill="#334155" />
+      <rect x="14" y="60" width="22" height="30" rx="3" fill="#fff" stroke="#334155" strokeWidth="3" />
+      <rect x="18" y="65" width="14" height="16" rx="1.5" fill={tone.screen} opacity=".7" />
+      <circle cx="25" cy="85" r="1.6" fill="#334155" />
+    </svg>
+  )
+}
+
+function ArrowRightMini(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 12h14M13 6l6 6-6 6" />
+    </svg>
+  )
+}
+
+function InputRaporView({ onBack }) {
+  const { guru, pilihan } = useGuruContext()
+  const [kelasList, setKelasList] = useState(null)
+  const [nilai, setNilai] = useState(null)
+  const [scope, setScope] = useState(null)
+  const [filterKelas, setFilterKelas] = useState('')
+  const [filterStatus, setFilterStatus] = useState('')
+  const [search, setSearch] = useState('')
+
+  useEffect(() => {
+    api.getMyGuruKelas().then(setKelasList).catch(() => setKelasList([]))
+  }, [])
+
+  useEffect(() => {
+    if (!guru || scope) return
+    api
+      .listNilai({ 'filter[guru_id]': guru.id, include: 'siswa', per_page: 500 })
+      .then((r) => setNilai(r.data))
+      .catch(() => setNilai([]))
+  }, [guru, scope])
+
+  if (scope) {
+    return (
+      <NilaiManagement
+        onBack={() => setScope(null)}
+        scope={scope}
+        title={`Input Nilai Rapor · ${scope.nama_mapel} · ${scope.nama_kelas}`}
+        description="Nilai yang diinput di sini otomatis menjadi sumber data E-Rapor siswa untuk semester & tahun ajaran yang dipilih."
+      />
+    )
+  }
+
+  const jumlahNilai = (kelasId, mapelId) =>
+    (nilai || []).filter((n) => (n.siswa?.kelas_id ?? n.siswa?.kelas?.id) === kelasId && n.mata_pelajaran_id === mapelId).length
+  const siswaDinilai = (kelasId, mapelId) =>
+    new Set(
+      (nilai || [])
+        .filter((n) => (n.siswa?.kelas_id ?? n.siswa?.kelas?.id) === kelasId && n.mata_pelajaran_id === mapelId)
+        .map((n) => n.siswa_id)
+    ).size
+  const jumlahSiswa = (kelasId) => (kelasList || []).find((k) => k.id === kelasId)?.jumlah_siswa ?? 0
+
+  const kartu = (pilihan || [])
+    .filter((p) => !filterKelas || String(p.kelas_id) === filterKelas)
+    .filter((p) => {
+      if (!filterStatus || nilai === null) return true
+      const ada = jumlahNilai(p.kelas_id, p.mata_pelajaran_id) > 0
+      return filterStatus === 'sudah' ? ada : !ada
+    })
+    .filter((p) => {
+      const q = search.trim().toLowerCase()
+      return !q || p.nama_mapel.toLowerCase().includes(q) || p.nama_kelas.toLowerCase().includes(q)
+    })
+
+  const inisial = (guru?.nama || 'G').trim().charAt(0).toUpperCase()
+
+  return (
+    <div className="xl:flex xl:items-start gap-6">
+      <div className="flex-1 min-w-0">
+        <button onClick={onBack} className="text-sm text-navy/50 hover:text-navy mb-2 block">
+          ← Kembali ke Dashboard
+        </button>
+
+        <div className="flex items-start justify-between gap-4 mb-1">
+          <div>
+            <h1 className="text-3xl font-extrabold text-emerald-900 tracking-tight">Input Nilai Rapor</h1>
+            <p className="text-sm text-navy/50 mt-1 max-w-xl">
+              Pilih kelas dan mata pelajaran, lalu input nilainya. Nilai otomatis menjadi sumber data E-Rapor siswa.
+            </p>
+          </div>
+          <div className="relative shrink-0">
+            <SearchMiniIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-navy/35" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Cari mapel / kelas..."
+              className="bg-white/80 border border-white rounded-full pl-10 pr-4 py-2 text-sm text-navy placeholder:text-navy/35 focus:outline-none focus:border-emerald-400 w-48 sm:w-56"
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5 my-5">
+          <span className="text-xs font-semibold text-navy/55">Filter by:</span>
+          <select
+            value={filterKelas}
+            onChange={(e) => setFilterKelas(e.target.value)}
+            className="bg-white/80 border border-white text-xs font-semibold text-emerald-900 rounded-full px-4 py-2 focus:outline-none focus:border-emerald-400"
+          >
+            <option value="">Semua Kelas</option>
+            {(kelasList || []).map((k) => (
+              <option key={k.id} value={k.id}>
+                {k.nama_kelas}
+              </option>
+            ))}
+          </select>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="bg-white/80 border border-white text-xs font-semibold text-emerald-900 rounded-full px-4 py-2 focus:outline-none focus:border-emerald-400"
+          >
+            <option value="">Semua Status</option>
+            <option value="sudah">Sudah ada nilai</option>
+            <option value="belum">Belum ada nilai</option>
+          </select>
+        </div>
+
+        {pilihan === null && <EmptyState text="Memuat..." />}
+        {pilihan !== null && kartu.length === 0 && (
+          <EmptyState text={pilihan.length === 0 ? 'Belum ada kelas dan mata pelajaran yang Anda ampu.' : 'Tidak ada hasil yang cocok.'} />
+        )}
+
+        <div className="space-y-4">
+          {kartu.map((p, i) => {
+            const tone = RAPOR_CARD_TONES[i % RAPOR_CARD_TONES.length]
+            const total = jumlahSiswa(p.kelas_id)
+            const dinilai = nilai === null ? null : siswaDinilai(p.kelas_id, p.mata_pelajaran_id)
+            return (
+              <button
+                key={`${p.kelas_id}-${p.mata_pelajaran_id}`}
+                onClick={() => setScope(p)}
+                className={`group w-full text-left relative overflow-hidden rounded-3xl border ${tone.card} p-5 sm:p-6 flex items-center gap-5 sm:gap-7 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all`}
+              >
+                <RaporCardIllustration tone={tone} className="hidden sm:block h-28 w-40 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xl font-extrabold text-navy leading-tight">{p.nama_mapel}</p>
+                  <p className="text-xs text-navy/50 mt-1.5 leading-relaxed max-w-md">
+                    Input nilai harian, tugas, UTS, dan UAS untuk {p.nama_kelas} sebagai sumber data E-Rapor.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2 mt-3">
+                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${tone.chip}`}>{p.nama_kelas}</span>
+                    <span className="text-[11px] font-semibold text-navy/50">
+                      {dinilai === null ? '...' : `${dinilai} dari ${total} siswa sudah dinilai`}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-navy/40 mt-2">
+                    Guru pengampu: <span className={`font-semibold ${tone.accent}`}>{guru?.nama ?? '-'}</span>
+                  </p>
+                </div>
+                <span
+                  className={`h-11 w-11 rounded-full text-white flex items-center justify-center shrink-0 shadow-md transition-transform group-hover:translate-x-0.5 ${tone.button}`}
+                >
+                  <ArrowRightMini className="h-5 w-5" />
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      <aside className="xl:w-80 shrink-0 mt-6 xl:mt-0 space-y-5">
+        <div className="flex items-center justify-end gap-3">
+          <div className="text-right min-w-0">
+            <p className="text-sm font-bold text-emerald-950 truncate">{guru?.nama ?? '...'}</p>
+            <p className="text-[11px] text-navy/45">{guru?.nip ? `NIP ${guru.nip}` : 'Guru Mata Pelajaran'}</p>
+          </div>
+          <span className="h-11 w-11 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 text-white font-bold flex items-center justify-center shrink-0 shadow">
+            {inisial}
+          </span>
+        </div>
+
+        <div className="bg-white/80 backdrop-blur rounded-3xl border border-white p-5 shadow-sm">
+          <MiniCalendar title="Kalender" />
+        </div>
+
+        <div className="bg-white/80 backdrop-blur rounded-3xl border border-white p-5 shadow-sm">
+          <p className="text-sm font-extrabold text-emerald-900 mb-4">Progres Input Nilai</p>
+          {(kelasList === null || nilai === null) && <p className="text-xs text-navy/40">Memuat...</p>}
+          {kelasList !== null && nilai !== null && kelasList.length === 0 && (
+            <p className="text-xs text-navy/40">Belum ada kelas.</p>
+          )}
+          <div className="space-y-3.5">
+            {nilai !== null &&
+              (kelasList || []).map((k, i) => {
+                const tone = RAPOR_CARD_TONES[i % RAPOR_CARD_TONES.length]
+                const jumlah = nilai.filter((n) => (n.siswa?.kelas_id ?? n.siswa?.kelas?.id) === k.id).length
+                const dinilai = new Set(
+                  nilai.filter((n) => (n.siswa?.kelas_id ?? n.siswa?.kelas?.id) === k.id).map((n) => n.siswa_id)
+                ).size
+                return (
+                  <div key={k.id} className="flex items-center gap-3">
+                    <span className={`h-10 w-10 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${tone.chip}`}>
+                      {k.tingkat ?? k.nama_kelas.charAt(0)}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-navy truncate">{k.nama_kelas}</p>
+                      <p className="text-[11px] text-navy/45">
+                        {dinilai}/{k.jumlah_siswa ?? 0} siswa · {jumlah} nilai
+                      </p>
+                    </div>
+                    <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${dinilai > 0 ? tone.dot : 'bg-navy/15'}`} />
+                  </div>
+                )
+              })}
+          </div>
+        </div>
+      </aside>
+    </div>
+  )
+}
+
+function StatIllustrationCard({ label, value, icon: Icon, iconTone, illustration, onClick }) {
+  const Wrapper = onClick ? 'button' : 'div'
+  return (
+    <Wrapper
+      onClick={onClick}
+      className={`bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5 text-left transition-colors flex items-center justify-between gap-3 overflow-hidden ${
+        onClick ? 'hover:shadow-md' : ''
+      }`}
+    >
+      <div className="min-w-0">
+        <div className={`h-9 w-9 rounded-lg flex items-center justify-center mb-3 ${iconTone}`}>
+          <Icon className="h-4.5 w-4.5" />
+        </div>
+        <p className="text-2xl font-extrabold text-navy leading-none">{value ?? '-'}</p>
+        <p className="text-[11px] text-navy/50 mt-1.5 uppercase tracking-wide">{label}</p>
+      </div>
+      <div className="shrink-0">{illustration}</div>
+    </Wrapper>
+  )
+}
+
+function ShortcutTile({ eyebrow, label, icon: Icon, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-3 bg-navy/5 hover:bg-navy/10 rounded-xl p-3.5 text-left transition-colors"
+    >
+      <Icon className="h-5 w-5 text-navy shrink-0" />
+      <span className="min-w-0">
+        {eyebrow && <p className="text-[10px] font-bold text-navy/45 uppercase tracking-wide truncate">{eyebrow}</p>}
+        <p className="text-xs font-semibold text-navy leading-snug truncate">{label}</p>
       </span>
-      <p className="text-sm font-extrabold text-navy mt-3">{label}</p>
-      <div className="flex items-end justify-between gap-2 mt-0.5">
-        <p className="text-xs text-navy/50">{sub}</p>
-        <span className="h-7 w-7 rounded-full bg-white shadow-sm flex items-center justify-center text-navy shrink-0">
-          <ChevronRightIcon className="h-4 w-4" />
-        </span>
-      </div>
     </button>
   )
 }
 
-function ChevronRightIcon(props) {
+function TeachingIllustration(props) {
   return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-      <path d="m9 6 6 6-6 6" />
+    <svg {...props} viewBox="0 0 100 70" fill="none">
+      <rect x="16" y="4" width="66" height="40" rx="4" fill="#1f9d6a" />
+      <rect x="16" y="4" width="66" height="40" rx="4" fill="none" stroke="#0f6b48" strokeWidth="2" />
+      <path d="M27 16h32M27 24h24M27 32h27" stroke="#eafff3" strokeWidth="2.5" strokeLinecap="round" />
+      <rect x="8" y="44" width="82" height="4" rx="2" fill="#c98a4b" />
+      <circle cx="63" cy="55" r="6" fill="#f6c453" />
+      <path d="M55 70v-7a8 8 0 0 1 16 0v7" fill="#3b82f6" />
+      <path d="M63 51l7-9" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round" />
     </svg>
   )
 }
 
-function SearchIcon(props) {
+function BooksIllustration(props) {
   return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="11" cy="11" r="7" />
-      <path d="m20 20-3.5-3.5" />
+    <svg {...props} viewBox="0 0 90 70" fill="none">
+      <ellipse cx="45" cy="64" rx="36" ry="4" fill="#0f6b48" opacity=".12" />
+      <rect x="14" y="42" width="62" height="14" rx="2" fill="#c98a4b" />
+      <rect x="18" y="28" width="54" height="14" rx="2" fill="#e2b04c" />
+      <rect x="22" y="14" width="46" height="14" rx="2" fill="#4f8f6d" />
+      <rect x="30" y="2" width="30" height="12" rx="2" fill="#1f9d6a" />
     </svg>
   )
 }
 
-function ClockIcon(props) {
+function ClockIllustration(props) {
   return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 7v5l3 2" />
+    <svg {...props} viewBox="0 0 70 70" fill="none">
+      <circle cx="35" cy="37" r="30" fill="#eaf4ff" />
+      <circle cx="35" cy="37" r="21" fill="#fff" stroke="#3b82f6" strokeWidth="3" />
+      <path d="M35 37V24M35 37l9 5" stroke="#1e3a5f" strokeWidth="3" strokeLinecap="round" />
+      <path d="M22 16l5 5M48 16l-5 5" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round" />
     </svg>
   )
 }
 
-function BoltIcon(props) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M13 2 4 14h7l-1 8 9-12h-7z" />
-    </svg>
-  )
-}
 
 function ChevronIcon(props) {
   return (
@@ -1981,6 +3218,15 @@ function CalendarIcon(props) {
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <rect x="3" y="4" width="18" height="17" rx="2" />
       <path d="M16 2v4M8 2v4M3 10h18" />
+    </svg>
+  )
+}
+
+function ClockIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
     </svg>
   )
 }
@@ -2267,6 +3513,102 @@ function LogoutIcon(props) {
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
       <path d="M16 17l5-5-5-5M21 12H9" />
+    </svg>
+  )
+}
+
+function GuruMapelDoodleBackground() {
+  const doodles = [
+    { Icon: DoodleBookIcon, className: 'top-8 right-[22%] h-14 w-14 -rotate-6' },
+    { Icon: DoodlePencilIcon, className: 'top-4 right-[10%] h-16 w-16 rotate-12' },
+    { Icon: DoodleBulbIcon, className: 'top-24 right-[4%] h-14 w-14 -rotate-6' },
+    { Icon: DoodleCapIcon, className: 'top-40 right-[16%] h-14 w-14 rotate-6' },
+    { Icon: DoodlePencilIcon, className: 'top-16 right-[32%] h-10 w-10 -rotate-45' },
+  ]
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-white/20 blur-3xl" />
+      <div className="absolute top-32 right-10 h-56 w-56 rounded-full bg-cyan-200/20 blur-3xl" />
+      {doodles.map((d, i) => (
+        <d.Icon key={i} className={`absolute text-white/50 ${d.className}`} />
+      ))}
+    </div>
+  )
+}
+
+function DoodleBookIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" />
+    </svg>
+  )
+}
+
+function DoodlePencilIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  )
+}
+
+function DoodleBulbIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 18h6M10 21h4" />
+      <path d="M12 3a6 6 0 0 0-4 10.5c.6.5 1 1.3 1 2.1V16h6v-.4c0-.8.4-1.6 1-2.1A6 6 0 0 0 12 3Z" />
+    </svg>
+  )
+}
+
+function DoodleCapIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m2 8 10-5 10 5-10 5-10-5Z" />
+      <path d="M6 10.5V16c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5v-5.5" />
+    </svg>
+  )
+}
+
+function SchoolIllustration(props) {
+  return (
+    <svg {...props} viewBox="0 0 320 150" preserveAspectRatio="xMaxYMax meet" fill="none">
+      <ellipse cx="160" cy="146" rx="150" ry="8" fill="#0b4a35" opacity=".35" />
+      <g fill="#0f6b48" opacity=".9">
+        <path d="M18 146V96l16-30 16 30v50z" />
+        <path d="M262 146V88l18-34 18 34v58z" />
+      </g>
+      <rect x="70" y="80" width="180" height="66" fill="#e8f5ee" />
+      <rect x="120" y="58" width="80" height="88" fill="#f3faf6" />
+      <path d="M112 60 160 30l48 30z" fill="#1f9d6a" />
+      <path d="M62 82 160 62l98 20z" fill="#178a5c" />
+      <circle cx="160" cy="46" r="9" fill="#fff" stroke="#0f6b48" strokeWidth="2" />
+      <path d="M160 40v6l4 2" stroke="#0f6b48" strokeWidth="1.5" strokeLinecap="round" />
+      <rect x="148" y="112" width="24" height="34" rx="2" fill="#1f9d6a" />
+      <g fill="#8fd4b0">
+        <rect x="82" y="96" width="14" height="16" rx="1.5" />
+        <rect x="104" y="96" width="14" height="16" rx="1.5" />
+        <rect x="202" y="96" width="14" height="16" rx="1.5" />
+        <rect x="224" y="96" width="14" height="16" rx="1.5" />
+        <rect x="82" y="120" width="14" height="16" rx="1.5" />
+        <rect x="104" y="120" width="14" height="16" rx="1.5" />
+        <rect x="202" y="120" width="14" height="16" rx="1.5" />
+        <rect x="224" y="120" width="14" height="16" rx="1.5" />
+      </g>
+    </svg>
+  )
+}
+
+function UsersGroupIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="3" />
+      <path d="M6.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" />
+      <circle cx="5" cy="10" r="2" />
+      <circle cx="19" cy="10" r="2" />
+      <path d="M1.5 18c0-2 1.5-3.5 3.5-3.5M22.5 18c0-2-1.5-3.5-3.5-3.5" />
     </svg>
   )
 }

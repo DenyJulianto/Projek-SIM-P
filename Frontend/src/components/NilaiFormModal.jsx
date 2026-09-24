@@ -11,15 +11,15 @@ const JENIS_OPTIONS = [
 const fieldClass =
   'w-full border border-emerald-100 rounded-xl px-3.5 py-2.5 text-sm text-navy bg-white/80 focus:outline-none focus:border-emerald-400 transition-colors'
 
-export default function NilaiFormModal({ item, guruId, onClose, onSaved }) {
+export default function NilaiFormModal({ item, guruId, defaults, onClose, onSaved }) {
   const isEdit = Boolean(item)
   const [kelasList, setKelasList] = useState([])
   const [mapelList, setMapelList] = useState([])
   const [siswaList, setSiswaList] = useState([])
-  const [selectedKelas, setSelectedKelas] = useState('')
+  const [selectedKelas, setSelectedKelas] = useState(defaults?.kelas_id ? String(defaults.kelas_id) : '')
   const [form, setForm] = useState({
     siswa_id: item?.siswa_id || '',
-    mata_pelajaran_id: item?.mata_pelajaran_id || '',
+    mata_pelajaran_id: item?.mata_pelajaran_id || defaults?.mata_pelajaran_id || '',
     jenis_nilai: item?.jenis_nilai || 'harian',
     nilai: item?.nilai || '',
     semester: item?.semester || 'Ganjil',

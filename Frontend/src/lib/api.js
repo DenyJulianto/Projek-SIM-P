@@ -1563,4 +1563,7 @@ export const api = {
     request(`/ujian-soal/${soalId}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteUjianSoal: (soalId) => request(`/ujian-soal/${soalId}`, { method: 'DELETE' }),
   listUjianAttempts: (ujianId) => request(`/ujian/${ujianId}/attempts`),
+  getUjianAttemptDetail: (ujianId, attemptId) => request(`/ujian/${ujianId}/attempts/${attemptId}`),
+  nilaiUjianEssay: (jawabanId, data) =>
+    request(`/ujian-jawaban/${jawabanId}/nilai`, { method: 'POST', body: JSON.stringify(data) }),
 }

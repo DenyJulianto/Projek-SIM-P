@@ -12,13 +12,14 @@ class Ujian extends Model
 {
     protected $table = 'ujian';
 
-    protected $fillable = ['kelas_id', 'mata_pelajaran_id', 'guru_id', 'judul', 'deskripsi', 'waktu_mulai', 'waktu_selesai', 'durasi_menit'];
+    protected $fillable = ['kelas_id', 'mata_pelajaran_id', 'guru_id', 'judul', 'deskripsi', 'waktu_mulai', 'waktu_selesai', 'durasi_menit', 'kkm'];
 
     protected function casts(): array
     {
         return [
             'waktu_mulai' => 'datetime',
             'waktu_selesai' => 'datetime',
+            'kkm' => 'integer',
         ];
     }
 

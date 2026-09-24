@@ -26,7 +26,7 @@ function splitName(fullName) {
   return { firstName: parts[0] || '', lastName: parts.slice(1).join(' ') }
 }
 
-export default function MyProfile({ onBack, guruProfile = false, staffProfile = false, kelas = null }) {
+export default function MyProfile({ onBack, guruProfile = false, staffProfile = false, kelas = null, roleLabel = null }) {
   const { user, setUser } = useAuth()
   const profesional = guruProfile || staffProfile
   const client = staffProfile ? STAFF_CLIENT : GURU_CLIENT
@@ -61,9 +61,7 @@ export default function MyProfile({ onBack, guruProfile = false, staffProfile = 
               {staffProfile
                 ? guru?.jabatan || user?.roles?.map((r) => r.name).join(', ') || 'Staf Sekolah'
                 : guruProfile
-                  ? kelas
-                    ? `Wali Kelas ${kelas.nama_kelas}`
-                    : 'Wali Kelas'
+                  ? roleLabel || (kelas ? `Wali Kelas ${kelas.nama_kelas}` : 'Wali Kelas')
                   : user?.roles?.map((r) => r.name).join(', ') || 'Tidak ada role'}
             </p>
             {guruProfile && guru?.mata_pelajaran && (
@@ -114,6 +112,7 @@ export default function MyProfile({ onBack, guruProfile = false, staffProfile = 
               kelas={kelas}
               client={client}
               staff={staffProfile}
+              roleLabel={roleLabel}
               onSaved={setGuru}
               onUserSaved={setUser}
             />
@@ -212,7 +211,7 @@ function SidebarTab({ icon: Icon, label, active, onClick }) {
 
 const PENDIDIKAN_OPTIONS = ['SMA/SMK', 'S1', 'S2', 'S3']
 
-function ProfilProfesionalForm({ user, guru, kelas, client, staff, onSaved, onUserSaved }) {
+function ProfilProfesionalForm({ user, guru, kelas, client, staff, roleLabel, onSaved, onUserSaved }) {
   const [form, setForm] = useState(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -222,7 +221,7 @@ function ProfilProfesionalForm({ user, guru, kelas, client, staff, onSaved, onUs
     if (!guru) return
     setForm({
       nama: guru.nama || '',
-      jabatan: guru.jabatan || (staff ? user?.roles?.[0]?.name || '' : kelas ? `Wali Kelas ${kelas.nama_kelas}` : 'Wali Kelas'),
+      jabatan: guru.jabatan || (staff ? user?.roles?.[0]?.name || '' : roleLabel || (kelas ? `Wali Kelas ${kelas.nama_kelas}` : 'Wali Kelas')),
       ...(staff ? {} : { mata_pelajaran: guru.mata_pelajaran || '' }),
       email: user?.email || '',
       phone: user?.phone || '',

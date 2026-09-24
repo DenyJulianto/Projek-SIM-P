@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import NilaiSikapFormModal from '../components/NilaiSikapFormModal'
+import { useThemedConfirm } from '../components/ThemedModal'
 import { api } from '../lib/api'
 
 const PREDIKAT_TONE = {
@@ -10,6 +11,7 @@ const PREDIKAT_TONE = {
 }
 
 export default function NilaiSikapManagement({ onBack }) {
+  const [askConfirm, confirmModal] = useThemedConfirm()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -44,18 +46,30 @@ export default function NilaiSikapManagement({ onBack }) {
     loadItems()
   }
 
-  async function handleDelete(item) {
-    if (!window.confirm(`Hapus penilaian sikap ${item.siswa?.nama}?`)) return
-    try {
-      await api.deleteNilaiSikap(item.id)
-      loadItems()
-    } catch (err) {
-      setError(err.message)
-    }
+  function handleDelete(item) {
+    askConfirm(
+      {
+        title: 'Hapus penilaian sikap',
+        message: (
+          <>
+            Yakin ingin menghapus penilaian sikap <span className="font-semibold text-navy">{item.siswa?.nama}</span>?
+          </>
+        ),
+      },
+      async () => {
+        try {
+          await api.deleteNilaiSikap(item.id)
+          loadItems()
+        } catch (err) {
+          setError(err.message)
+        }
+      }
+    )
   }
 
   return (
     <div>
+      {confirmModal}
       <div className="flex items-center justify-between mb-6">
         <div>
           {onBack && (

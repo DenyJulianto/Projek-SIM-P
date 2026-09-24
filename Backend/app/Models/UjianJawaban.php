@@ -11,12 +11,13 @@ class UjianJawaban extends Model
 {
     protected $table = 'ujian_jawaban';
 
-    protected $fillable = ['ujian_attempt_id', 'ujian_soal_id', 'jawaban_dipilih', 'benar'];
+    protected $fillable = ['ujian_attempt_id', 'ujian_soal_id', 'jawaban_dipilih', 'jawaban_essay', 'benar', 'nilai_essay'];
 
     protected function casts(): array
     {
         return [
             'benar' => 'boolean',
+            'nilai_essay' => 'float',
         ];
     }
 
