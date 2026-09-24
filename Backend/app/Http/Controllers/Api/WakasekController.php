@@ -19,6 +19,7 @@ use App\Models\Pelanggaran;
 use App\Models\Prestasi;
 use App\Models\Rapor;
 use App\Models\Siswa;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Collection;
@@ -53,6 +54,14 @@ class WakasekController extends Controller
             'pelanggaran_terbaru' => $this->pelanggaranQuery()->limit(5)->get(),
             'jadwal_hari_ini' => $this->jadwalHariIni(),
         ]);
+    }
+
+    /** Nama Kepala Sekolah (pengguna dengan role Kepala Sekolah) untuk banner sapaan. */
+    public function kepalaSekolah(): JsonResponse
+    {
+        $kepsek = User::role('Kepala Sekolah')->orderBy('id')->first(['id', 'name']);
+
+        return response()->json(['nama' => $kepsek?->name ?: null]);
     }
 
     public function kurikulum(): JsonResponse

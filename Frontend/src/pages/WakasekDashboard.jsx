@@ -86,9 +86,11 @@ export default function WakasekDashboard() {
   const [view, setView] = useState('home')
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const [sekolah, setSekolah] = useState(null)
+  const [kepsek, setKepsek] = useState(null)
 
   useEffect(() => {
     api.getProfil().then(setSekolah).catch(() => {})
+    api.getWakasek('kepala-sekolah').then((r) => setKepsek(r.nama)).catch(() => {})
   }, [])
 
   // Sapaan mengikuti jenis kelamin di profil; kalau belum diisi, dipakai "Bapak/Ibu".
@@ -206,6 +208,7 @@ export default function WakasekDashboard() {
             <p className="text-sm text-white/90">
               Anda adalah wakil kepala sekolah{sekolah?.nama_sekolah ? ` di ${sekolah.nama_sekolah}` : ''}
             </p>
+            {kepsek && <p className="text-sm text-white/85">Kepala Sekolah: {kepsek}</p>}
           </div>
         </div>
 

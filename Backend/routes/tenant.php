@@ -334,7 +334,7 @@ Route::middleware([
 
         Route::middleware('permission:laporan.dashboard|dashboard.view-all')->prefix('wakasek')->group(function () {
             foreach ([
-                'dashboard', 'kurikulum', 'pembelajaran', 'nilai-rapor', 'siswa', 'pelanggaran', 'prestasi',
+                'dashboard', 'kepala-sekolah', 'kurikulum', 'pembelajaran', 'nilai-rapor', 'siswa', 'pelanggaran', 'prestasi',
                 'guru', 'beban-mengajar', 'aktivitas-guru', 'kehadiran', 'jadwal', 'jam-pelajaran', 'persetujuan',
             ] as $endpoint) {
                 Route::get($endpoint, [WakasekController::class, \Illuminate\Support\Str::camel($endpoint)]);
