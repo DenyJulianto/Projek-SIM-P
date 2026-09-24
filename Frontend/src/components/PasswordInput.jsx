@@ -1,13 +1,18 @@
 import { useState } from 'react'
 
-export default function PasswordInput({ className = '', ...props }) {
+export default function PasswordInput({ className = '', leftIcon = null, ...props }) {
   const [visible, setVisible] = useState(false)
 
   return (
     <div className="relative">
+      {leftIcon && (
+        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-navy-light">
+          {leftIcon}
+        </span>
+      )}
       <input
         type={visible ? 'text' : 'password'}
-        className={`w-full bg-emerald-50 rounded-full px-5 py-3 pr-12 text-sm text-navy placeholder-navy/40 focus:outline-none focus:ring-2 focus:ring-navy-light/50 ${className}`}
+        className={`w-full bg-emerald-50 rounded-full py-3 pr-12 ${leftIcon ? 'pl-11' : 'pl-5'} text-sm text-navy placeholder-navy/40 focus:outline-none focus:ring-2 focus:ring-navy-light/50 ${className}`}
         {...props}
       />
       <button
