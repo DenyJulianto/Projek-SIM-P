@@ -1,3 +1,4 @@
+import logoLambang from '../assets/logo-sim-lambang.png'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
@@ -8,7 +9,6 @@ import NilaiManagement from './NilaiManagement'
 import { JadwalMengajarView, MateriManagement, TugasManagement } from './GuruMapelDashboard'
 import PelanggaranManagement from './PelanggaranManagement'
 import ModulAjarManagement from './ModulAjarManagement'
-import LogoHorizontal from '../components/LogoHorizontal'
 
 const MENU_GROUPS = [
   { section: null, items: [{ key: 'home', label: 'Dashboard', icon: GridIcon }] },
@@ -93,22 +93,23 @@ export default function WaliKelasDashboard() {
         <div className="absolute -bottom-10 -left-8 h-40 w-40 rounded-full bg-amber-200/30 blur-3xl pointer-events-none" />
         <div className="absolute top-1/3 -right-10 h-32 w-32 rounded-full bg-white/10 blur-3xl pointer-events-none" />
 
-        <div className="relative px-2 mb-6">
+        <div className="relative px-2 mb-8">
           <button
             type="button"
             onClick={() => setView('home')}
             title="Ke Dashboard"
-            className="flex items-center gap-2 w-full text-left rounded-full hover:opacity-90 transition-opacity"
+            className="flex items-center gap-2.5 w-full min-w-0 text-left hover:opacity-90 transition-opacity"
           >
-            <LogoHorizontal />
+            <div className="h-16 w-16 rounded-full bg-white ring-2 ring-white/40 shadow-md overflow-hidden shrink-0">
+              <img src={logoLambang} alt="Logo SIM Pendidikan" className="h-full w-full object-cover" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-bold tracking-wide text-sm">SIM Pendidikan</p>
+              <p className="text-[11px] leading-snug mt-1 text-white/60">
+                Membimbing dengan Hati, Membentuk Generasi Berprestasi
+              </p>
+            </div>
           </button>
-          <div className="mt-4 pt-3 border-t border-white/20 text-center">
-            <p className="text-[11px] font-semibold leading-relaxed tracking-wide text-white/90">
-              Membimbing dengan Hati,
-              <br />
-              Membentuk Generasi Berprestasi
-            </p>
-          </div>
         </div>
 
         <nav className="relative flex-1 space-y-1.5 overflow-y-auto">
