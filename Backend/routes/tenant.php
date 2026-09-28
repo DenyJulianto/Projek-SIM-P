@@ -46,6 +46,24 @@ use App\Http\Controllers\Api\PpdbPenerimaanController;
 use App\Http\Controllers\Api\PpdbPengumumanController;
 use App\Http\Controllers\Api\PpdbPeriodeController;
 use App\Http\Controllers\Api\PpdbSeleksiController;
+use App\Http\Controllers\Api\PerpusAnggotaController;
+use App\Http\Controllers\Api\PerpusBukuController;
+use App\Http\Controllers\Api\PerpusDashboardController;
+use App\Http\Controllers\Api\PerpusDendaController;
+use App\Http\Controllers\Api\PerpusKegiatanController;
+use App\Http\Controllers\Api\PerpusLaporanController;
+use App\Http\Controllers\Api\PerpusPengembalianController;
+use App\Http\Controllers\Api\PerpusPeminjamanController;
+use App\Http\Controllers\Api\PerpusReservasiController;
+use App\Http\Controllers\Api\LabBahanController;
+use App\Http\Controllers\Api\LabDashboardController;
+use App\Http\Controllers\Api\LabJadwalController;
+use App\Http\Controllers\Api\LabKegiatanController;
+use App\Http\Controllers\Api\LabLaboratoriumController;
+use App\Http\Controllers\Api\LabLaporanController;
+use App\Http\Controllers\Api\LabPemeliharaanController;
+use App\Http\Controllers\Api\LabPeminjamanController;
+use App\Http\Controllers\Api\LabPeralatanController;
 use App\Http\Controllers\Api\KasusController;
 use App\Http\Controllers\Api\KegiatanController;
 use App\Http\Controllers\Api\KelasController;
@@ -619,6 +637,117 @@ Route::middleware([
             Route::post('penerimaan/terima', [PpdbPenerimaanController::class, 'terima']);
             Route::post('penerimaan/batal', [PpdbPenerimaanController::class, 'batalTerima']);
             Route::post('penerimaan/import', [PpdbPenerimaanController::class, 'import']);
+        });
+
+        Route::middleware('permission:perpustakaan.manage')->prefix('perpustakaan')->group(function () {
+            Route::get('dashboard', [PerpusDashboardController::class, 'index']);
+
+            Route::get('buku/opsi', [PerpusBukuController::class, 'opsi']);
+            Route::get('buku/export', [PerpusBukuController::class, 'export']);
+            Route::get('buku/import-template', [PerpusBukuController::class, 'importTemplate']);
+            Route::post('buku/import', [PerpusBukuController::class, 'import']);
+            Route::get('eksemplar/cetak-barcode', [PerpusBukuController::class, 'cetakBarcode']);
+            Route::get('buku/{buku}/riwayat', [PerpusBukuController::class, 'riwayat']);
+            Route::post('buku/{buku}/eksemplar', [PerpusBukuController::class, 'storeEksemplar']);
+            Route::put('eksemplar/{eksemplar}', [PerpusBukuController::class, 'updateEksemplar']);
+            Route::delete('eksemplar/{eksemplar}', [PerpusBukuController::class, 'destroyEksemplar']);
+            Route::apiResource('buku', PerpusBukuController::class)->names('perpustakaan.buku');
+
+            Route::get('anggota/calon', [PerpusAnggotaController::class, 'calon']);
+            Route::get('anggota/cari-kartu', [PerpusAnggotaController::class, 'cariKartu']);
+            Route::get('anggota/{anggota}/kartu', [PerpusAnggotaController::class, 'kartu']);
+            Route::get('anggota', [PerpusAnggotaController::class, 'index']);
+            Route::post('anggota', [PerpusAnggotaController::class, 'store']);
+            Route::get('anggota/{anggota}', [PerpusAnggotaController::class, 'show']);
+            Route::put('anggota/{anggota}', [PerpusAnggotaController::class, 'update']);
+
+            Route::get('peminjaman/cari-eksemplar', [PerpusPeminjamanController::class, 'cariEksemplar']);
+            Route::get('peminjaman', [PerpusPeminjamanController::class, 'index']);
+            Route::post('peminjaman', [PerpusPeminjamanController::class, 'store']);
+            Route::get('peminjaman/{peminjaman}', [PerpusPeminjamanController::class, 'show']);
+            Route::post('peminjaman/{peminjaman}/perpanjang', [PerpusPeminjamanController::class, 'perpanjang']);
+            Route::post('peminjaman/{peminjaman}/batalkan', [PerpusPeminjamanController::class, 'batalkan']);
+
+            Route::get('pengembalian/cari', [PerpusPengembalianController::class, 'cari']);
+            Route::post('pengembalian/proses', [PerpusPengembalianController::class, 'proses']);
+
+            Route::get('reservasi', [PerpusReservasiController::class, 'index']);
+            Route::post('reservasi', [PerpusReservasiController::class, 'store']);
+            Route::post('reservasi/{reservasi}/batalkan', [PerpusReservasiController::class, 'batalkan']);
+            Route::post('reservasi/{reservasi}/ambil', [PerpusReservasiController::class, 'ambil']);
+
+            Route::get('denda', [PerpusDendaController::class, 'index']);
+            Route::post('denda', [PerpusDendaController::class, 'store']);
+            Route::post('denda/{denda}/bayar', [PerpusDendaController::class, 'bayar']);
+            Route::get('denda/{denda}/bukti', [PerpusDendaController::class, 'bukti']);
+
+            Route::apiResource('kegiatan', PerpusKegiatanController::class)->names('perpustakaan.kegiatan');
+
+            Route::get('laporan', [PerpusLaporanController::class, 'index']);
+            Route::get('laporan/export', [PerpusLaporanController::class, 'export']);
+            Route::get('laporan/pdf', [PerpusLaporanController::class, 'pdf']);
+        });
+
+        Route::middleware('permission:laboratorium.manage')->prefix('laboratorium')->group(function () {
+            Route::get('dashboard', [LabDashboardController::class, 'index']);
+
+            Route::get('lab/opsi', [LabLaboratoriumController::class, 'opsi']);
+            Route::get('lab/{laboratorium}/riwayat', [LabLaboratoriumController::class, 'riwayat']);
+            Route::apiResource('lab', LabLaboratoriumController::class)->parameters(['lab' => 'laboratorium'])->names('laboratorium.lab');
+
+            Route::get('peralatan/opsi', [LabPeralatanController::class, 'opsi']);
+            Route::get('peralatan/export', [LabPeralatanController::class, 'export']);
+            Route::get('peralatan/import-template', [LabPeralatanController::class, 'importTemplate']);
+            Route::post('peralatan/import', [LabPeralatanController::class, 'import']);
+            Route::get('peralatan/cetak-barcode', [LabPeralatanController::class, 'cetakBarcode']);
+            Route::post('peralatan/{peralatan}/tambah-jumlah', [LabPeralatanController::class, 'tambahJumlah']);
+            Route::post('peralatan/{peralatan}/kurangi-jumlah', [LabPeralatanController::class, 'kurangiJumlah']);
+            Route::post('peralatan/{peralatan}/mutasi', [LabPeralatanController::class, 'mutasi']);
+            Route::apiResource('peralatan', LabPeralatanController::class)
+                ->parameters(['peralatan' => 'peralatan'])
+                ->names('laboratorium.peralatan');
+
+            Route::get('jadwal/opsi', [LabJadwalController::class, 'opsi']);
+            Route::get('jadwal/{jadwal}/riwayat', [LabJadwalController::class, 'riwayat']);
+            Route::get('jadwal', [LabJadwalController::class, 'index']);
+            Route::post('jadwal', [LabJadwalController::class, 'store']);
+            Route::put('jadwal/{jadwal}', [LabJadwalController::class, 'update']);
+            Route::delete('jadwal/{jadwal}', [LabJadwalController::class, 'destroy']);
+
+            Route::get('peminjaman-alat/cari-alat', [LabPeminjamanController::class, 'cariAlat']);
+            Route::get('peminjaman-alat', [LabPeminjamanController::class, 'index']);
+            Route::post('peminjaman-alat', [LabPeminjamanController::class, 'store']);
+            Route::get('peminjaman-alat/{peminjamanAlat}', [LabPeminjamanController::class, 'show']);
+            Route::post('peminjaman-alat/{peminjamanAlat}/setujui', [LabPeminjamanController::class, 'setujui']);
+            Route::post('peminjaman-alat/{peminjamanAlat}/tolak', [LabPeminjamanController::class, 'tolak']);
+            Route::post('peminjaman-alat/{peminjamanAlat}/ambil', [LabPeminjamanController::class, 'ambil']);
+            Route::post('peminjaman-alat/{peminjamanAlat}/kembalikan', [LabPeminjamanController::class, 'kembalikan']);
+            Route::post('peminjaman-alat/{peminjamanAlat}/perpanjang', [LabPeminjamanController::class, 'perpanjang']);
+
+            Route::get('pemeliharaan', [LabPemeliharaanController::class, 'index']);
+            Route::post('pemeliharaan', [LabPemeliharaanController::class, 'store']);
+            Route::get('pemeliharaan/{pemeliharaanAlat}', [LabPemeliharaanController::class, 'show']);
+            Route::put('pemeliharaan/{pemeliharaanAlat}', [LabPemeliharaanController::class, 'update']);
+            Route::delete('pemeliharaan/{pemeliharaanAlat}', [LabPemeliharaanController::class, 'destroy']);
+
+            Route::get('bahan/opsi', [LabBahanController::class, 'opsi']);
+            Route::get('bahan', [LabBahanController::class, 'index']);
+            Route::post('bahan', [LabBahanController::class, 'store']);
+            Route::get('bahan/{bahan}', [LabBahanController::class, 'show']);
+            Route::put('bahan/{bahan}', [LabBahanController::class, 'update']);
+            Route::post('bahan/{bahan}/stok-masuk', [LabBahanController::class, 'stokMasuk']);
+            Route::post('bahan/{bahan}/stok-keluar', [LabBahanController::class, 'stokKeluar']);
+            Route::post('bahan/{bahan}/penyesuaian', [LabBahanController::class, 'penyesuaian']);
+
+            Route::get('kegiatan', [LabKegiatanController::class, 'index']);
+            Route::post('kegiatan', [LabKegiatanController::class, 'store']);
+            Route::get('kegiatan/{kegiatanLab}', [LabKegiatanController::class, 'show']);
+            Route::put('kegiatan/{kegiatanLab}', [LabKegiatanController::class, 'update']);
+            Route::delete('kegiatan/{kegiatanLab}', [LabKegiatanController::class, 'destroy']);
+
+            Route::get('laporan/{jenis}', [LabLaporanController::class, 'index']);
+            Route::get('laporan/{jenis}/export', [LabLaporanController::class, 'export']);
+            Route::get('laporan/{jenis}/pdf', [LabLaporanController::class, 'pdf']);
         });
 
         Route::get('guru/export', [GuruController::class, 'export'])
