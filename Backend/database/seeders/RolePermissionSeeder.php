@@ -114,6 +114,9 @@ class RolePermissionSeeder extends Seeder
                 'monitoring-guru.absensi-guru',
                 'humas.pengumuman',
                 'laporan.view',
+                'ppdb.manage',
+                'perpustakaan.manage',
+                'laboratorium.manage',
             ],
             'Kurikulum' => [
                 'kurikulum.manage',

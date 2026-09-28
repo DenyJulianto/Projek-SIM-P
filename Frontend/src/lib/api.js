@@ -1576,4 +1576,154 @@ export const api = {
   getUjianAttemptDetail: (ujianId, attemptId) => request(`/ujian/${ujianId}/attempts/${attemptId}`),
   nilaiUjianEssay: (jawabanId, data) =>
     request(`/ujian-jawaban/${jawabanId}/nilai`, { method: 'POST', body: JSON.stringify(data) }),
+
+  // Perpustakaan
+  perpusDashboard: () => request('/perpustakaan/dashboard'),
+
+  perpusOpsiBuku: () => request('/perpustakaan/buku/opsi'),
+  perpusListBuku: (params = {}) => request(`/perpustakaan/buku?${new URLSearchParams(params).toString()}`),
+  perpusGetBuku: (id) => request(`/perpustakaan/buku/${id}`),
+  perpusCreateBuku: (formData) => requestForm('/perpustakaan/buku', formData),
+  perpusUpdateBuku: (id, formData) => {
+    formData.append('_method', 'PUT')
+    return requestForm(`/perpustakaan/buku/${id}`, formData)
+  },
+  perpusNonaktifkanBuku: (id) => request(`/perpustakaan/buku/${id}`, { method: 'DELETE' }),
+  perpusRiwayatBuku: (id) => request(`/perpustakaan/buku/${id}/riwayat`),
+  perpusExportBuku: () => downloadFile('/perpustakaan/buku/export', 'koleksi-buku.xlsx'),
+  perpusTemplateImportBuku: () => downloadFile('/perpustakaan/buku/import-template', 'template-import-buku.xlsx'),
+  perpusImportBuku: (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return requestForm('/perpustakaan/buku/import', formData)
+  },
+  perpusTambahEksemplar: (bukuId, jumlah) =>
+    request(`/perpustakaan/buku/${bukuId}/eksemplar`, { method: 'POST', body: JSON.stringify({ jumlah }) }),
+  perpusUpdateEksemplar: (id, data) => request(`/perpustakaan/eksemplar/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  perpusHapusEksemplar: (id) => request(`/perpustakaan/eksemplar/${id}`, { method: 'DELETE' }),
+  perpusCetakBarcode: (ids) =>
+    downloadFile(`/perpustakaan/eksemplar/cetak-barcode?${ids.map((id) => `ids[]=${id}`).join('&')}`, 'label-barcode-buku.pdf'),
+
+  perpusListAnggota: (params = {}) => request(`/perpustakaan/anggota?${new URLSearchParams(params).toString()}`),
+  perpusCalonAnggota: (jenis, search) =>
+    request(`/perpustakaan/anggota/calon?${new URLSearchParams({ jenis, ...(search ? { search } : {}) }).toString()}`),
+  perpusAktivasiAnggota: (data) => request('/perpustakaan/anggota', { method: 'POST', body: JSON.stringify(data) }),
+  perpusGetAnggota: (id) => request(`/perpustakaan/anggota/${id}`),
+  perpusUpdateStatusAnggota: (id, status) => request(`/perpustakaan/anggota/${id}`, { method: 'PUT', body: JSON.stringify({ status }) }),
+  perpusCariKartuAnggota: (nomorKartu) =>
+    request(`/perpustakaan/anggota/cari-kartu?${new URLSearchParams({ nomor_kartu: nomorKartu }).toString()}`),
+  perpusCetakKartuAnggota: (id, nomorKartu) => downloadFile(`/perpustakaan/anggota/${id}/kartu`, `kartu-anggota-${nomorKartu}.pdf`),
+
+  perpusListPeminjaman: (params = {}) => request(`/perpustakaan/peminjaman?${new URLSearchParams(params).toString()}`),
+  perpusCariEksemplarBarcode: (barcode) =>
+    request(`/perpustakaan/peminjaman/cari-eksemplar?${new URLSearchParams({ barcode }).toString()}`),
+  perpusBuatPeminjaman: (data) => request('/perpustakaan/peminjaman', { method: 'POST', body: JSON.stringify(data) }),
+  perpusGetPeminjaman: (id) => request(`/perpustakaan/peminjaman/${id}`),
+  perpusPerpanjangPeminjaman: (id, tanggalJatuhTempo) =>
+    request(`/perpustakaan/peminjaman/${id}/perpanjang`, { method: 'POST', body: JSON.stringify({ tanggal_jatuh_tempo: tanggalJatuhTempo }) }),
+  perpusBatalkanPeminjaman: (id) => request(`/perpustakaan/peminjaman/${id}/batalkan`, { method: 'POST' }),
+
+  perpusCariPengembalian: (params) => request(`/perpustakaan/pengembalian/cari?${new URLSearchParams(params).toString()}`),
+  perpusProsesPengembalian: (items) => request('/perpustakaan/pengembalian/proses', { method: 'POST', body: JSON.stringify({ items }) }),
+
+  perpusListReservasi: (params = {}) => request(`/perpustakaan/reservasi?${new URLSearchParams(params).toString()}`),
+  perpusBuatReservasi: (data) => request('/perpustakaan/reservasi', { method: 'POST', body: JSON.stringify(data) }),
+  perpusBatalkanReservasi: (id) => request(`/perpustakaan/reservasi/${id}/batalkan`, { method: 'POST' }),
+  perpusAmbilReservasi: (id) => request(`/perpustakaan/reservasi/${id}/ambil`, { method: 'POST' }),
+
+  perpusListDenda: (params = {}) => request(`/perpustakaan/denda?${new URLSearchParams(params).toString()}`),
+  perpusBuatDenda: (data) => request('/perpustakaan/denda', { method: 'POST', body: JSON.stringify(data) }),
+  perpusBayarDenda: (id) => request(`/perpustakaan/denda/${id}/bayar`, { method: 'POST' }),
+  perpusBuktiDenda: (id) => downloadFile(`/perpustakaan/denda/${id}/bukti`, `bukti-denda-${id}.pdf`),
+
+  perpusListKegiatan: (params = {}) => request(`/perpustakaan/kegiatan?${new URLSearchParams(params).toString()}`),
+  perpusBuatKegiatan: (formData) => requestForm('/perpustakaan/kegiatan', formData),
+  perpusUpdateKegiatan: (id, formData) => {
+    formData.append('_method', 'PUT')
+    return requestForm(`/perpustakaan/kegiatan/${id}`, formData)
+  },
+  perpusHapusKegiatan: (id) => request(`/perpustakaan/kegiatan/${id}`, { method: 'DELETE' }),
+
+  perpusLaporan: (params = {}) => request(`/perpustakaan/laporan?${new URLSearchParams(params).toString()}`),
+  perpusLaporanExport: (params = {}) => downloadFile(`/perpustakaan/laporan/export?${new URLSearchParams(params).toString()}`, 'laporan-perpustakaan.xlsx'),
+  perpusLaporanPdf: (params = {}) => downloadFile(`/perpustakaan/laporan/pdf?${new URLSearchParams(params).toString()}`, 'laporan-perpustakaan.pdf'),
+
+  // Laboratorium
+  labDashboard: () => request('/laboratorium/dashboard'),
+
+  labOpsiLab: () => request('/laboratorium/lab/opsi'),
+  labListLab: (params = {}) => request(`/laboratorium/lab?${new URLSearchParams(params).toString()}`),
+  labCreateLab: (formData) => requestForm('/laboratorium/lab', formData),
+  labUpdateLab: (id, formData) => {
+    formData.append('_method', 'PUT')
+    return requestForm(`/laboratorium/lab/${id}`, formData)
+  },
+  labGetLab: (id) => request(`/laboratorium/lab/${id}`),
+  labNonaktifkanLab: (id) => request(`/laboratorium/lab/${id}`, { method: 'DELETE' }),
+  labRiwayatLab: (id) => request(`/laboratorium/lab/${id}/riwayat`),
+
+  labOpsiPeralatan: () => request('/laboratorium/peralatan/opsi'),
+  labListPeralatan: (params = {}) => request(`/laboratorium/peralatan?${new URLSearchParams(params).toString()}`),
+  labCreatePeralatan: (data) => request('/laboratorium/peralatan', { method: 'POST', body: JSON.stringify(data) }),
+  labGetPeralatan: (id) => request(`/laboratorium/peralatan/${id}`),
+  labUpdatePeralatan: (id, data) => request(`/laboratorium/peralatan/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  labNonaktifkanPeralatan: (id) => request(`/laboratorium/peralatan/${id}`, { method: 'DELETE' }),
+  labTambahJumlahPeralatan: (id, jumlah, keterangan) => request(`/laboratorium/peralatan/${id}/tambah-jumlah`, { method: 'POST', body: JSON.stringify({ jumlah, keterangan }) }),
+  labKurangiJumlahPeralatan: (id, jumlah, keterangan) => request(`/laboratorium/peralatan/${id}/kurangi-jumlah`, { method: 'POST', body: JSON.stringify({ jumlah, keterangan }) }),
+  labMutasiPeralatan: (id, data) => request(`/laboratorium/peralatan/${id}/mutasi`, { method: 'POST', body: JSON.stringify(data) }),
+  labCetakBarcodePeralatan: (ids) =>
+    downloadFile(`/laboratorium/peralatan/cetak-barcode?${ids.map((id) => `ids[]=${id}`).join('&')}`, 'label-barcode-alat.pdf'),
+  labExportPeralatan: () => downloadFile('/laboratorium/peralatan/export', 'peralatan-laboratorium.xlsx'),
+  labTemplateImportPeralatan: () => downloadFile('/laboratorium/peralatan/import-template', 'template-import-peralatan-lab.xlsx'),
+  labImportPeralatan: (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return requestForm('/laboratorium/peralatan/import', formData)
+  },
+
+  labOpsiJadwal: () => request('/laboratorium/jadwal/opsi'),
+  labListJadwal: (params = {}) => request(`/laboratorium/jadwal?${new URLSearchParams(params).toString()}`),
+  labCreateJadwal: (data) => request('/laboratorium/jadwal', { method: 'POST', body: JSON.stringify(data) }),
+  labUpdateJadwal: (id, data) => request(`/laboratorium/jadwal/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  labHapusJadwal: (id) => request(`/laboratorium/jadwal/${id}`, { method: 'DELETE' }),
+  labRiwayatJadwal: (id) => request(`/laboratorium/jadwal/${id}/riwayat`),
+
+  labCariAlatBarcode: (barcode) => request(`/laboratorium/peminjaman-alat/cari-alat?${new URLSearchParams({ barcode }).toString()}`),
+  labListPeminjamanAlat: (params = {}) => request(`/laboratorium/peminjaman-alat?${new URLSearchParams(params).toString()}`),
+  labAjukanPeminjamanAlat: (data) => request('/laboratorium/peminjaman-alat', { method: 'POST', body: JSON.stringify(data) }),
+  labGetPeminjamanAlat: (id) => request(`/laboratorium/peminjaman-alat/${id}`),
+  labSetujuiPeminjamanAlat: (id) => request(`/laboratorium/peminjaman-alat/${id}/setujui`, { method: 'POST' }),
+  labTolakPeminjamanAlat: (id, catatan) => request(`/laboratorium/peminjaman-alat/${id}/tolak`, { method: 'POST', body: JSON.stringify({ catatan }) }),
+  labAmbilPeminjamanAlat: (id) => request(`/laboratorium/peminjaman-alat/${id}/ambil`, { method: 'POST' }),
+  labKembalikanPeminjamanAlat: (id, items, catatanKerusakan) =>
+    request(`/laboratorium/peminjaman-alat/${id}/kembalikan`, { method: 'POST', body: JSON.stringify({ items, catatan_kerusakan: catatanKerusakan }) }),
+  labPerpanjangPeminjamanAlat: (id, tanggalKembaliRencana) =>
+    request(`/laboratorium/peminjaman-alat/${id}/perpanjang`, { method: 'POST', body: JSON.stringify({ tanggal_kembali_rencana: tanggalKembaliRencana }) }),
+
+  labListPemeliharaan: (params = {}) => request(`/laboratorium/pemeliharaan?${new URLSearchParams(params).toString()}`),
+  labCreatePemeliharaan: (data) => request('/laboratorium/pemeliharaan', { method: 'POST', body: JSON.stringify(data) }),
+  labGetPemeliharaan: (id) => request(`/laboratorium/pemeliharaan/${id}`),
+  labUpdatePemeliharaan: (id, data) => request(`/laboratorium/pemeliharaan/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  labHapusPemeliharaan: (id) => request(`/laboratorium/pemeliharaan/${id}`, { method: 'DELETE' }),
+
+  labOpsiBahan: () => request('/laboratorium/bahan/opsi'),
+  labListBahan: (params = {}) => request(`/laboratorium/bahan?${new URLSearchParams(params).toString()}`),
+  labCreateBahan: (data) => request('/laboratorium/bahan', { method: 'POST', body: JSON.stringify(data) }),
+  labGetBahan: (id) => request(`/laboratorium/bahan/${id}`),
+  labUpdateBahan: (id, data) => request(`/laboratorium/bahan/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  labStokMasukBahan: (id, jumlah, keterangan, tanggal) => request(`/laboratorium/bahan/${id}/stok-masuk`, { method: 'POST', body: JSON.stringify({ jumlah, keterangan, tanggal }) }),
+  labStokKeluarBahan: (id, jumlah, keterangan, tanggal) => request(`/laboratorium/bahan/${id}/stok-keluar`, { method: 'POST', body: JSON.stringify({ jumlah, keterangan, tanggal }) }),
+  labPenyesuaianBahan: (id, jumlahBaru, keterangan) => request(`/laboratorium/bahan/${id}/penyesuaian`, { method: 'POST', body: JSON.stringify({ jumlah_baru: jumlahBaru, keterangan }) }),
+
+  labListKegiatan: (params = {}) => request(`/laboratorium/kegiatan?${new URLSearchParams(params).toString()}`),
+  labCreateKegiatan: (formData) => requestForm('/laboratorium/kegiatan', formData),
+  labUpdateKegiatan: (id, formData) => {
+    formData.append('_method', 'PUT')
+    return requestForm(`/laboratorium/kegiatan/${id}`, formData)
+  },
+  labHapusKegiatan: (id) => request(`/laboratorium/kegiatan/${id}`, { method: 'DELETE' }),
+
+  labLaporan: (jenis, params = {}) => request(`/laboratorium/laporan/${jenis}?${new URLSearchParams(params).toString()}`),
+  labLaporanExport: (jenis, params = {}) => downloadFile(`/laboratorium/laporan/${jenis}/export?${new URLSearchParams(params).toString()}`, `laporan-lab-${jenis}.xlsx`),
+  labLaporanPdf: (jenis, params = {}) => downloadFile(`/laboratorium/laporan/${jenis}/pdf?${new URLSearchParams(params).toString()}`, `laporan-lab-${jenis}.pdf`),
 }
