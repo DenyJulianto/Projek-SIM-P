@@ -138,19 +138,28 @@ class PrincipalController extends Controller
         // resmi yang ditetapkan sekolah.
         $kkmStandar = 75;
 
+        $agregatPerMapel = Nilai::query()
+            ->select(
+                'mata_pelajaran_id',
+                DB::raw('avg(nilai) as rata_rata'),
+                DB::raw('count(*) as jumlah'),
+                DB::raw("sum(case when nilai >= {$kkmStandar} then 1 else 0 end) as tuntas")
+            )
+            ->groupBy('mata_pelajaran_id')
+            ->get()
+            ->keyBy('mata_pelajaran_id');
+
         $perMapel = MataPelajaran::query()
             ->get()
-            ->map(function (MataPelajaran $mapel) use ($kkmStandar) {
-                $nilaiMapel = Nilai::where('mata_pelajaran_id', $mapel->id);
-                $rata = (clone $nilaiMapel)->avg('nilai');
-                $jumlah = (clone $nilaiMapel)->count();
-                $tuntas = (clone $nilaiMapel)->where('nilai', '>=', $kkmStandar)->count();
+            ->map(function (MataPelajaran $mapel) use ($agregatPerMapel) {
+                $row = $agregatPerMapel->get($mapel->id);
+                $jumlah = $row ? (int) $row->jumlah : 0;
 
                 return [
                     'mata_pelajaran' => $mapel->nama_mapel,
-                    'rata_rata_nilai' => $rata ? round((float) $rata, 2) : null,
+                    'rata_rata_nilai' => $row && $row->rata_rata !== null ? round((float) $row->rata_rata, 2) : null,
                     'jumlah_nilai' => $jumlah,
-                    'tuntas_persen' => $jumlah > 0 ? round(($tuntas / $jumlah) * 100, 1) : null,
+                    'tuntas_persen' => $jumlah > 0 ? round(($row->tuntas / $jumlah) * 100, 1) : null,
                 ];
             });
 
@@ -200,8 +209,12 @@ class PrincipalController extends Controller
             'total' => Guru::count(),
             'aktif' => Guru::where('status', 'aktif')->count(),
             'nonaktif' => Guru::where('status', 'nonaktif')->count(),
+            // Dibatasi 300 baris — daftar guru satu sekolah secara wajar tidak
+            // pernah sebesar itu, ini cuma jaring pengaman kalau suatu saat
+            // dipakai sekolah dengan ribuan guru (mis. gabungan kampus).
             'daftar' => Guru::with('user:id,email,avatar')
                 ->orderBy('nama')
+                ->limit(300)
                 ->get()
                 ->map(fn (Guru $g) => [
                     'id' => $g->id,
@@ -315,16 +328,37 @@ class PrincipalController extends Controller
         ];
     }
 
+    /**
+     * Total & jumlah nilai per kelas dalam SATU query (join nilai->siswa,
+     * group by kelas_id) — dipakai nilaiPerKelas(), perKelasAkademik(), dan
+     * performaGuruList() supaya tidak masing-masing menjalankan query
+     * ->avg('nilai') terpisah per kelas (N+1 kalau di-loop).
+     */
+    private function nilaiAgregatPerKelas()
+    {
+        return Nilai::query()
+            ->join('siswa', 'nilai.siswa_id', '=', 'siswa.id')
+            ->select('siswa.kelas_id', DB::raw('sum(nilai.nilai) as total_nilai'), DB::raw('count(*) as jumlah_nilai'))
+            ->groupBy('siswa.kelas_id')
+            ->get()
+            ->keyBy('kelas_id');
+    }
+
     /** Rata-rata nilai tiap kelas (kelas tanpa nilai tidak ditampilkan). */
     private function nilaiPerKelas(): array
     {
+        $agregat = $this->nilaiAgregatPerKelas();
+
         return Kelas::query()
             ->orderBy('nama_kelas')
-            ->get()
-            ->map(function (Kelas $kelas) {
-                $rata = Nilai::whereHas('siswa', fn ($q) => $q->where('kelas_id', $kelas->id))->avg('nilai');
+            ->get(['id', 'nama_kelas'])
+            ->map(function (Kelas $kelas) use ($agregat) {
+                $row = $agregat->get($kelas->id);
 
-                return ['kelas' => $kelas->nama_kelas, 'rata_rata' => $rata ? round((float) $rata, 2) : null];
+                return [
+                    'kelas' => $kelas->nama_kelas,
+                    'rata_rata' => $row ? round((float) $row->total_nilai / $row->jumlah_nilai, 2) : null,
+                ];
             })
             ->filter(fn ($row) => $row['rata_rata'] !== null)
             ->values()
@@ -334,12 +368,14 @@ class PrincipalController extends Controller
     /** Jumlah siswa aktif pada akhir tiap bulan selama 6 bulan terakhir (berdasarkan tanggal data dibuat). */
     private function trenSiswa(): array
     {
-        return collect(range(5, 0))->map(function (int $mundur) {
+        $createdDates = Siswa::where('status', 'aktif')->pluck('created_at');
+
+        return collect(range(5, 0))->map(function (int $mundur) use ($createdDates) {
             $akhir = now()->startOfMonth()->subMonths($mundur)->endOfMonth();
 
             return [
                 'bulan' => $akhir->format('Y-m'),
-                'total' => Siswa::where('status', 'aktif')->where('created_at', '<=', $akhir)->count(),
+                'total' => $createdDates->filter(fn ($d) => $d <= $akhir)->count(),
             ];
         })->all();
     }
@@ -347,13 +383,24 @@ class PrincipalController extends Controller
     /** Persentase kehadiran siswa per bulan sepanjang tahun ini (null = belum ada data absensi bulan itu). */
     private function trenKehadiran(): array
     {
-        return collect(range(1, 12))->map(function (int $bulan) {
-            $query = Absensi::whereMonth('tanggal', $bulan)->whereYear('tanggal', now()->year);
-            $total = (clone $query)->count();
+        $perBulan = Absensi::query()
+            ->whereYear('tanggal', now()->year)
+            ->select(
+                DB::raw("cast(strftime('%m', tanggal) as integer) as bulan"),
+                DB::raw('count(*) as total'),
+                DB::raw("sum(case when status = 'hadir' then 1 else 0 end) as hadir")
+            )
+            ->groupBy('bulan')
+            ->get()
+            ->keyBy('bulan');
+
+        return collect(range(1, 12))->map(function (int $bulan) use ($perBulan) {
+            $row = $perBulan->get($bulan);
+            $total = $row ? (int) $row->total : 0;
 
             return [
                 'bulan' => $bulan,
-                'persen' => $total > 0 ? round(((clone $query)->where('status', 'hadir')->count() / $total) * 100, 1) : null,
+                'persen' => $total > 0 ? round(($row->hadir / $total) * 100, 1) : null,
             ];
         })->all();
     }
@@ -410,16 +457,18 @@ class PrincipalController extends Controller
 
     private function perKelasAkademik()
     {
+        $agregat = $this->nilaiAgregatPerKelas();
+
         return Kelas::query()
             ->withCount('siswa')
             ->get()
-            ->map(function (Kelas $kelas) {
-                $rata = Nilai::whereHas('siswa', fn ($q) => $q->where('kelas_id', $kelas->id))->avg('nilai');
+            ->map(function (Kelas $kelas) use ($agregat) {
+                $row = $agregat->get($kelas->id);
 
                 return [
                     'kelas' => $kelas->nama_kelas,
                     'jumlah_siswa' => $kelas->siswa_count,
-                    'rata_rata_nilai' => $rata ? round((float) $rata, 2) : null,
+                    'rata_rata_nilai' => $row ? round((float) $row->total_nilai / $row->jumlah_nilai, 2) : null,
                 ];
             });
     }
@@ -471,14 +520,21 @@ class PrincipalController extends Controller
     {
         $bulanIni = now();
 
+        $absensiPerSiswa = Absensi::query()
+            ->whereMonth('tanggal', $bulanIni->month)
+            ->whereYear('tanggal', $bulanIni->year)
+            ->select('siswa_id', DB::raw('count(*) as total'), DB::raw("sum(case when status = 'hadir' then 1 else 0 end) as hadir"))
+            ->groupBy('siswa_id')
+            ->get()
+            ->keyBy('siswa_id');
+
         $kehadiranBermasalah = Siswa::where('status', 'aktif')
-            ->whereHas('absensi', fn ($q) => $q->whereMonth('tanggal', $bulanIni->month)->whereYear('tanggal', $bulanIni->year))
+            ->whereIn('id', $absensiPerSiswa->keys())
             ->with('kelas:id,nama_kelas')
             ->get(['id', 'nama', 'kelas_id'])
-            ->map(function (Siswa $s) use ($bulanIni) {
-                $total = $s->absensi()->whereMonth('tanggal', $bulanIni->month)->whereYear('tanggal', $bulanIni->year)->count();
-                $hadir = $s->absensi()->whereMonth('tanggal', $bulanIni->month)->whereYear('tanggal', $bulanIni->year)->where('status', 'hadir')->count();
-                $persen = $total > 0 ? round(($hadir / $total) * 100, 1) : null;
+            ->map(function (Siswa $s) use ($absensiPerSiswa) {
+                $row = $absensiPerSiswa->get($s->id);
+                $persen = $row->total > 0 ? round(($row->hadir / $row->total) * 100, 1) : null;
 
                 if ($persen === null || $persen >= self::AMBANG_KEHADIRAN) {
                     return null;
@@ -523,26 +579,39 @@ class PrincipalController extends Controller
     {
         $bulanIni = now();
 
+        $absensiPerGuru = AbsensiGuru::query()
+            ->whereMonth('tanggal', $bulanIni->month)
+            ->whereYear('tanggal', $bulanIni->year)
+            ->select('guru_id', DB::raw('count(*) as total'), DB::raw("sum(case when status = 'hadir' then 1 else 0 end) as hadir"))
+            ->groupBy('guru_id')
+            ->get()
+            ->keyBy('guru_id');
+
+        $kelasPerWali = Kelas::whereNotNull('wali_kelas_id')->get(['id', 'wali_kelas_id'])->groupBy('wali_kelas_id');
+        $nilaiPerKelas = $this->nilaiAgregatPerKelas();
+
         return Guru::where('status', 'aktif')
             ->orderBy('nama')
             ->get(['id', 'nama'])
-            ->map(function (Guru $g) use ($bulanIni) {
-                $totalAbsen = AbsensiGuru::where('guru_id', $g->id)
-                    ->whereMonth('tanggal', $bulanIni->month)->whereYear('tanggal', $bulanIni->year)->count();
-                $hadirAbsen = AbsensiGuru::where('guru_id', $g->id)
-                    ->whereMonth('tanggal', $bulanIni->month)->whereYear('tanggal', $bulanIni->year)
-                    ->where('status', 'hadir')->count();
+            ->map(function (Guru $g) use ($absensiPerGuru, $kelasPerWali, $nilaiPerKelas) {
+                $absen = $absensiPerGuru->get($g->id);
+                $kelasIds = ($kelasPerWali->get($g->id) ?? collect())->pluck('id');
 
-                $kelasIds = Kelas::where('wali_kelas_id', $g->id)->pluck('id');
-                $rataNilai = $kelasIds->isNotEmpty()
-                    ? Nilai::whereHas('siswa', fn ($q) => $q->whereIn('kelas_id', $kelasIds))->avg('nilai')
-                    : null;
+                $totalNilai = 0;
+                $jumlahNilai = 0;
+                foreach ($kelasIds as $kelasId) {
+                    $row = $nilaiPerKelas->get($kelasId);
+                    if ($row) {
+                        $totalNilai += $row->total_nilai;
+                        $jumlahNilai += $row->jumlah_nilai;
+                    }
+                }
 
                 return [
                     'nama' => $g->nama,
                     'jumlah_kelas_diampu' => $kelasIds->count(),
-                    'persen_kehadiran' => $totalAbsen > 0 ? round(($hadirAbsen / $totalAbsen) * 100, 1) : null,
-                    'rata_rata_nilai_kelas' => $rataNilai ? round((float) $rataNilai, 2) : null,
+                    'persen_kehadiran' => $absen && $absen->total > 0 ? round(($absen->hadir / $absen->total) * 100, 1) : null,
+                    'rata_rata_nilai_kelas' => $jumlahNilai > 0 ? round($totalNilai / $jumlahNilai, 2) : null,
                 ];
             })
             ->take(8)

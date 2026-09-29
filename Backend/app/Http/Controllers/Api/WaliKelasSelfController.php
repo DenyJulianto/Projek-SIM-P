@@ -15,6 +15,7 @@ use App\Models\Siswa;
 use App\Models\StrukturKelas;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Endpoint self-service untuk wali kelas — setiap method yang menerima
@@ -279,13 +280,18 @@ class WaliKelasSelfController extends Controller
 
         $siswa = $kelas->siswa()->get(['id', 'nama']);
 
-        $perkembangan = $siswa->map(function ($s) {
-            $perSemester = Nilai::where('siswa_id', $s->id)
-                ->selectRaw('semester, tahun_ajaran, avg(nilai) as rata_rata')
-                ->groupBy('semester', 'tahun_ajaran')
-                ->orderBy('tahun_ajaran')
-                ->orderBy('semester')
-                ->get();
+        // Satu query untuk seluruh siswa di kelas ini (group by siswa_id juga),
+        // bukan query groupBy per siswa di dalam map() (N+1).
+        $semuaNilai = Nilai::whereIn('siswa_id', $siswa->pluck('id'))
+            ->selectRaw('siswa_id, semester, tahun_ajaran, avg(nilai) as rata_rata')
+            ->groupBy('siswa_id', 'semester', 'tahun_ajaran')
+            ->orderBy('tahun_ajaran')
+            ->orderBy('semester')
+            ->get()
+            ->groupBy('siswa_id');
+
+        $perkembangan = $siswa->map(function ($s) use ($semuaNilai) {
+            $perSemester = $semuaNilai->get($s->id, collect());
 
             return [
                 'siswa' => ['id' => $s->id, 'nama' => $s->nama],
@@ -293,7 +299,7 @@ class WaliKelasSelfController extends Controller
                     'semester' => $p->semester,
                     'tahun_ajaran' => $p->tahun_ajaran,
                     'rata_rata' => round((float) $p->rata_rata, 2),
-                ]),
+                ])->values(),
             ];
         });
 
@@ -307,8 +313,13 @@ class WaliKelasSelfController extends Controller
         $mapelCount = \App\Models\MataPelajaran::count();
         $siswa = $kelas->siswa()->get(['id', 'nama']);
 
-        $status = $siswa->map(function ($s) use ($mapelCount) {
-            $mapelDiisi = Nilai::where('siswa_id', $s->id)->distinct('mata_pelajaran_id')->count('mata_pelajaran_id');
+        $mapelDiisiPerSiswa = Nilai::whereIn('siswa_id', $siswa->pluck('id'))
+            ->select('siswa_id', DB::raw('count(distinct mata_pelajaran_id) as total'))
+            ->groupBy('siswa_id')
+            ->pluck('total', 'siswa_id');
+
+        $status = $siswa->map(function ($s) use ($mapelCount, $mapelDiisiPerSiswa) {
+            $mapelDiisi = (int) $mapelDiisiPerSiswa->get($s->id, 0);
 
             return [
                 'siswa' => ['id' => $s->id, 'nama' => $s->nama],

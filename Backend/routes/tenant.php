@@ -76,6 +76,7 @@ use App\Http\Controllers\Api\KonfirmasiPembayaranController;
 use App\Http\Controllers\Api\KonselingController;
 use App\Http\Controllers\Api\KurikulumDashboardController;
 use App\Http\Controllers\Api\LaporanKeuanganController;
+use App\Http\Controllers\Api\LaporanTataUsahaController;
 use App\Http\Controllers\Api\MataPelajaranController;
 use App\Http\Controllers\Api\MateriController;
 use App\Http\Controllers\Api\NilaiController;
@@ -83,6 +84,7 @@ use App\Http\Controllers\Api\NilaiSikapController;
 use App\Http\Controllers\Api\PelanggaranController;
 use App\Http\Controllers\Api\PembayaranController;
 use App\Http\Controllers\Api\PemanggilanController;
+use App\Http\Controllers\Api\PengajuanPenguranganPoinController;
 use App\Http\Controllers\Api\PengajuanAnggaranController;
 use App\Http\Controllers\Api\PengajuanKepegawaianController;
 use App\Http\Controllers\Api\PengumumanController;
@@ -180,6 +182,7 @@ Route::middleware([
         Route::get('/me/siswa/prestasi', [StudentSelfController::class, 'prestasi']);
         Route::post('/me/siswa/prestasi', [StudentSelfController::class, 'submitPrestasi']);
         Route::delete('/me/siswa/prestasi/{prestasi}', [StudentSelfController::class, 'destroyPrestasi']);
+        Route::get('/me/siswa/pelanggaran', [StudentSelfController::class, 'pelanggaran']);
         Route::get('/me/siswa/materi', [StudentSelfController::class, 'materi']);
         Route::get('/me/siswa/tugas', [StudentSelfController::class, 'tugas']);
         Route::post('/me/siswa/tugas/{tugas}/jawaban', [StudentSelfController::class, 'submitTugas']);
@@ -196,6 +199,7 @@ Route::middleware([
         Route::get('/me/anak/{siswa}/tagihan', [ParentSelfController::class, 'tagihan']);
         Route::get('/me/anak/{siswa}/riwayat-pembayaran', [ParentSelfController::class, 'riwayatPembayaran']);
         Route::get('/me/anak/{siswa}/prestasi', [ParentSelfController::class, 'prestasi']);
+        Route::get('/me/anak/{siswa}/pelanggaran', [ParentSelfController::class, 'pelanggaran']);
         Route::get('/me/anak/{siswa}/wali-kelas', [ParentSelfController::class, 'waliKelas']);
 
         Route::post('/me/konfirmasi-pembayaran', [KonfirmasiPembayaranController::class, 'store']);
@@ -960,7 +964,7 @@ Route::middleware([
 
         Route::apiResource('pelanggaran', PelanggaranController::class)
             ->only(['index'])
-            ->middleware('permission:pelanggaran.manage|kesiswaan.pelanggaran|dashboard.view-all');
+            ->middleware('permission:pelanggaran.manage|kesiswaan.pelanggaran|dashboard.view-all|pelanggaran.view');
 
         Route::apiResource('pelanggaran', PelanggaranController::class)
             ->only(['store', 'update', 'destroy'])
@@ -990,6 +994,18 @@ Route::middleware([
                 Route::get('rekap-kasus', [BkMonitoringController::class, 'rekapKasus']);
                 Route::get('statistik', [BkMonitoringController::class, 'statistik']);
                 Route::get('laporan', [BkMonitoringController::class, 'laporan']);
+            });
+
+            // Alur poin kedisiplinan: BK mengajukan, Kesiswaan menyetujui/menolak.
+            Route::middleware('permission:pengurangan-poin.ajukan|pengurangan-poin.approve')->group(function () {
+                Route::get('pengajuan-pengurangan-poin', [PengajuanPenguranganPoinController::class, 'index']);
+            });
+            Route::middleware('permission:pengurangan-poin.ajukan')->group(function () {
+                Route::post('pengajuan-pengurangan-poin', [PengajuanPenguranganPoinController::class, 'store']);
+            });
+            Route::middleware('permission:pengurangan-poin.approve')->group(function () {
+                Route::post('pengajuan-pengurangan-poin/{pengajuan}/setujui', [PengajuanPenguranganPoinController::class, 'setujui']);
+                Route::post('pengajuan-pengurangan-poin/{pengajuan}/tolak', [PengajuanPenguranganPoinController::class, 'tolak']);
             });
         });
 
@@ -1076,6 +1092,13 @@ Route::middleware([
                 Route::get('penerimaan-harian', [LaporanKeuanganController::class, 'penerimaanHarian']);
                 Route::get('penerimaan-per-jenis', [LaporanKeuanganController::class, 'penerimaanPerJenis']);
             });
+        });
+
+        Route::middleware('permission:laporan.view')->prefix('laporan-tu')->group(function () {
+            Route::get('siswa', [LaporanTataUsahaController::class, 'siswa']);
+            Route::get('pegawai', [LaporanTataUsahaController::class, 'pegawai']);
+            Route::get('absensi', [LaporanTataUsahaController::class, 'absensi']);
+            Route::get('administrasi', [LaporanTataUsahaController::class, 'administrasi']);
         });
 
         // Kepegawaian: pengajuan (Tata Usaha / pegawai.manage) & persetujuan (Kepala Sekolah).

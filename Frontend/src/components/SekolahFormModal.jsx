@@ -8,6 +8,21 @@ import { api } from '../lib/api'
 const KODEPOS_SEARCH_URL = 'https://kodepos.vercel.app/search/?q='
 
 const JENJANG_OPTIONS = ['PAUD', 'TK', 'SD', 'SMP', 'SMA', 'SMK', 'SLB']
+const AKREDITASI_OPTIONS = ['A', 'B', 'C', 'Belum Terakreditasi']
+
+// Domain login sekolah dibuat otomatis dari nama sekolah (bukan diisi manual
+// lagi) supaya selalu konsisten dengan pola yang sama dipakai di endpoint
+// impor massal (`{id}.{TENANT_BASE_DOMAIN}` di SekolahController::import).
+// Dipakai akhiran .localhost di sini karena itu yang langsung bisa dibuka
+// browser tanpa pengaturan DNS/hosts tambahan saat development.
+function slugifyNamaSekolah(nama) {
+  return nama
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
 
 export default function SekolahFormModal({ onClose, onSaved }) {
   const [form, setForm] = useState({
@@ -15,8 +30,11 @@ export default function SekolahFormModal({ onClose, onSaved }) {
     nama_sekolah: '',
     npsn: '',
     jenjang: '',
+    status_sekolah: '',
+    akreditasi: '',
     domain: '',
     alamat: '',
+    rt_rw: '',
     kecamatan: '',
     kelurahan: '',
     kode_pos: '',
@@ -26,6 +44,11 @@ export default function SekolahFormModal({ onClose, onSaved }) {
     longitude: '',
     telepon: '',
     email: '',
+    website: '',
+    nama_kepala_sekolah: '',
+    nama_yayasan: '',
+    tahun_berdiri: '',
+    no_sk_pendirian: '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -98,7 +121,14 @@ export default function SekolahFormModal({ onClose, onSaved }) {
   }
 
   function update(field, value) {
-    setForm((f) => ({ ...f, [field]: value }))
+    setForm((f) => {
+      const next = { ...f, [field]: value }
+      if (field === 'nama_sekolah') {
+        const slug = slugifyNamaSekolah(value)
+        next.domain = slug ? `${slug}.localhost` : ''
+      }
+      return next
+    })
   }
 
   async function handleSubmit(e) {
@@ -110,6 +140,13 @@ export default function SekolahFormModal({ onClose, onSaved }) {
         ...form,
         npsn: form.npsn || null,
         jenjang: form.jenjang || null,
+        status_sekolah: form.status_sekolah || null,
+        akreditasi: form.akreditasi || null,
+        website: form.website || null,
+        nama_kepala_sekolah: form.nama_kepala_sekolah || null,
+        nama_yayasan: form.nama_yayasan || null,
+        tahun_berdiri: form.tahun_berdiri !== '' ? Number(form.tahun_berdiri) : null,
+        no_sk_pendirian: form.no_sk_pendirian || null,
         latitude: form.latitude !== '' ? Number(form.latitude) : null,
         longitude: form.longitude !== '' ? Number(form.longitude) : null,
       }
@@ -123,7 +160,7 @@ export default function SekolahFormModal({ onClose, onSaved }) {
   }
 
   const loginUrl = createdDomain
-    ? `${window.location.protocol}//${createdDomain}${window.location.port ? `:${window.location.port}` : ''}/login`
+    ? `${window.location.protocol}//${createdDomain}${window.location.port ? `:${window.location.port}` : ''}/`
     : ''
 
   function showCopied() {
@@ -168,8 +205,8 @@ export default function SekolahFormModal({ onClose, onSaved }) {
 <ModalCloseButton onClose={onClose} />
           <h2 className="text-lg font-bold text-navy mb-2">Sekolah Berhasil Ditambahkan</h2>
           <p className="text-sm text-navy/60 mb-4">
-            Bagikan link login berikut ke pihak sekolah supaya admin sekolah bisa masuk memakai akun
-            mereka sendiri.
+            Bagikan link berikut ke pihak sekolah — dari halaman ini mereka bisa masuk ke sistem
+            memakai akun sekolah masing-masing.
           </p>
 
           <div className="mb-5">
@@ -231,7 +268,6 @@ export default function SekolahFormModal({ onClose, onSaved }) {
                 value={form.npsn}
                 onChange={(e) => update('npsn', e.target.value)}
                 className="input"
-                placeholder="Opsional"
               />
             </Field>
           </div>
@@ -261,19 +297,46 @@ export default function SekolahFormModal({ onClose, onSaved }) {
                 ))}
               </select>
             </Field>
-            <Field label="Domain" hint="untuk login sekolah">
+            <Field label="Status Sekolah">
+              <select
+                value={form.status_sekolah}
+                onChange={(e) => update('status_sekolah', e.target.value)}
+                className="input"
+              >
+                <option value="">Pilih status</option>
+                <option value="negeri">Negeri</option>
+                <option value="swasta">Swasta</option>
+              </select>
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Akreditasi">
+              <select
+                value={form.akreditasi}
+                onChange={(e) => update('akreditasi', e.target.value)}
+                className="input"
+              >
+                <option value="">Pilih akreditasi</option>
+                {AKREDITASI_OPTIONS.map((a) => (
+                  <option key={a} value={a}>
+                    {a}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Domain" hint="otomatis, untuk login sekolah">
               <input
                 type="text"
                 required
+                readOnly
                 value={form.domain}
-                onChange={(e) => update('domain', e.target.value)}
-                className="input"
-                placeholder="sman1-jakarta.localhost"
+                className="input bg-navy/[0.03] text-navy/60 cursor-not-allowed"
+                placeholder="Otomatis dari Nama Sekolah"
               />
               <p className="text-xs text-navy/40 mt-1">
-                Di komputer ini, akhiran <code>.localhost</code> langsung bisa dibuka browser tanpa
-                pengaturan tambahan. Domain lain (mis. <code>.test</code> atau domain sungguhan) perlu
-                didaftarkan dulu di DNS/hosts server sebelum linknya bisa diakses.
+                Dibuat otomatis dari Nama Sekolah. Di komputer ini, akhiran <code>.localhost</code>{' '}
+                langsung bisa dibuka browser tanpa pengaturan tambahan.
               </p>
             </Field>
           </div>
@@ -370,14 +433,27 @@ export default function SekolahFormModal({ onClose, onSaved }) {
             </>
           )}
 
-          <Field label="Alamat">
-            <textarea
-              rows={2}
-              value={form.alamat}
-              onChange={(e) => update('alamat', e.target.value)}
-              className="input"
-            />
-          </Field>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="col-span-2">
+              <Field label="Alamat">
+                <textarea
+                  rows={2}
+                  value={form.alamat}
+                  onChange={(e) => update('alamat', e.target.value)}
+                  className="input"
+                />
+              </Field>
+            </div>
+            <Field label="RT/RW" hint="opsional">
+              <input
+                type="text"
+                value={form.rt_rw}
+                onChange={(e) => update('rt_rw', e.target.value)}
+                className="input"
+                placeholder="001/002"
+              />
+            </Field>
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Telepon">
@@ -393,6 +469,55 @@ export default function SekolahFormModal({ onClose, onSaved }) {
                 type="email"
                 value={form.email}
                 onChange={(e) => update('email', e.target.value)}
+                className="input"
+              />
+            </Field>
+          </div>
+
+          <Field label="Situs Web" hint="opsional">
+            <input
+              type="text"
+              value={form.website}
+              onChange={(e) => update('website', e.target.value)}
+              className="input"
+              placeholder="https://sekolah.sch.id"
+            />
+          </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Nama Kepala Sekolah">
+              <input
+                type="text"
+                value={form.nama_kepala_sekolah}
+                onChange={(e) => update('nama_kepala_sekolah', e.target.value)}
+                className="input"
+              />
+            </Field>
+            <Field label="Nama Yayasan" hint="khusus swasta">
+              <input
+                type="text"
+                value={form.nama_yayasan}
+                onChange={(e) => update('nama_yayasan', e.target.value)}
+                className="input"
+              />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Tahun Berdiri">
+              <input
+                type="number"
+                value={form.tahun_berdiri}
+                onChange={(e) => update('tahun_berdiri', e.target.value)}
+                className="input"
+                placeholder="2010"
+              />
+            </Field>
+            <Field label="No. SK Pendirian">
+              <input
+                type="text"
+                value={form.no_sk_pendirian}
+                onChange={(e) => update('no_sk_pendirian', e.target.value)}
                 className="input"
               />
             </Field>

@@ -247,6 +247,105 @@ class GuruDirectoryController extends Controller
         ]);
     }
 
+    /**
+     * Alamat rinci guru TIDAK ikut disalin ke direktori nasional (sama
+     * seperti alasan SiswaDirectoryController::wali()) — jadi diambil
+     * langsung dari database sekolah bersangkutan saat Super Admin membuka
+     * detail guru tsb, bukan disinkron & disimpan permanen di central.
+     */
+    public function alamat(Sekolah $sekolah, int $guruId): JsonResponse
+    {
+        $guru = $sekolah->run(fn () => Guru::find($guruId, [
+            'alamat', 'rt_rw', 'kelurahan', 'kecamatan', 'kota', 'kode_pos',
+        ]));
+
+        if (! $guru) {
+            return response()->json(['message' => 'Guru tidak ditemukan.'], 404);
+        }
+
+        return response()->json([
+            'alamat' => $guru->alamat,
+            'rt_rw' => $guru->rt_rw,
+            'kelurahan' => $guru->kelurahan,
+            'kecamatan' => $guru->kecamatan,
+            'kota' => $guru->kota,
+            'kode_pos' => $guru->kode_pos,
+        ]);
+    }
+
+    /**
+     * Edit identitas guru dari halaman detail Super Admin — menulis
+     * langsung ke database sekolah (sumber kebenaran), sama seperti
+     * GuruController::update() di sisi sekolah. GuruObserver otomatis
+     * menyalin perubahan ini ke direktori nasional lewat job sinkronisasi,
+     * jadi tidak perlu update manual ke GuruDirectory di sini.
+     */
+    public function update(Request $request, Sekolah $sekolah, int $guruId): JsonResponse
+    {
+        $result = $sekolah->run(function () use ($request, $guruId) {
+            $guru = Guru::find($guruId);
+
+            if (! $guru) {
+                return null;
+            }
+
+            $data = $request->validate([
+                'nip' => ['nullable', 'string', 'max:30', 'unique:guru,nip,' . $guru->id],
+                'nuptk' => ['nullable', 'string', 'max:30', 'unique:guru,nuptk,' . $guru->id],
+                'nama' => ['sometimes', 'string', 'max:255'],
+                'gelar' => ['nullable', 'string', 'max:100'],
+                'jenis_kelamin' => ['sometimes', 'in:L,P'],
+                'jabatan' => ['nullable', 'string', 'max:255'],
+                'mata_pelajaran' => ['nullable', 'string', 'max:255'],
+                'status_kepegawaian' => ['nullable', 'string', 'max:100'],
+                'pendidikan_terakhir' => ['nullable', 'string', 'max:100'],
+                'no_telepon' => ['nullable', 'string', 'max:20'],
+                'alamat' => ['nullable', 'string'],
+                'rt_rw' => ['nullable', 'string', 'max:20'],
+                'kelurahan' => ['nullable', 'string', 'max:255'],
+                'kecamatan' => ['nullable', 'string', 'max:255'],
+                'kota' => ['nullable', 'string', 'max:255'],
+                'kode_pos' => ['nullable', 'string', 'max:10'],
+            ]);
+
+            $guru->update($data);
+
+            return $guru->toArray();
+        });
+
+        if ($result === null) {
+            return response()->json(['message' => 'Guru tidak ditemukan.'], 404);
+        }
+
+        return response()->json($result);
+    }
+
+    /**
+     * Hapus permanen data guru dari database sekolah — sama seperti
+     * GuruController::destroy() di sisi sekolah. GuruObserver otomatis
+     * menghapus salinannya dari direktori nasional lewat job sinkronisasi.
+     */
+    public function destroy(Sekolah $sekolah, int $guruId): JsonResponse
+    {
+        $found = $sekolah->run(function () use ($guruId) {
+            $guru = Guru::find($guruId);
+
+            if (! $guru) {
+                return false;
+            }
+
+            $guru->delete();
+
+            return true;
+        });
+
+        if (! $found) {
+            return response()->json(['message' => 'Guru tidak ditemukan.'], 404);
+        }
+
+        return response()->json(['message' => 'Guru berhasil dihapus.']);
+    }
+
     private function cleanString(mixed $value): ?string
     {
         $value = is_string($value) ? trim($value) : $value;

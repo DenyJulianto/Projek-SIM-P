@@ -6,8 +6,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Pelanggaran;
+use App\Notifications\PelanggaranBaruNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
 
 class PelanggaranController extends Controller
 {
@@ -40,6 +42,8 @@ class PelanggaranController extends Controller
         $pelanggaran = Pelanggaran::create(array_filter($data, fn ($v) => $v !== null) + ['dicatat_oleh' => $request->user()?->id]);
 
         activity()->causedBy($request->user())->log("Mencatat pelanggaran \"{$pelanggaran->jenis}\".");
+
+        $this->notifySiswaDanOrtu($pelanggaran, new PelanggaranBaruNotification($pelanggaran));
 
         return response()->json($pelanggaran->load('siswa:id,nama,kelas_id'), 201);
     }
@@ -75,5 +79,22 @@ class PelanggaranController extends Controller
         activity()->causedBy($request->user())->log("Menghapus catatan pelanggaran \"{$jenis}\".");
 
         return response()->json(['message' => 'Catatan pelanggaran berhasil dihapus.']);
+    }
+
+    /**
+     * Kirim notifikasi dalam aplikasi ke siswa yang bersangkutan (kalau
+     * sudah punya akun login) dan ke semua orang tua/wali yang tertaut.
+     */
+    private function notifySiswaDanOrtu(Pelanggaran $pelanggaran, $notification): void
+    {
+        $pelanggaran->loadMissing(['siswa.user', 'siswa.walis']);
+
+        $penerima = collect([$pelanggaran->siswa->user])
+            ->merge($pelanggaran->siswa->walis)
+            ->filter();
+
+        if ($penerima->isNotEmpty()) {
+            Notification::send($penerima, $notification);
+        }
     }
 }

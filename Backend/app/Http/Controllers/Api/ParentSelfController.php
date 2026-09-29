@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\JadwalPelajaran;
+use App\Models\Pelanggaran;
 use App\Models\Prestasi;
 use App\Models\SaldoSiswa;
 use App\Models\SaldoTransaksi;
@@ -130,6 +131,17 @@ class ParentSelfController extends Controller
             ->get();
 
         return response()->json($prestasi);
+    }
+
+    public function pelanggaran(Request $request, Siswa $siswa): JsonResponse
+    {
+        $this->authorizeAnak($request, $siswa);
+
+        $pelanggaran = Pelanggaran::where('siswa_id', $siswa->id)
+            ->orderByDesc('tanggal')
+            ->get();
+
+        return response()->json($pelanggaran);
     }
 
     public function waliKelas(Request $request, Siswa $siswa): JsonResponse

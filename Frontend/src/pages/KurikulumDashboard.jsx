@@ -1,31 +1,36 @@
-import { useEffect, useState } from 'react'
-import CapaianPembelajaranManagement from './CapaianPembelajaranManagement'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import ComingSoon from '../components/ComingSoon'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import { useAuth } from '../lib/AuthContext'
 import { api, BASE_URL } from '../lib/api'
-import JamPelajaranManagement from './JamPelajaranManagement'
-import KelasManagement from './KelasManagement'
-import GuruPenggantiManagement from './GuruPenggantiManagement'
-import HariEfektifManagement from './HariEfektifManagement'
-import MonitoringNilaiManagement from './MonitoringNilaiManagement'
-import PembagianMapelManagement from './PembagianMapelManagement'
-import KalenderAkademikManagement from './KalenderAkademikManagement'
-import LaporanAkademikManagement from './LaporanAkademikManagement'
-import PenerbitanRaporManagement from './PenerbitanRaporManagement'
-import PenguncianNilaiManagement from './PenguncianNilaiManagement'
-import VerifikasiNilaiManagement from './VerifikasiNilaiManagement'
-import PerubahanJadwalManagement from './PerubahanJadwalManagement'
-import RombelManagement from './RombelManagement'
-import MataPelajaranManagement from './MataPelajaranManagement'
-import MyProfile from './MyProfile'
-import ScheduleManagement from './ScheduleManagement'
-import StrukturKurikulumManagement from './StrukturKurikulumManagement'
-import KkmKktpManagement from './KkmKktpManagement'
-import ProgramSemesterManagement from './ProgramSemesterManagement'
-import ProgramTahunanManagement from './ProgramTahunanManagement'
-import TujuanPembelajaranManagement from './TujuanPembelajaranManagement'
 import logoLambang from '../assets/logo-sim-lambang.png'
+
+// 22 sub-halaman ini sebelumnya semua di-bundle jadi satu chunk ~480 KB yang
+// diunduh utuh begitu satu menu Kurikulum dibuka, walau yang dibuka cuma
+// satu halaman. Dipecah per halaman supaya hanya yang benar-benar dibuka
+// yang diunduh.
+const CapaianPembelajaranManagement = lazy(() => import('./CapaianPembelajaranManagement'))
+const JamPelajaranManagement = lazy(() => import('./JamPelajaranManagement'))
+const KelasManagement = lazy(() => import('./KelasManagement'))
+const GuruPenggantiManagement = lazy(() => import('./GuruPenggantiManagement'))
+const HariEfektifManagement = lazy(() => import('./HariEfektifManagement'))
+const MonitoringNilaiManagement = lazy(() => import('./MonitoringNilaiManagement'))
+const PembagianMapelManagement = lazy(() => import('./PembagianMapelManagement'))
+const KalenderAkademikManagement = lazy(() => import('./KalenderAkademikManagement'))
+const LaporanAkademikManagement = lazy(() => import('./LaporanAkademikManagement'))
+const PenerbitanRaporManagement = lazy(() => import('./PenerbitanRaporManagement'))
+const PenguncianNilaiManagement = lazy(() => import('./PenguncianNilaiManagement'))
+const VerifikasiNilaiManagement = lazy(() => import('./VerifikasiNilaiManagement'))
+const PerubahanJadwalManagement = lazy(() => import('./PerubahanJadwalManagement'))
+const RombelManagement = lazy(() => import('./RombelManagement'))
+const MataPelajaranManagement = lazy(() => import('./MataPelajaranManagement'))
+const MyProfile = lazy(() => import('./MyProfile'))
+const ScheduleManagement = lazy(() => import('./ScheduleManagement'))
+const StrukturKurikulumManagement = lazy(() => import('./StrukturKurikulumManagement'))
+const KkmKktpManagement = lazy(() => import('./KkmKktpManagement'))
+const ProgramSemesterManagement = lazy(() => import('./ProgramSemesterManagement'))
+const ProgramTahunanManagement = lazy(() => import('./ProgramTahunanManagement'))
+const TujuanPembelajaranManagement = lazy(() => import('./TujuanPembelajaranManagement'))
 
 const MENU_GROUPS = [
   { section: null, items: [{ key: 'home', label: 'Dashboard', icon: GridIcon }] },
@@ -201,6 +206,7 @@ export default function KurikulumDashboard() {
           </div>
         )}
         {view === 'home' && <KurikulumHome onNavigate={setView} />}
+        <Suspense fallback={<p className="text-sm text-navy/40 text-center py-14">Memuat...</p>}>
         {view === 'struktur-kurikulum' && <StrukturKurikulumManagement onBack={() => setView('home')} />}
         {view === 'capaian-pembelajaran' && <CapaianPembelajaranManagement onBack={() => setView('home')} />}
         {view === 'tujuan-pembelajaran' && <TujuanPembelajaranManagement onBack={() => setView('home')} />}
@@ -223,6 +229,7 @@ export default function KurikulumDashboard() {
         {view === 'jadwal-pelajaran' &&<ScheduleManagement onBack={() => setView('home')} />}
         {view === 'jam-pelajaran' && <JamPelajaranManagement onBack={() => setView('home')} />}
         {view === 'profile' && <MyProfile onBack={() => setView('home')} staffProfile />}
+        </Suspense>
         {COMING_SOON_LABEL[view] && (
           <div>
             <button onClick={() => setView('home')} className="text-sm text-navy/50 hover:text-navy mb-1">

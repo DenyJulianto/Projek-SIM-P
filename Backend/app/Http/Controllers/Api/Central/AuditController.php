@@ -9,6 +9,7 @@ use App\Models\Sekolah;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Spatie\Activitylog\Models\Activity;
@@ -41,12 +42,29 @@ class AuditController extends Controller
         $page = max(1, $request->integer('page', 1));
         $perPage = $request->integer('per_page', 20);
 
-        $rows = [];
-        foreach ($sekolahs as $sekolah) {
-            $rows = [...$rows, ...$this->fetchActivities($sekolah, $request)];
-        }
+        // Halaman ini dipaginasi di sisi PHP (hasil semua sekolah digabung
+        // dulu baru dipotong per halaman) — tanpa cache, geser dari
+        // halaman 1 ke 2 dengan filter yang sama akan membuka ulang semua
+        // database tenant dari nol. Cache pendek (20 detik) cukup untuk
+        // menyerap perpindahan halaman/klik ulang tanpa membuat log audit
+        // terasa basi.
+        $cacheKey = 'super-admin:audit-index:'.md5(json_encode([
+            'sekolah_id' => $request->string('sekolah_id')->value(),
+            'search' => $request->string('search')->value(),
+            'from' => $request->string('from')->value(),
+            'until' => $request->string('until')->value(),
+        ]));
 
-        usort($rows, fn ($a, $b) => strtotime($b['created_at']) <=> strtotime($a['created_at']));
+        $rows = Cache::remember($cacheKey, 20, function () use ($sekolahs, $request) {
+            $rows = [];
+            foreach ($sekolahs as $sekolah) {
+                $rows = [...$rows, ...$this->fetchActivities($sekolah, $request)];
+            }
+
+            usort($rows, fn ($a, $b) => strtotime($b['created_at']) <=> strtotime($a['created_at']));
+
+            return $rows;
+        });
 
         return response()->json($this->paginate($rows, $page, $perPage));
     }
@@ -65,19 +83,25 @@ class AuditController extends Controller
         $page = max(1, $request->integer('page', 1));
         $perPage = $request->integer('per_page', 20);
 
-        $rows = [];
-        foreach ($sekolahs as $sekolah) {
-            $rows = [...$rows, ...$this->fetchSensitiveActivities($sekolah)];
-        }
+        $cacheKey = 'super-admin:audit-sensitive:'.($request->string('sekolah_id')->value() ?: 'all');
 
-        foreach ($rows as &$row) {
-            $row['type'] = str_contains($row['description'], 'Mereset password') ? 'reset_password' : 'delete';
-        }
-        unset($row);
+        $rows = Cache::remember($cacheKey, 20, function () use ($sekolahs) {
+            $rows = [];
+            foreach ($sekolahs as $sekolah) {
+                $rows = [...$rows, ...$this->fetchSensitiveActivities($sekolah)];
+            }
 
-        $rows = $this->flagMassDeletes($rows);
+            foreach ($rows as &$row) {
+                $row['type'] = str_contains($row['description'], 'Mereset password') ? 'reset_password' : 'delete';
+            }
+            unset($row);
 
-        usort($rows, fn ($a, $b) => strtotime($b['created_at']) <=> strtotime($a['created_at']));
+            $rows = $this->flagMassDeletes($rows);
+
+            usort($rows, fn ($a, $b) => strtotime($b['created_at']) <=> strtotime($a['created_at']));
+
+            return $rows;
+        });
 
         return response()->json($this->paginate($rows, $page, $perPage));
     }
@@ -138,18 +162,25 @@ class AuditController extends Controller
         $from = $request->filled('from') ? Carbon::parse($request->string('from')->value())->startOfDay() : now()->subDays(30)->startOfDay();
         $until = $request->filled('until') ? Carbon::parse($request->string('until')->value())->endOfDay() : now()->endOfDay();
 
-        $perSekolah = collect(Sekolah::all())->map(function (Sekolah $sekolah) use ($from, $until) {
-            $count = $sekolah->run(fn () => Activity::whereBetween('created_at', [$from, $until])->count());
+        // Bagian yang mahal (buka DB tiap sekolah untuk hitung aktivitas)
+        // di-cache per rentang tanggal, terpisah dari group_by — supaya
+        // ganti tampilan provinsi<->sekolah pada rentang yang sama tidak
+        // mengulang buka semua koneksi tenant lagi.
+        $cacheKey = 'super-admin:laporan-wilayah:' . $from->toDateString() . ':' . $until->toDateString();
+        $perSekolah = collect(Cache::remember($cacheKey, 60, function () use ($from, $until) {
+            return collect(Sekolah::all())->map(function (Sekolah $sekolah) use ($from, $until) {
+                $count = $sekolah->run(fn () => Activity::whereBetween('created_at', [$from, $until])->count());
 
-            return [
-                'sekolah_id' => $sekolah->id,
-                'nama_sekolah' => $sekolah->nama_sekolah,
-                'npsn' => $sekolah->npsn,
-                'provinsi' => $sekolah->provinsi ?: 'Tidak diketahui',
-                'kabupaten_kota' => $sekolah->kabupaten_kota,
-                'jumlah_aktivitas' => $count,
-            ];
-        });
+                return [
+                    'sekolah_id' => $sekolah->id,
+                    'nama_sekolah' => $sekolah->nama_sekolah,
+                    'npsn' => $sekolah->npsn,
+                    'provinsi' => $sekolah->provinsi ?: 'Tidak diketahui',
+                    'kabupaten_kota' => $sekolah->kabupaten_kota,
+                    'jumlah_aktivitas' => $count,
+                ];
+            })->all();
+        }));
 
         if ($groupBy === 'sekolah') {
             return $perSekolah->sortByDesc('jumlah_aktivitas')->values();

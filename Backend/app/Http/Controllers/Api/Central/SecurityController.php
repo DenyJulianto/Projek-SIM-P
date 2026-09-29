@@ -11,6 +11,7 @@ use App\Models\Sekolah;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Spatie\Activitylog\Models\Activity;
 
 /**
@@ -81,10 +82,21 @@ class SecurityController extends Controller
     {
         $cutoff = $this->cutoffDate();
 
-        $activityCount = 0;
-        foreach (Sekolah::all() as $sekolah) {
-            $activityCount += $sekolah->run(fn () => Activity::where('created_at', '<', $cutoff)->count());
-        }
+        // Read-only, tapi tetap buka semua database tenant satu per satu —
+        // cache singkat supaya klik "Pratinjau" berulang (mis. sambil
+        // menimbang keputusan) tidak mengulang buka semua koneksi tenant.
+        $activityCount = Cache::remember(
+            'super-admin:retention-preview:'.$cutoff->toDateString(),
+            60,
+            function () use ($cutoff) {
+                $total = 0;
+                foreach (Sekolah::all() as $sekolah) {
+                    $total += $sekolah->run(fn () => Activity::where('created_at', '<', $cutoff)->count());
+                }
+
+                return $total;
+            }
+        );
 
         $syncLogCount = SyncLog::where('created_at', '<', $cutoff)->count();
 
@@ -113,6 +125,8 @@ class SecurityController extends Controller
 
         $settings = SecuritySettings::current();
         $settings->update(['last_retention_purge_at' => now()]);
+
+        Cache::forget('super-admin:retention-preview:'.$cutoff->toDateString());
 
         return response()->json([
             'message' => 'Penghapusan data sesuai kebijakan retensi berhasil dijalankan.',

@@ -252,6 +252,123 @@ class SiswaDirectoryController extends Controller
         ]);
     }
 
+    /**
+     * Data orang tua/wali TIDAK ikut disalin ke direktori nasional (siswa_
+     * direktori_nasional cuma menyimpan data non-sensitif secukupnya untuk
+     * daftar & pencarian) — jadi diambil langsung dari database sekolah
+     * yang bersangkutan saat Super Admin benar-benar membuka detail siswa
+     * tsb, bukan disinkron & disimpan permanen di central.
+     */
+    public function wali(Sekolah $sekolah, int $siswaId): JsonResponse
+    {
+        $wali = $sekolah->run(fn () => Siswa::find($siswaId, ['nama_wali', 'telepon_wali']));
+
+        if (! $wali) {
+            return response()->json(['message' => 'Siswa tidak ditemukan.'], 404);
+        }
+
+        return response()->json([
+            'nama_wali' => $wali->nama_wali,
+            'telepon_wali' => $wali->telepon_wali,
+        ]);
+    }
+
+    /**
+     * Alamat rinci siswa TIDAK ikut disalin ke direktori nasional — sama
+     * alasannya dengan wali() di atas, diambil langsung dari database
+     * sekolah bersangkutan saat Super Admin membuka detail siswa tsb.
+     */
+    public function alamat(Sekolah $sekolah, int $siswaId): JsonResponse
+    {
+        $siswa = $sekolah->run(fn () => Siswa::find($siswaId, [
+            'alamat', 'rt_rw', 'kelurahan', 'kecamatan', 'kota', 'kode_pos',
+        ]));
+
+        if (! $siswa) {
+            return response()->json(['message' => 'Siswa tidak ditemukan.'], 404);
+        }
+
+        return response()->json([
+            'alamat' => $siswa->alamat,
+            'rt_rw' => $siswa->rt_rw,
+            'kelurahan' => $siswa->kelurahan,
+            'kecamatan' => $siswa->kecamatan,
+            'kota' => $siswa->kota,
+            'kode_pos' => $siswa->kode_pos,
+        ]);
+    }
+
+    /**
+     * Edit identitas siswa dari halaman detail Super Admin — menulis
+     * langsung ke database sekolah (sumber kebenaran), sama seperti
+     * SiswaController::update() di sisi sekolah. SiswaObserver otomatis
+     * menyalin perubahan ini ke direktori nasional lewat job sinkronisasi.
+     * Kelas TIDAK bisa diubah dari sini — pemindahan kelas tetap operasi
+     * di sisi sekolah karena butuh memilih dari data kelas yang tersedia.
+     */
+    public function update(Request $request, Sekolah $sekolah, int $siswaId): JsonResponse
+    {
+        $result = $sekolah->run(function () use ($request, $siswaId) {
+            $siswa = Siswa::find($siswaId);
+
+            if (! $siswa) {
+                return null;
+            }
+
+            $data = $request->validate([
+                'nis' => ['sometimes', 'string', 'max:20', 'unique:siswa,nis,' . $siswa->id],
+                'nisn' => ['nullable', 'string', 'max:20', 'unique:siswa,nisn,' . $siswa->id],
+                'nama' => ['sometimes', 'string', 'max:255'],
+                'jenis_kelamin' => ['sometimes', 'in:L,P'],
+                'tahun_masuk' => ['nullable', 'integer', 'min:1950', 'max:2100'],
+                'alamat' => ['nullable', 'string'],
+                'rt_rw' => ['nullable', 'string', 'max:20'],
+                'kelurahan' => ['nullable', 'string', 'max:255'],
+                'kecamatan' => ['nullable', 'string', 'max:255'],
+                'kota' => ['nullable', 'string', 'max:255'],
+                'kode_pos' => ['nullable', 'string', 'max:10'],
+                'nama_wali' => ['nullable', 'string', 'max:255'],
+                'telepon_wali' => ['nullable', 'string', 'max:20'],
+            ]);
+
+            $siswa->update($data);
+
+            return $siswa->toArray();
+        });
+
+        if ($result === null) {
+            return response()->json(['message' => 'Siswa tidak ditemukan.'], 404);
+        }
+
+        return response()->json($result);
+    }
+
+    /**
+     * Hapus permanen data siswa dari database sekolah — sama seperti
+     * SiswaController::destroy() di sisi sekolah. SiswaObserver otomatis
+     * menghapus salinannya dari direktori nasional lewat job sinkronisasi.
+     */
+    public function destroy(Sekolah $sekolah, int $siswaId): JsonResponse
+    {
+        $found = $sekolah->run(function () use ($siswaId) {
+            $siswa = Siswa::find($siswaId);
+
+            if (! $siswa) {
+                return false;
+            }
+
+            $siswa->delete();
+
+            return true;
+        });
+
+        if (! $found) {
+            return response()->json(['message' => 'Siswa tidak ditemukan.'], 404);
+        }
+
+        return response()->json(['message' => 'Siswa berhasil dihapus.']);
+    }
+
     private function cleanString(mixed $value): ?string
     {
         $value = is_string($value) ? trim($value) : $value;

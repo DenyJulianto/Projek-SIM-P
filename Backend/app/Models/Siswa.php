@@ -25,6 +25,11 @@ class Siswa extends Model
         'tempat_lahir',
         'tanggal_lahir',
         'alamat',
+        'rt_rw',
+        'kelurahan',
+        'kecamatan',
+        'kota',
+        'kode_pos',
         'nama_wali',
         'telepon_wali',
         'status',
@@ -82,5 +87,10 @@ class Siswa extends Model
     public function pelanggaran(): HasMany
     {
         return $this->hasMany(Pelanggaran::class);
+    }
+
+    public function pengajuanPenguranganPoin(): HasMany
+    {
+        return $this->hasMany(PengajuanPenguranganPoin::class);
     }
 }
