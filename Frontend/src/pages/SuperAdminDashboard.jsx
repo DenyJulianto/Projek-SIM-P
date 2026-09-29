@@ -11,9 +11,17 @@ import GuruImportModal from '../components/GuruImportModal'
 import SiswaImportModal from '../components/SiswaImportModal'
 import LogoHorizontal from '../components/LogoHorizontal'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
+import NonaktifkanSekolahModal from '../components/NonaktifkanSekolahModal'
+import Pagination from '../components/Pagination'
+import GuruDetailPage from './GuruDetailPage'
+import SekolahDetailPage from './SekolahDetailPage'
+import SekolahGuruListPage from './SekolahGuruListPage'
+import SekolahSiswaListPage from './SekolahSiswaListPage'
+import SiswaDetailPage from './SiswaDetailPage'
 import SekolahFormModal from '../components/SekolahFormModal'
 import SekolahImportModal from '../components/SekolahImportModal'
 import { useAuth } from '../lib/AuthContext'
+import { usePaginatedDirectory } from '../lib/usePaginatedDirectory'
 import { api } from '../lib/api'
 
 // Vite tidak meresolusi path relatif bawaan Leaflet untuk ikon marker
@@ -931,64 +939,19 @@ function formatNumber(value) {
 /* Direktori (sekolah / guru / siswa)                                     */
 /* -------------------------------------------------------------------- */
 
-function usePaginatedDirectory(fetcher, extraFilters) {
-  const [items, setItems] = useState([])
-  const [meta, setMeta] = useState({ current_page: 1, last_page: 1, total: 0 })
-  const [page, setPage] = useState(1)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-
-  function load(filters) {
-    setLoading(true)
-    setError('')
-    fetcher({ page, per_page: 20, ...filters })
-      .then((res) => {
-        setItems(res.data)
-        setMeta({ current_page: res.current_page, last_page: res.last_page, total: res.total })
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false))
-  }
-
-  useEffect(() => {
-    load(extraFilters)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page])
-
-  return { items, meta, page, setPage, loading, error, reload: load }
-}
-
-function Pagination({ meta, page, setPage }) {
-  if (meta.last_page <= 1) return null
-  return (
-    <div className="flex items-center justify-between px-4 py-3 border-t border-navy/5 text-xs text-navy/50">
-      <span>
-        Halaman {meta.current_page} dari {meta.last_page} ({meta.total} data)
-      </span>
-      <div className="flex items-center gap-1">
-        <button
-          onClick={() => setPage((p) => Math.max(1, p - 1))}
-          disabled={meta.current_page === 1}
-          className="h-7 w-7 rounded-full flex items-center justify-center border border-navy/10 disabled:opacity-30 hover:bg-navy/5"
-        >
-          ‹
-        </button>
-        <button
-          onClick={() => setPage((p) => Math.min(meta.last_page, p + 1))}
-          disabled={meta.current_page === meta.last_page}
-          className="h-7 w-7 rounded-full flex items-center justify-center border border-navy/10 disabled:opacity-30 hover:bg-navy/5"
-        >
-          ›
-        </button>
-      </div>
-    </div>
-  )
-}
+// usePaginatedDirectory dan Pagination sekarang tinggal di lib/components
+// bersama supaya bisa dipakai juga oleh halaman drill-down guru/siswa per
+// sekolah (SekolahGuruListPage/SekolahSiswaListPage), bukan cuma di sini.
 
 function SekolahNasional() {
   const [search, setSearch] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [showImport, setShowImport] = useState(false)
+  const [detailSekolah, setDetailSekolah] = useState(null)
+  const [guruListSekolah, setGuruListSekolah] = useState(null)
+  const [siswaListSekolah, setSiswaListSekolah] = useState(null)
+  const [detailGuru, setDetailGuru] = useState(null)
+  const [detailSiswa, setDetailSiswa] = useState(null)
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState('')
   const { items, meta, page, setPage, loading, error, reload } = usePaginatedDirectory(
@@ -1016,6 +979,66 @@ function SekolahNasional() {
     } finally {
       setExporting(false)
     }
+  }
+
+  if (detailGuru) {
+    return (
+      <GuruDetailPage
+        guru={detailGuru}
+        onBack={() => setDetailGuru(null)}
+        backLabel={`Guru di ${guruListSekolah?.nama_sekolah ?? ''}`}
+        onUpdated={setDetailGuru}
+        onDeleted={() => setDetailGuru(null)}
+      />
+    )
+  }
+
+  if (detailSiswa) {
+    return (
+      <SiswaDetailPage
+        siswa={detailSiswa}
+        onBack={() => setDetailSiswa(null)}
+        backLabel={`Siswa di ${siswaListSekolah?.nama_sekolah ?? ''}`}
+        onUpdated={setDetailSiswa}
+        onDeleted={() => setDetailSiswa(null)}
+      />
+    )
+  }
+
+  if (guruListSekolah) {
+    return (
+      <SekolahGuruListPage
+        sekolah={guruListSekolah}
+        onBack={() => setGuruListSekolah(null)}
+        onSelectGuru={setDetailGuru}
+      />
+    )
+  }
+
+  if (siswaListSekolah) {
+    return (
+      <SekolahSiswaListPage
+        sekolah={siswaListSekolah}
+        onBack={() => setSiswaListSekolah(null)}
+        onSelectSiswa={setDetailSiswa}
+      />
+    )
+  }
+
+  if (detailSekolah) {
+    return (
+      <SekolahDetailPage
+        sekolah={detailSekolah}
+        onBack={() => setDetailSekolah(null)}
+        onViewGuru={() => setGuruListSekolah(detailSekolah)}
+        onViewSiswa={() => setSiswaListSekolah(detailSekolah)}
+        onUpdated={setDetailSekolah}
+        onDeleted={() => {
+          setDetailSekolah(null)
+          reload(search ? { 'filter[nama_sekolah]': search } : {})
+        }}
+      />
+    )
   }
 
   return (
@@ -1080,50 +1103,68 @@ function SekolahNasional() {
             <tr className="bg-navy/5 text-navy/60 text-xs uppercase text-left">
               <th className="px-4 py-3 whitespace-nowrap">Nama Sekolah</th>
               <th className="px-4 py-3 whitespace-nowrap">NPSN</th>
-              <th className="px-4 py-3 whitespace-nowrap">Jenjang</th>
               <th className="px-4 py-3 whitespace-nowrap">Provinsi</th>
-              <th className="px-4 py-3 whitespace-nowrap">Jumlah Guru</th>
-              <th className="px-4 py-3 whitespace-nowrap">Jumlah Siswa</th>
+              <th className="px-4 py-3 whitespace-nowrap">Link</th>
               <th className="px-4 py-3 whitespace-nowrap">Status</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-navy/40">
+                <td colSpan={5} className="px-4 py-6 text-center text-navy/40">
                   Memuat...
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-navy/40">
+                <td colSpan={5} className="px-4 py-6 text-center text-navy/40">
                   Tidak ada sekolah yang cocok.
                 </td>
               </tr>
             ) : (
-              items.map((item) => (
-                <tr key={item.id} className="border-t border-navy/5">
-                  <td className="px-4 py-3 font-medium text-navy whitespace-nowrap">
-                    {item.nama_sekolah}
-                  </td>
-                  <td className="px-4 py-3 text-navy/70 whitespace-nowrap">{item.npsn || '-'}</td>
-                  <td className="px-4 py-3 text-navy/70 whitespace-nowrap">{item.jenjang || '-'}</td>
-                  <td className="px-4 py-3 text-navy/70 whitespace-nowrap">{item.provinsi || '-'}</td>
-                  <td className="px-4 py-3 text-navy/70 whitespace-nowrap">{item.jumlah_guru}</td>
-                  <td className="px-4 py-3 text-navy/70 whitespace-nowrap">{item.jumlah_siswa}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <span
-                      className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                        item.status === 'active'
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-navy/10 text-navy/60'
-                      }`}
-                    >
-                      {item.status}
-                    </span>
-                  </td>
-                </tr>
-              ))
+              items.map((item) => {
+                const domain = item.domains?.[0]?.domain
+                return (
+                  <tr key={item.id} className="border-t border-navy/5">
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <button
+                        type="button"
+                        onClick={() => setDetailSekolah(item)}
+                        className="font-medium text-navy hover:text-emerald-700 hover:underline text-left"
+                      >
+                        {item.nama_sekolah}
+                      </button>
+                    </td>
+                    <td className="px-4 py-3 text-navy/70 whitespace-nowrap">{item.npsn || '-'}</td>
+                    <td className="px-4 py-3 text-navy/70 whitespace-nowrap">{item.provinsi || '-'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {domain ? (
+                        <a
+                          href={`${window.location.protocol}//${domain}${window.location.port ? `:${window.location.port}` : ''}/`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs font-semibold text-emerald-700 hover:underline"
+                        >
+                          {domain}
+                        </a>
+                      ) : (
+                        <span className="text-xs text-navy/30">-</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span
+                        className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                          item.status === 'active'
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : 'bg-navy/10 text-navy/60'
+                        }`}
+                      >
+                        {item.status}
+                      </span>
+                    </td>
+                  </tr>
+                )
+              })
             )}
           </tbody>
         </table>
@@ -1150,6 +1191,7 @@ function GuruDirectoryNasional() {
   const [showImport, setShowImport] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState('')
+  const [detailGuru, setDetailGuru] = useState(null)
   const { items, meta, page, setPage, loading, error, reload } = usePaginatedDirectory(
     api.getGuruDirectoryNasional
   )
@@ -1177,6 +1219,20 @@ function GuruDirectoryNasional() {
     } finally {
       setExporting(false)
     }
+  }
+
+  if (detailGuru) {
+    return (
+      <GuruDetailPage
+        guru={detailGuru}
+        onBack={() => setDetailGuru(null)}
+        onUpdated={setDetailGuru}
+        onDeleted={() => {
+          setDetailGuru(null)
+          reload(currentFilters())
+        }}
+      />
+    )
   }
 
   return (
@@ -1241,10 +1297,7 @@ function GuruDirectoryNasional() {
           <thead>
             <tr className="bg-navy/5 text-navy/60 text-xs uppercase text-left">
               <th className="px-4 py-3 whitespace-nowrap">Nama Lengkap</th>
-              <th className="px-4 py-3 whitespace-nowrap">NIP/NUPTK</th>
               <th className="px-4 py-3 whitespace-nowrap">Jabatan</th>
-              <th className="px-4 py-3 whitespace-nowrap">Mata Pelajaran</th>
-              <th className="px-4 py-3 whitespace-nowrap">Status Kepegawaian</th>
               <th className="px-4 py-3 whitespace-nowrap">Sekolah</th>
               <th className="px-4 py-3 whitespace-nowrap">Status</th>
             </tr>
@@ -1252,33 +1305,30 @@ function GuruDirectoryNasional() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-navy/40">
+                <td colSpan={4} className="px-4 py-6 text-center text-navy/40">
                   Memuat...
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-navy/40">
+                <td colSpan={4} className="px-4 py-6 text-center text-navy/40">
                   Tidak ada data guru yang cocok.
                 </td>
               </tr>
             ) : (
               items.map((item) => (
                 <tr key={`${item.sekolah_id}-${item.guru_id}`} className="border-t border-navy/5">
-                  <td className="px-4 py-3 font-medium text-navy whitespace-nowrap">
-                    {item.nama}
-                    {item.gelar ? `, ${item.gelar}` : ''}
-                  </td>
-                  <td className="px-4 py-3 text-navy/70 whitespace-nowrap">
-                    {item.nip || '-'} / {item.nuptk || '-'}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <button
+                      type="button"
+                      onClick={() => setDetailGuru(item)}
+                      className="font-medium text-navy hover:text-emerald-700 hover:underline text-left"
+                    >
+                      {item.nama}
+                      {item.gelar ? `, ${item.gelar}` : ''}
+                    </button>
                   </td>
                   <td className="px-4 py-3 text-navy/70 whitespace-nowrap">{item.jabatan || '-'}</td>
-                  <td className="px-4 py-3 text-navy/70 whitespace-nowrap">
-                    {item.mata_pelajaran || '-'}
-                  </td>
-                  <td className="px-4 py-3 text-navy/70 whitespace-nowrap">
-                    {item.status_kepegawaian || '-'}
-                  </td>
                   <td className="px-4 py-3 text-navy/70 whitespace-nowrap">
                     {item.sekolah?.nama_sekolah || '-'}
                   </td>
@@ -1316,6 +1366,7 @@ function SiswaDirectoryNasional() {
   const [showImport, setShowImport] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState('')
+  const [detailSiswa, setDetailSiswa] = useState(null)
   const { items, meta, page, setPage, loading, error, reload } = usePaginatedDirectory(
     api.getSiswaDirectoryNasional
   )
@@ -1340,6 +1391,20 @@ function SiswaDirectoryNasional() {
     } finally {
       setExporting(false)
     }
+  }
+
+  if (detailSiswa) {
+    return (
+      <SiswaDetailPage
+        siswa={detailSiswa}
+        onBack={() => setDetailSiswa(null)}
+        onUpdated={setDetailSiswa}
+        onDeleted={() => {
+          setDetailSiswa(null)
+          reload(currentFilters())
+        }}
+      />
+    )
   }
 
   return (
@@ -1397,9 +1462,7 @@ function SiswaDirectoryNasional() {
           <thead>
             <tr className="bg-navy/5 text-navy/60 text-xs uppercase text-left">
               <th className="px-4 py-3 whitespace-nowrap">Nama</th>
-              <th className="px-4 py-3 whitespace-nowrap">NIS</th>
               <th className="px-4 py-3 whitespace-nowrap">Kelas</th>
-              <th className="px-4 py-3 whitespace-nowrap">Tahun Masuk</th>
               <th className="px-4 py-3 whitespace-nowrap">Sekolah</th>
               <th className="px-4 py-3 whitespace-nowrap">Status</th>
             </tr>
@@ -1407,25 +1470,29 @@ function SiswaDirectoryNasional() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-navy/40">
+                <td colSpan={4} className="px-4 py-6 text-center text-navy/40">
                   Memuat...
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-navy/40">
+                <td colSpan={4} className="px-4 py-6 text-center text-navy/40">
                   Tidak ada data siswa yang cocok.
                 </td>
               </tr>
             ) : (
               items.map((item) => (
                 <tr key={`${item.sekolah_id}-${item.siswa_id}`} className="border-t border-navy/5">
-                  <td className="px-4 py-3 font-medium text-navy whitespace-nowrap">{item.nama}</td>
-                  <td className="px-4 py-3 text-navy/70 whitespace-nowrap">{item.nis}</td>
-                  <td className="px-4 py-3 text-navy/70 whitespace-nowrap">{item.kelas || '-'}</td>
-                  <td className="px-4 py-3 text-navy/70 whitespace-nowrap">
-                    {item.tahun_masuk || '-'}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <button
+                      type="button"
+                      onClick={() => setDetailSiswa(item)}
+                      className="font-medium text-navy hover:text-emerald-700 hover:underline text-left"
+                    >
+                      {item.nama}
+                    </button>
                   </td>
+                  <td className="px-4 py-3 text-navy/70 whitespace-nowrap">{item.kelas || '-'}</td>
                   <td className="px-4 py-3 text-navy/70 whitespace-nowrap">
                     {item.sekolah?.nama_sekolah || '-'}
                   </td>
@@ -1461,6 +1528,8 @@ function ManajemenSekolah() {
   const [busyId, setBusyId] = useState(null)
   const [error, setError] = useState('')
   const [confirmTarget, setConfirmTarget] = useState(null)
+  const [nonaktifTarget, setNonaktifTarget] = useState(null)
+  const [nonaktifError, setNonaktifError] = useState('')
   const { items, meta, page, setPage, loading, reload } = usePaginatedDirectory(api.getSekolahNasional)
 
   function handleFilter(e) {
@@ -1469,19 +1538,46 @@ function ManajemenSekolah() {
     reload(search ? { 'filter[nama_sekolah]': search } : {})
   }
 
+  function handleAksiClick(sekolah) {
+    if (sekolah.status === 'active') {
+      setNonaktifTarget(sekolah)
+    } else {
+      setConfirmTarget(sekolah)
+    }
+  }
+
+  // Mengaktifkan kembali tidak butuh alasan, jadi cukup pakai
+  // ConfirmActionModal generik.
   async function handleToggleStatus() {
     const sekolah = confirmTarget
-    const next = sekolah.status === 'active' ? 'inactive' : 'active'
 
     setBusyId(sekolah.id)
     setError('')
     try {
-      await api.updateSekolahStatus(sekolah.id, next)
+      await api.updateSekolahStatus(sekolah.id, 'active')
       setConfirmTarget(null)
       reload(search ? { 'filter[nama_sekolah]': search } : {})
     } catch (err) {
       setError(err.message)
       setConfirmTarget(null)
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  // Menonaktifkan WAJIB disertai alasan — dicatat di backend sebagai jejak
+  // audit kenapa akses login sekolah tsb dicabut.
+  async function handleNonaktifkan(alasan) {
+    const sekolah = nonaktifTarget
+
+    setBusyId(sekolah.id)
+    setNonaktifError('')
+    try {
+      await api.updateSekolahStatus(sekolah.id, 'inactive', alasan)
+      setNonaktifTarget(null)
+      reload(search ? { 'filter[nama_sekolah]': search } : {})
+    } catch (err) {
+      setNonaktifError(err.message)
     } finally {
       setBusyId(null)
     }
@@ -1528,19 +1624,20 @@ function ManajemenSekolah() {
               <th className="px-4 py-3 whitespace-nowrap">NPSN</th>
               <th className="px-4 py-3 whitespace-nowrap">Jenjang</th>
               <th className="px-4 py-3 whitespace-nowrap">Status</th>
+              <th className="px-4 py-3">Alasan Nonaktif</th>
               <th className="px-4 py-3 whitespace-nowrap">Aksi</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-navy/40">
+                <td colSpan={6} className="px-4 py-6 text-center text-navy/40">
                   Memuat...
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-navy/40">
+                <td colSpan={6} className="px-4 py-6 text-center text-navy/40">
                   Tidak ada sekolah yang cocok.
                 </td>
               </tr>
@@ -1563,9 +1660,12 @@ function ManajemenSekolah() {
                       {sekolah.status === 'active' ? 'Aktif' : 'Nonaktif'}
                     </span>
                   </td>
+                  <td className="px-4 py-3 text-navy/60 max-w-xs">
+                    {sekolah.status !== 'active' ? sekolah.alasan_nonaktif || '-' : '-'}
+                  </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <button
-                      onClick={() => setConfirmTarget(sekolah)}
+                      onClick={() => handleAksiClick(sekolah)}
                       disabled={busyId === sekolah.id}
                       className={`text-xs font-semibold px-3 py-1.5 rounded-full border disabled:opacity-50 ${
                         sekolah.status === 'active'
@@ -1590,17 +1690,26 @@ function ManajemenSekolah() {
 
       {confirmTarget && (
         <ConfirmActionModal
-          title={confirmTarget.status === 'active' ? 'Nonaktifkan sekolah ini?' : 'Aktifkan sekolah ini?'}
-          message={
-            confirmTarget.status === 'active'
-              ? `"${confirmTarget.nama_sekolah}" tidak akan bisa login ke sistem sampai diaktifkan kembali.`
-              : `"${confirmTarget.nama_sekolah}" akan bisa login ke sistem kembali.`
-          }
-          confirmLabel={confirmTarget.status === 'active' ? 'Ya, Nonaktifkan' : 'Ya, Aktifkan'}
-          tone={confirmTarget.status === 'active' ? 'danger' : 'success'}
+          title="Aktifkan sekolah ini?"
+          message={`"${confirmTarget.nama_sekolah}" akan bisa login ke sistem kembali.`}
+          confirmLabel="Ya, Aktifkan"
+          tone="success"
           loading={busyId === confirmTarget.id}
           onConfirm={handleToggleStatus}
           onClose={() => setConfirmTarget(null)}
+        />
+      )}
+
+      {nonaktifTarget && (
+        <NonaktifkanSekolahModal
+          sekolah={nonaktifTarget}
+          loading={busyId === nonaktifTarget.id}
+          error={nonaktifError}
+          onConfirm={handleNonaktifkan}
+          onClose={() => {
+            setNonaktifTarget(null)
+            setNonaktifError('')
+          }}
         />
       )}
     </div>

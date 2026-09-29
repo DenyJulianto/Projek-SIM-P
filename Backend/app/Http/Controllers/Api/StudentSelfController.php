@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Absensi;
 use App\Models\JadwalPelajaran;
 use App\Models\Materi;
+use App\Models\Pelanggaran;
 use App\Models\Prestasi;
 use App\Models\Siswa;
 use App\Models\Tagihan;
@@ -157,6 +158,17 @@ class StudentSelfController extends Controller
             ->get();
 
         return response()->json($prestasi);
+    }
+
+    public function pelanggaran(Request $request): JsonResponse
+    {
+        $siswa = $this->siswaFor($request);
+
+        $pelanggaran = Pelanggaran::where('siswa_id', $siswa->id)
+            ->orderByDesc('tanggal')
+            ->get();
+
+        return response()->json($pelanggaran);
     }
 
     public function submitPrestasi(Request $request): JsonResponse

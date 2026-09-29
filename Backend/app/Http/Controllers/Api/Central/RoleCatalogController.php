@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Sekolah;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 
@@ -44,6 +45,11 @@ class RoleCatalogController extends Controller
      * @return array<string, int> nama role => jumlah pengguna di seluruh sekolah
      */
     private function nationalUsage(): array
+    {
+        return Cache::remember('super-admin:role-national-usage', 60, fn () => $this->computeNationalUsage());
+    }
+
+    private function computeNationalUsage(): array
     {
         $totals = [];
 

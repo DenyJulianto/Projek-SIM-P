@@ -2,6 +2,7 @@ import logoLambang from '../assets/logo-sim-lambang.png'
 import { useEffect, useRef, useState } from 'react'
 import ComingSoon from '../components/ComingSoon'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
+import NotifBell from '../components/NotifBell'
 import { useAuth } from '../lib/AuthContext'
 import { api, BASE_URL } from '../lib/api'
 import MyProfile from './MyProfile'
@@ -36,15 +37,13 @@ const MENU_GROUPS = [
     section: 'Kesiswaan',
     items: [
       { key: 'prestasi', label: 'Prestasi Saya', icon: TrophyIcon },
+      { key: 'pelanggaran', label: 'Pelanggaran Saya', icon: ShieldIcon },
       { key: 'ekstrakurikuler', label: 'Ekstrakurikuler', icon: StarIcon },
     ],
   },
   {
     section: null,
-    items: [
-      { key: 'pengumuman', label: 'Pengumuman', icon: MegaphoneIcon },
-      { key: 'notifikasi', label: 'Notifikasi', icon: BellIcon },
-    ],
+    items: [{ key: 'pengumuman', label: 'Pengumuman', icon: MegaphoneIcon }],
   },
 ]
 
@@ -181,14 +180,7 @@ export default function SiswaDashboard() {
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0">
-          <button
-            onClick={() => goTo('notifikasi')}
-            className={`h-9 w-9 rounded-full flex items-center justify-center transition-colors ${
-              view === 'notifikasi' ? 'bg-gold text-navy' : 'text-white/60 hover:bg-white/10 hover:text-white'
-            }`}
-          >
-            <BellIcon className="h-4.5 w-4.5" />
-          </button>
+          <NotifBell />
 
           <button
             onClick={() => goTo('profile')}
@@ -245,6 +237,7 @@ export default function SiswaDashboard() {
         {view === 'tagihan' && <TagihanSayaView onBack={() => setView('home')} />}
         {view === 'saldo' && <SaldoSayaView onBack={() => setView('home')} />}
         {view === 'prestasi' && <PrestasiSayaView onBack={() => setView('home')} />}
+        {view === 'pelanggaran' && <PelanggaranSayaView onBack={() => setView('home')} />}
         {view === 'materi' && <MateriSayaView onBack={() => setView('home')} />}
         {view === 'tugas' && <TugasSayaView onBack={() => setView('home')} />}
         {view === 'ujian' && <UjianSayaView onBack={() => setView('home')} />}
@@ -1612,6 +1605,85 @@ function PrestasiSayaView({ onBack }) {
   )
 }
 
+const PELANGGARAN_TINGKAT_STYLE = {
+  ringan: { label: 'Ringan', badge: 'bg-amber-100 text-amber-700' },
+  sedang: { label: 'Sedang', badge: 'bg-orange-100 text-orange-700' },
+  berat: { label: 'Berat', badge: 'bg-red-100 text-red-600' },
+}
+
+function PelanggaranSayaView({ onBack }) {
+  const [pelanggaran, setPelanggaran] = useState(null)
+  const [siswa, setSiswa] = useState(null)
+
+  useEffect(() => {
+    api.getMySiswaPelanggaran().then(setPelanggaran).catch(() => setPelanggaran([]))
+    api.getMySiswaProfil().then(setSiswa).catch(() => {})
+  }, [])
+
+  return (
+    <div>
+      <LearningHeaderCard
+        onBack={onBack}
+        icon={ShieldIcon}
+        title="Pelanggaran Saya"
+        subtitle="Catatan pelanggaran dan sisa poin kedisiplinanmu di sekolah."
+        tagline={
+          <>
+            Jaga Sikap,
+            <br />
+            Jaga Poin
+            <br />
+            Kedisiplinanmu
+          </>
+        }
+      />
+
+      <div className="bg-white rounded-2xl border border-navy/10 p-5 mb-4">
+        <p className="text-xs font-semibold text-navy/50 uppercase tracking-wide mb-1">
+          Sisa Poin Kedisiplinan
+        </p>
+        <p className="text-3xl font-extrabold text-navy">{siswa?.poin_disiplin ?? '-'}</p>
+      </div>
+
+      <p className="text-sm font-bold text-navy mb-3">Riwayat Pelanggaran</p>
+
+      {pelanggaran && pelanggaran.length > 0 && (
+        <div className="space-y-3">
+          {pelanggaran.map((p) => {
+            const style = PELANGGARAN_TINGKAT_STYLE[p.tingkat] ?? PELANGGARAN_TINGKAT_STYLE.ringan
+            return (
+              <div key={p.id} className="bg-white rounded-2xl border border-navy/10 p-5">
+                <div className="flex items-start justify-between mb-2">
+                  <p className="font-bold text-navy">{p.jenis}</p>
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${style.badge}`}>
+                    {style.label}
+                  </span>
+                </div>
+                <p className="text-xs text-navy/40 mb-2">
+                  {new Date(p.tanggal).toLocaleDateString('id-ID', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                  })}
+                </p>
+                {p.keterangan && <p className="text-sm text-navy/60">{p.keterangan}</p>}
+                {p.tindakan && (
+                  <p className="text-xs text-navy/40 mt-1">Tindakan: {p.tindakan}</p>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {pelanggaran && pelanggaran.length === 0 && (
+        <EmptyState text="Tidak ada catatan pelanggaran. Pertahankan!" />
+      )}
+      {pelanggaran === null && <EmptyState text="Memuat..." />}
+    </div>
+  )
+}
+
 function DeletePrestasiButton({ prestasi, onDeleted }) {
   const [busy, setBusy] = useState(false)
 
@@ -2802,6 +2874,14 @@ function TrophyIcon(props) {
   )
 }
 
+function ShieldIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z" />
+    </svg>
+  )
+}
+
 
 function ProfileIcon(props) {
   return (
@@ -2821,14 +2901,6 @@ function MegaphoneIcon(props) {
   )
 }
 
-function BellIcon(props) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M6 8a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z" />
-      <path d="M10 20a2 2 0 0 0 4 0" />
-    </svg>
-  )
-}
 
 function LogoutIcon(props) {
   return (

@@ -58,10 +58,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/direktori-guru/import', [GuruDirectoryController::class, 'import']);
         Route::get('/direktori-guru/export', [GuruDirectoryController::class, 'export']);
         Route::get('/direktori-guru', [GuruDirectoryController::class, 'index']);
+        Route::get('/direktori-guru/{sekolah}/{guruId}/alamat', [GuruDirectoryController::class, 'alamat']);
+        Route::patch('/direktori-guru/{sekolah}/{guruId}', [GuruDirectoryController::class, 'update']);
+        Route::delete('/direktori-guru/{sekolah}/{guruId}', [GuruDirectoryController::class, 'destroy']);
         Route::get('/direktori-siswa/import-template', [SiswaDirectoryController::class, 'importTemplate']);
         Route::post('/direktori-siswa/import', [SiswaDirectoryController::class, 'import']);
         Route::get('/direktori-siswa/export', [SiswaDirectoryController::class, 'export']);
         Route::get('/direktori-siswa', [SiswaDirectoryController::class, 'index']);
+        Route::get('/direktori-siswa/{sekolah}/{siswaId}/wali', [SiswaDirectoryController::class, 'wali']);
+        Route::get('/direktori-siswa/{sekolah}/{siswaId}/alamat', [SiswaDirectoryController::class, 'alamat']);
+        Route::patch('/direktori-siswa/{sekolah}/{siswaId}', [SiswaDirectoryController::class, 'update']);
+        Route::delete('/direktori-siswa/{sekolah}/{siswaId}', [SiswaDirectoryController::class, 'destroy']);
         Route::get('/sinkronisasi/log', [SchoolSyncController::class, 'log']);
         Route::get('/sinkronisasi/konflik', [SchoolSyncController::class, 'conflicts']);
         Route::post('/sekolah/{sekolah}/sinkronisasi', [SchoolSyncController::class, 'sync']);

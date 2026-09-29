@@ -20,6 +20,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Spatie\Activitylog\Models\Activity;
 use Symfony\Component\HttpFoundation\Response;
@@ -155,17 +156,19 @@ class PenerbitanRaporController extends Controller
         $siswaList = $this->daftarSiswa($request, $ta);
         $analisis = $this->analisis($ta, $semester, $request->filled('kelas_id') ? $request->integer('kelas_id') : null);
         $rapor = $this->raporPeriode($ta, $semester, $siswaList->pluck('id'));
+        $penerbitanExisting = $this->penerbitanPeriode($ta, $semester, $siswaList->pluck('id'));
+        $jumlahNilaiPerSiswa = $this->jumlahNilaiPeriode($ta, $semester, $siswaList->pluck('id'));
 
         $dibuat = 0;
         $dilewati = [];
         foreach ($siswaList as $s) {
-            $lama = PenerbitanRapor::where(['siswa_id' => $s->id, 'tahun_ajaran_id' => $ta->id, 'semester' => $semester])->first();
+            $lama = $penerbitanExisting->get($s->id);
             if ($lama?->status === 'diterbitkan') {
                 $dilewati[] = "{$s->nama}: sudah diterbitkan (cabut terlebih dahulu bila perlu digenerate ulang).";
 
                 continue;
             }
-            $masalah = collect($this->validasi($s, $ta, $semester, $rapor->get($s->id), $analisis[$s->kelas_id] ?? null))->firstWhere('blokir_generate', true);
+            $masalah = collect($this->validasi($s, $ta, $semester, $rapor->get($s->id), $analisis[$s->kelas_id] ?? null, $jumlahNilaiPerSiswa->get($s->id, 0)))->firstWhere('blokir_generate', true);
             if ($masalah) {
                 $dilewati[] = "{$s->nama}: {$masalah['pesan']}";
 
@@ -197,12 +200,14 @@ class PenerbitanRaporController extends Controller
     {
         [$ta, $semester] = $this->konteks($request);
         $siswaList = $this->daftarSiswa($request, $ta);
+        $penerbitanExisting = $this->penerbitanPeriode($ta, $semester, $siswaList->pluck('id'));
+        $raporMap = $this->raporPeriode($ta, $semester, $siswaList->pluck('id'));
 
         $diajukan = 0;
         $dilewati = [];
         foreach ($siswaList as $s) {
-            $p = PenerbitanRapor::where(['siswa_id' => $s->id, 'tahun_ajaran_id' => $ta->id, 'semester' => $semester])->first();
-            $rapor = $this->raporPeriode($ta, $semester, collect([$s->id]))->get($s->id);
+            $p = $penerbitanExisting->get($s->id);
+            $rapor = $raporMap->get($s->id);
             if (! $p || $p->status === 'diterbitkan') {
                 $dilewati[] = "{$s->nama}: ".($p ? 'sudah diterbitkan.' : 'belum digenerate.');
 
@@ -233,6 +238,7 @@ class PenerbitanRaporController extends Controller
         ]);
         $siswaList = $this->daftarSiswa($request, $ta);
         $rapor = $this->raporPeriode($ta, $semester, $siswaList->pluck('id'));
+        $penerbitanExisting = $this->penerbitanPeriode($ta, $semester, $siswaList->pluck('id'));
 
         $diproses = 0;
         $dilewati = [];
@@ -249,7 +255,7 @@ class PenerbitanRaporController extends Controller
                 'catatan' => $in['catatan'] ?? null,
                 'tanggal_keputusan' => now(),
             ]);
-            $p = PenerbitanRapor::where(['siswa_id' => $s->id, 'tahun_ajaran_id' => $ta->id, 'semester' => $semester])->first();
+            $p = $penerbitanExisting->get($s->id);
             if ($p) {
                 $catatan = ! empty($in['catatan']) ? " Catatan: {$in['catatan']}" : '';
                 $this->log($request, $p, $in['aksi'] === 'sahkan' ? 'approved' : 'rejected', ($in['aksi'] === 'sahkan' ? 'Mengesahkan' : 'Menolak')." rapor {$s->nama} ({$ta->nama} {$semester}).{$catatan}", $ta, $semester);
@@ -267,11 +273,13 @@ class PenerbitanRaporController extends Controller
         $siswaList = $this->daftarSiswa($request, $ta);
         $analisis = $this->analisis($ta, $semester, $request->filled('kelas_id') ? $request->integer('kelas_id') : null);
         $rapor = $this->raporPeriode($ta, $semester, $siswaList->pluck('id'));
+        $penerbitanExisting = $this->penerbitanPeriode($ta, $semester, $siswaList->pluck('id'));
+        $jumlahNilaiPerSiswa = $this->jumlahNilaiPeriode($ta, $semester, $siswaList->pluck('id'));
 
         $terbit = 0;
         $dilewati = [];
         foreach ($siswaList as $s) {
-            $p = PenerbitanRapor::where(['siswa_id' => $s->id, 'tahun_ajaran_id' => $ta->id, 'semester' => $semester])->first();
+            $p = $penerbitanExisting->get($s->id);
             if (! $p) {
                 $dilewati[] = "{$s->nama}: belum digenerate.";
 
@@ -282,7 +290,7 @@ class PenerbitanRaporController extends Controller
 
                 continue;
             }
-            $masalah = collect($this->validasi($s, $ta, $semester, $rapor->get($s->id), $analisis[$s->kelas_id] ?? null))->where('blokir_terbit', true);
+            $masalah = collect($this->validasi($s, $ta, $semester, $rapor->get($s->id), $analisis[$s->kelas_id] ?? null, $jumlahNilaiPerSiswa->get($s->id, 0)))->where('blokir_terbit', true);
             if ($masalah->isNotEmpty()) {
                 $dilewati[] = "{$s->nama}: ".$masalah->pluck('pesan')->implode(' ');
 
@@ -432,6 +440,32 @@ class PenerbitanRaporController extends Controller
     }
 
     /**
+     * @return \Illuminate\Support\Collection<int, PenerbitanRapor> keyed by siswa_id
+     *
+     * Dipakai generate()/ajukan()/pengesahan()/terbitkan() supaya tidak
+     * masing-masing menjalankan ->where(...)->first() sendiri per siswa di
+     * dalam loop (N+1) — satu query untuk seluruh daftar siswa yang diproses.
+     */
+    private function penerbitanPeriode(TahunAjaran $ta, string $semester, Collection $siswaIds): Collection
+    {
+        return PenerbitanRapor::where('tahun_ajaran_id', $ta->id)->where('semester', $semester)->whereIn('siswa_id', $siswaIds)->get()->keyBy('siswa_id');
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, int> jumlah baris nilai per siswa_id
+     *
+     * Dipakai generate()/terbitkan() untuk mengisi parameter $jumlahNilai di
+     * validasi() tanpa query ->count() terpisah per siswa di dalam loop.
+     */
+    private function jumlahNilaiPeriode(TahunAjaran $ta, string $semester, Collection $siswaIds): Collection
+    {
+        return Nilai::whereIn('siswa_id', $siswaIds)->where('tahun_ajaran', $ta->nama)->whereRaw('lower(semester) = ?', [$semester])
+            ->select('siswa_id', DB::raw('count(*) as total'))
+            ->groupBy('siswa_id')
+            ->pluck('total', 'siswa_id');
+    }
+
+    /**
      * Ringkasan nilai & verifikasi per rombel dari data Monitoring Nilai.
      *
      * @return array<int, array{rows: Collection, total: int, terverifikasi: int}>
@@ -489,14 +523,19 @@ class PenerbitanRaporController extends Controller
      *
      * @return list<array{kode: string, pesan: string, blokir_generate: bool, blokir_terbit: bool}>
      */
-    private function validasi(Siswa $siswa, TahunAjaran $ta, string $semester, ?Rapor $rapor, ?array $analisis): array
+    /**
+     * @param  int|null  $jumlahNilai  Sudah dihitung di muka (lihat jumlahNilaiPeriode())
+     *                                 untuk pemanggilan massal; kalau null, dihitung
+     *                                 sendiri di sini (dipakai preview() untuk satu siswa saja).
+     */
+    private function validasi(Siswa $siswa, TahunAjaran $ta, string $semester, ?Rapor $rapor, ?array $analisis, ?int $jumlahNilai = null): array
     {
         $st = $this->statusSiswa($siswa->id, $analisis);
         $template = app(RaporTemplateSettings::class);
         $ada = fn (string $kode, string $pesan, bool $gen, bool $terbit) => ['kode' => $kode, 'pesan' => $pesan, 'blokir_generate' => $gen, 'blokir_terbit' => $terbit];
         $temuan = [];
 
-        $jumlahNilai = Nilai::where('siswa_id', $siswa->id)->where('tahun_ajaran', $ta->nama)->whereRaw('lower(semester) = ?', [$semester])->count();
+        $jumlahNilai ??= Nilai::where('siswa_id', $siswa->id)->where('tahun_ajaran', $ta->nama)->whereRaw('lower(semester) = ?', [$semester])->count();
         if ($jumlahNilai === 0) {
             $temuan[] = $ada('tanpa_nilai', 'Siswa belum memiliki nilai pada semester ini.', true, true);
         }

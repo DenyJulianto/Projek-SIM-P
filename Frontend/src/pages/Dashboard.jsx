@@ -1,38 +1,52 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import EditProfilModal from '../components/EditProfilModal'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import MiniCalendar from '../components/MiniCalendar'
 import { useAuth } from '../lib/AuthContext'
 import { api, BASE_URL } from '../lib/api'
-import AdminHome from './admin/AdminHome'
-import AttendanceRecap from './AttendanceRecap'
-import AuditLog from './AuditLog'
-import BackupRestore from './BackupRestore'
-import BendaharaDashboard from './BendaharaDashboard'
-import BkDashboard from './BkDashboard'
-import GuruManagement from './GuruManagement'
-import GuruMapelDashboard from './GuruMapelDashboard'
-import Integrations from './Integrations'
-import InventoryManagement from './InventoryManagement'
-import KelasManagement from './KelasManagement'
-import KesiswaanDashboard from './KesiswaanDashboard'
-import KurikulumDashboard from './KurikulumDashboard'
-import MyProfile from './MyProfile'
-import OrangTuaDashboard from './OrangTuaDashboard'
-import PrincipalDashboard from './PrincipalDashboard'
-import RoleManagement from './RoleManagement'
-import SiswaDashboard from './SiswaDashboard'
-import SiswaManagement from './SiswaManagement'
-import SinkronisasiData from './SinkronisasiData'
-import SuperAdminDashboard from './SuperAdminDashboard'
-import SuratArsipManagement from './SuratArsipManagement'
-import SystemConfig from './SystemConfig'
-import TataUsahaDashboard from './TataUsahaDashboard'
-import UserManagement from './UserManagement'
-import WakasekDashboard from './WakasekDashboard'
-import WaliKelasDashboard from './WaliKelasDashboard'
 import Logo from '../components/Logo'
 import LogoHorizontal from '../components/LogoHorizontal'
+
+// Setiap role hanya butuh dashboard-nya sendiri, tapi sebelumnya semua 27
+// halaman ini (termasuk dashboard role lain yang tidak relevan) di-bundle
+// jadi satu file JS raksasa yang diunduh & di-parse SEMUA pengguna di awal,
+// apa pun rolenya — inilah penyebab utama "menu lambat dimuat". React.lazy
+// memecahnya jadi chunk terpisah per halaman, diunduh hanya saat dibuka.
+const AdminHome = lazy(() => import('./admin/AdminHome'))
+const AttendanceRecap = lazy(() => import('./AttendanceRecap'))
+const AuditLog = lazy(() => import('./AuditLog'))
+const BackupRestore = lazy(() => import('./BackupRestore'))
+const BendaharaDashboard = lazy(() => import('./BendaharaDashboard'))
+const BkDashboard = lazy(() => import('./BkDashboard'))
+const GuruManagement = lazy(() => import('./GuruManagement'))
+const GuruMapelDashboard = lazy(() => import('./GuruMapelDashboard'))
+const Integrations = lazy(() => import('./Integrations'))
+const InventoryManagement = lazy(() => import('./InventoryManagement'))
+const KelasManagement = lazy(() => import('./KelasManagement'))
+const KesiswaanDashboard = lazy(() => import('./KesiswaanDashboard'))
+const KurikulumDashboard = lazy(() => import('./KurikulumDashboard'))
+const MyProfile = lazy(() => import('./MyProfile'))
+const OrangTuaDashboard = lazy(() => import('./OrangTuaDashboard'))
+const PrincipalDashboard = lazy(() => import('./PrincipalDashboard'))
+const RoleManagement = lazy(() => import('./RoleManagement'))
+const SiswaDashboard = lazy(() => import('./SiswaDashboard'))
+const SiswaManagement = lazy(() => import('./SiswaManagement'))
+const SinkronisasiData = lazy(() => import('./SinkronisasiData'))
+const SuperAdminDashboard = lazy(() => import('./SuperAdminDashboard'))
+const SuratArsipManagement = lazy(() => import('./SuratArsipManagement'))
+const SystemConfig = lazy(() => import('./SystemConfig'))
+const TataUsahaDashboard = lazy(() => import('./TataUsahaDashboard'))
+const UserManagement = lazy(() => import('./UserManagement'))
+const WakasekDashboard = lazy(() => import('./WakasekDashboard'))
+const WaliKelasDashboard = lazy(() => import('./WaliKelasDashboard'))
+
+function PageLoadingFallback() {
+  return (
+    <div className="h-screen w-full flex items-center justify-center bg-white">
+      <p className="text-sm text-navy/40">Memuat...</p>
+    </div>
+  )
+}
 
 const MENU_GROUPS = [
   {
@@ -149,63 +163,40 @@ export default function Dashboard() {
     setView(item.key)
   }
 
-  if (isSuperAdmin()) {
-    return <SuperAdminDashboard />
-  }
+  const hasRole = (name) => user?.roles?.some((r) => r.name === name) && !isAdmin
 
-  const isPrincipal = user?.roles?.some((r) => r.name === 'Kepala Sekolah') && !isAdmin
-  if (isPrincipal) {
-    return <PrincipalDashboard />
-  }
+  const RoleDashboard = isSuperAdmin()
+    ? SuperAdminDashboard
+    : hasRole('Kepala Sekolah')
+      ? PrincipalDashboard
+      : hasRole('Tata Usaha')
+        ? TataUsahaDashboard
+        : hasRole('Kurikulum')
+          ? KurikulumDashboard
+          : hasRole('Kesiswaan')
+            ? KesiswaanDashboard
+            : hasRole('Siswa')
+              ? SiswaDashboard
+              : hasRole('Orang Tua')
+                ? OrangTuaDashboard
+                : hasRole('Guru BK')
+                  ? BkDashboard
+                  : hasRole('Bendahara')
+                    ? BendaharaDashboard
+                    : hasRole('Guru Mata Pelajaran')
+                      ? GuruMapelDashboard
+                      : hasRole('Wakil Kepala Sekolah')
+                        ? WakasekDashboard
+                        : hasRole('Wali Kelas')
+                          ? WaliKelasDashboard
+                          : null
 
-  const isTataUsaha = user?.roles?.some((r) => r.name === 'Tata Usaha') && !isAdmin
-  if (isTataUsaha) {
-    return <TataUsahaDashboard />
-  }
-
-  const isKurikulum = user?.roles?.some((r) => r.name === 'Kurikulum') && !isAdmin
-  if (isKurikulum) {
-    return <KurikulumDashboard />
-  }
-
-  const isKesiswaan = user?.roles?.some((r) => r.name === 'Kesiswaan') && !isAdmin
-  if (isKesiswaan) {
-    return <KesiswaanDashboard />
-  }
-
-  const isSiswa = user?.roles?.some((r) => r.name === 'Siswa') && !isAdmin
-  if (isSiswa) {
-    return <SiswaDashboard />
-  }
-
-  const isOrangTua = user?.roles?.some((r) => r.name === 'Orang Tua') && !isAdmin
-  if (isOrangTua) {
-    return <OrangTuaDashboard />
-  }
-
-  const isGuruBk = user?.roles?.some((r) => r.name === 'Guru BK') && !isAdmin
-  if (isGuruBk) {
-    return <BkDashboard />
-  }
-
-  const isBendahara = user?.roles?.some((r) => r.name === 'Bendahara') && !isAdmin
-  if (isBendahara) {
-    return <BendaharaDashboard />
-  }
-
-  const isGuruMapel = user?.roles?.some((r) => r.name === 'Guru Mata Pelajaran') && !isAdmin
-  if (isGuruMapel) {
-    return <GuruMapelDashboard />
-  }
-
-  const isWakasek = user?.roles?.some((r) => r.name === 'Wakil Kepala Sekolah') && !isAdmin
-  if (isWakasek) {
-    return <WakasekDashboard />
-  }
-
-  const isWaliKelas = user?.roles?.some((r) => r.name === 'Wali Kelas') && !isAdmin
-  if (isWaliKelas) {
-    return <WaliKelasDashboard />
+  if (RoleDashboard) {
+    return (
+      <Suspense fallback={<PageLoadingFallback />}>
+        <RoleDashboard />
+      </Suspense>
+    )
   }
 
   return (
@@ -300,6 +291,7 @@ export default function Dashboard() {
         </aside>
 
         <main className="flex-1 p-6 sm:p-8 overflow-y-auto">
+          <Suspense fallback={<p className="text-sm text-navy/40 text-center py-14">Memuat...</p>}>
           {view === 'siswa' ? (
             <SiswaManagement onBack={() => setView('home')} />
           ) : view === 'guru' ? (
@@ -475,6 +467,7 @@ export default function Dashboard() {
               </aside>
             </div>
           )}
+          </Suspense>
         </main>
 
       {editingProfil && (
