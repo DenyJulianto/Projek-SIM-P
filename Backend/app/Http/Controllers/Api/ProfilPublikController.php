@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Kegiatan;
 use App\Models\Pengumuman;
+use App\Models\Prestasi;
 use App\Settings\ProfilSekolahSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -109,5 +110,31 @@ class ProfilPublikController extends Controller
             ->paginate($request->integer('per_page', 10));
 
         return response()->json($kegiatan);
+    }
+
+    /**
+     * Prestasi siswa untuk landing page — hanya yang sudah diverifikasi, dan
+     * hanya kolom yang layak tampil publik (tanpa NIS, file bukti, dsb).
+     */
+    public function prestasi(Request $request): JsonResponse
+    {
+        $prestasi = Prestasi::query()
+            ->where('status', 'terverifikasi')
+            ->with('siswa:id,nama,kelas_id', 'siswa.kelas:id,nama_kelas')
+            ->orderByDesc('tanggal')
+            ->paginate($request->integer('per_page', 6))
+            ->through(fn (Prestasi $p) => [
+                'id' => $p->id,
+                'judul' => $p->judul,
+                'bidang' => $p->bidang,
+                'tingkat' => $p->tingkat,
+                'peringkat' => $p->peringkat,
+                'penyelenggara' => $p->penyelenggara,
+                'tanggal' => $p->tanggal?->toDateString(),
+                'nama_siswa' => $p->siswa?->nama,
+                'kelas' => $p->siswa?->kelas?->nama_kelas,
+            ]);
+
+        return response()->json($prestasi);
     }
 }

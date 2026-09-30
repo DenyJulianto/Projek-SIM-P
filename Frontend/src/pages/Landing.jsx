@@ -7,6 +7,7 @@ import Hero from '../components/Hero'
 import Kegiatan from '../components/Kegiatan'
 import Kontak from '../components/Kontak'
 import Pengumuman from '../components/Pengumuman'
+import Prestasi from '../components/Prestasi'
 import SuperAdminHeroIllustration from '../components/SuperAdminHeroIllustration'
 import TopBar from '../components/TopBar'
 import { api, IS_CENTRAL_DOMAIN } from '../lib/api'
@@ -461,6 +462,7 @@ function SekolahLanding() {
   const [profil, setProfil] = useState(null)
   const [pengumuman, setPengumuman] = useState(null)
   const [kegiatan, setKegiatan] = useState(null)
+  const [prestasi, setPrestasi] = useState(null)
   const [error, setError] = useState('')
 
   function loadProfil() {
@@ -471,6 +473,7 @@ function SekolahLanding() {
     loadProfil()
     api.getPengumuman().then(setPengumuman).catch(() => {})
     api.getKegiatan().then(setKegiatan).catch(() => {})
+    api.getPrestasiPublik().then(setPrestasi).catch(() => {})
   }, [])
 
   if (error) {
@@ -495,6 +498,7 @@ function SekolahLanding() {
       <Hero profil={profil} />
       <About profil={profil} onProfilUpdated={loadProfil} />
       <Kegiatan kegiatan={kegiatan} />
+      <Prestasi prestasi={prestasi} />
       <Pengumuman pengumuman={pengumuman} />
       <Kontak profil={profil} />
       <Footer profil={profil} />

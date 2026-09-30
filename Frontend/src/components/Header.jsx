@@ -2,6 +2,7 @@ const NAV_ITEMS = [
   { label: 'Beranda', href: '#beranda' },
   { label: 'Tentang Kami', href: '#tentang' },
   { label: 'Kegiatan', href: '#kegiatan' },
+  { label: 'Prestasi', href: '#prestasi' },
   { label: 'Pengumuman', href: '#pengumuman' },
   { label: 'Kontak', href: '#kontak' },
 ]

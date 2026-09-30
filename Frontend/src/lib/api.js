@@ -92,6 +92,7 @@ export const api = {
   getProfil: () => request('/public/profil'),
   getPengumuman: () => request('/public/pengumuman'),
   getKegiatan: () => request('/public/kegiatan'),
+  getPrestasiPublik: () => request('/public/prestasi'),
 
   login: (email, password) =>
     request(IS_CENTRAL_DOMAIN ? '/api/login' : '/login', {

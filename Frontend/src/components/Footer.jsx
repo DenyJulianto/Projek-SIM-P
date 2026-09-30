@@ -23,6 +23,7 @@ export default function Footer({ profil }) {
             <li><a href="#beranda" className="hover:text-gold">Beranda</a></li>
             <li><a href="#tentang" className="hover:text-gold">Tentang Kami</a></li>
             <li><a href="#kegiatan" className="hover:text-gold">Kegiatan</a></li>
+            <li><a href="#prestasi" className="hover:text-gold">Prestasi</a></li>
             <li><a href="#pengumuman" className="hover:text-gold">Pengumuman</a></li>
           </ul>
         </div>

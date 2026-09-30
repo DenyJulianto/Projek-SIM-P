@@ -139,8 +139,8 @@ Route::middleware([
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/verify-email', [AuthController::class, 'verifyEmail']);
     Route::post('/resend-verification-code', [AuthController::class, 'resendVerificationCode']);
-    Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
-    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:forgot-password');
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:reset-password');
 
     Route::get('avatar/{path}', [AvatarController::class, 'show'])->where('path', '.*');
     Route::get('sertifikat-staf-file/{path}', [StaffProfileController::class, 'showSertifikatFile'])->where('path', '.*');
@@ -158,6 +158,7 @@ Route::middleware([
         Route::get('/profil', [ProfilPublikController::class, 'profil']);
         Route::get('/pengumuman', [ProfilPublikController::class, 'pengumuman']);
         Route::get('/kegiatan', [ProfilPublikController::class, 'kegiatan']);
+        Route::get('/prestasi', [ProfilPublikController::class, 'prestasi']);
     });
 
     Route::middleware('auth:sanctum')->group(function () {
