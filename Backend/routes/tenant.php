@@ -76,6 +76,7 @@ use App\Http\Controllers\Api\KonfirmasiPembayaranController;
 use App\Http\Controllers\Api\KonselingController;
 use App\Http\Controllers\Api\KurikulumDashboardController;
 use App\Http\Controllers\Api\LaporanKeuanganController;
+use App\Http\Controllers\Api\LaporanTataUsahaController;
 use App\Http\Controllers\Api\MataPelajaranController;
 use App\Http\Controllers\Api\MateriController;
 use App\Http\Controllers\Api\NilaiController;
@@ -1076,6 +1077,13 @@ Route::middleware([
                 Route::get('penerimaan-harian', [LaporanKeuanganController::class, 'penerimaanHarian']);
                 Route::get('penerimaan-per-jenis', [LaporanKeuanganController::class, 'penerimaanPerJenis']);
             });
+        });
+
+        Route::middleware('permission:laporan.view')->prefix('laporan-tu')->group(function () {
+            Route::get('siswa', [LaporanTataUsahaController::class, 'siswa']);
+            Route::get('pegawai', [LaporanTataUsahaController::class, 'pegawai']);
+            Route::get('absensi', [LaporanTataUsahaController::class, 'absensi']);
+            Route::get('administrasi', [LaporanTataUsahaController::class, 'administrasi']);
         });
 
         // Kepegawaian: pengajuan (Tata Usaha / pegawai.manage) & persetujuan (Kepala Sekolah).
