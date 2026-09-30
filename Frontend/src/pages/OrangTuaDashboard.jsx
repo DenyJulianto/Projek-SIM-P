@@ -2,6 +2,7 @@ import logoLambang from '../assets/logo-sim-lambang.png'
 import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
+import { BellIcon as NotifBellIcon, JENIS_NOTIFIKASI, NotifikasiItem, useNotifikasi } from '../components/Notifikasi'
 import { useAuth } from '../lib/AuthContext'
 import { api, BASE_URL } from '../lib/api'
 import MyProfile from './MyProfile'
@@ -31,6 +32,7 @@ const MENU_GROUPS = [
     items: [
       { key: 'tugas', label: 'Tugas', icon: TaskIcon },
       { key: 'prestasi', label: 'Prestasi', icon: TrophyIcon },
+      { key: 'notifikasi', label: 'Notifikasi Anak', icon: NotifBellIcon },
     ],
   },
 ]
@@ -57,17 +59,24 @@ export default function OrangTuaDashboard() {
   const [selectedAnakId, setSelectedAnakId] = useState(null)
   const [openSection, setOpenSection] = useState(null)
   const [payTagihanId, setPayTagihanId] = useState(null)
-
-  useEffect(() => {
-    const activeGroup = MENU_GROUPS.find(
-      (group) => group.section && group.items.some((item) => item.key === view)
-    )
-    if (activeGroup) setOpenSection(activeGroup.section)
-  }, [view])
+  const notif = useNotifikasi()
 
   function toggleSection(section) {
     setOpenSection((prev) => (prev === section ? null : section))
   }
+
+  function bukaNotifikasi(n) {
+    notif.tandaiDibaca(n)
+    if (n.data?.siswa_id && (anakList || []).some((a) => a.id === n.data.siswa_id)) {
+      setSelectedAnakId(n.data.siswa_id)
+    }
+  }
+
+  const badgeNotif = notif.belumDibaca > 0 && (
+    <span className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-red-600 text-white text-[11px] font-bold flex items-center justify-center">
+      {notif.belumDibaca > 99 ? '99+' : notif.belumDibaca}
+    </span>
+  )
 
   function navigate(key) {
     setView(key)
@@ -134,6 +143,9 @@ export default function OrangTuaDashboard() {
                     }`}
                   >
                     {group.section}
+                    {notif.belumDibaca > 0 && group.items.some((item) => item.key === 'notifikasi') && (
+                      <span className="h-2 w-2 rounded-full bg-red-500" />
+                    )}
                     <ChevronIcon className={`h-3.5 w-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                   </button>
                   {isOpen && (
@@ -156,6 +168,7 @@ export default function OrangTuaDashboard() {
                             >
                               <Icon className="h-4.5 w-4.5 shrink-0" />
                               <span className="truncate min-w-0">{item.label}</span>
+                              {item.key === 'notifikasi' && badgeNotif}
                             </button>
                           )
                         })}
@@ -204,9 +217,14 @@ export default function OrangTuaDashboard() {
               onClick={() => navigate(item.key)}
               className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
                 active ? 'bg-white text-navy' : 'text-white/75 bg-white/10'
-              }`}
+              } ${item.key === 'notifikasi' ? 'inline-flex items-center gap-1.5' : ''}`}
             >
               {item.label}
+              {item.key === 'notifikasi' && notif.belumDibaca > 0 && (
+                <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center">
+                  {notif.belumDibaca}
+                </span>
+              )}
             </button>
           )
         })}
@@ -228,7 +246,7 @@ export default function OrangTuaDashboard() {
 
           {anakList !== null && anakList.length > 0 && (
             <>
-              {view !== 'home' && view !== 'profile' && view !== 'pengumuman' && anakList.length > 1 && (
+              {view !== 'home' && view !== 'profile' && view !== 'pengumuman' && view !== 'notifikasi' && anakList.length > 1 && (
                 <AnakSelector anakList={anakList} selectedAnakId={selectedAnakId} onChange={setSelectedAnakId} />
               )}
 
@@ -240,7 +258,12 @@ export default function OrangTuaDashboard() {
                   selectedAnakId={selectedAnakId}
                   onSelectAnak={setSelectedAnakId}
                   onNavigate={setView}
+                  notif={notif}
+                  onBukaNotifikasi={bukaNotifikasi}
                 />
+              )}
+              {view === 'notifikasi' && (
+                <NotifikasiAnakView notif={notif} onBuka={bukaNotifikasi} onBack={() => setView('home')} />
               )}
               {view === 'profil-anak' && <ProfilAnakView onBack={() => setView('home')} anak={anak} onNavigate={setView} />}
               {view === 'jadwal' && <JadwalAnakView onBack={() => setView('home')} anak={anak} />}
@@ -412,7 +435,7 @@ function attendanceVisual(status) {
   return { icon: DashIcon, className: 'bg-navy/5 text-navy/30', text: 'Belum' }
 }
 
-function OrangTuaHome({ user, anak, anakList, selectedAnakId, onSelectAnak, onNavigate }) {
+function OrangTuaHome({ user, anak, anakList, selectedAnakId, onSelectAnak, onNavigate, notif, onBukaNotifikasi }) {
   const [nilaiList, setNilaiList] = useState(null)
   const [absensiList, setAbsensiList] = useState(null)
   const [tagihanList, setTagihanList] = useState(null)
@@ -528,6 +551,8 @@ function OrangTuaHome({ user, anak, anakList, selectedAnakId, onSelectAnak, onNa
           onClick={() => onNavigate('pengumuman')}
         />
       </div>
+
+      <NotifikasiAnakCard notif={notif} onBuka={onBukaNotifikasi} onLihatSemua={() => onNavigate('notifikasi')} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
         <NilaiTrendCard data={trend} />
@@ -692,6 +717,108 @@ function PrestasiMiniCard({ prestasi, onNavigate }) {
         Lihat Semua Prestasi
       </button>
     </div>
+  )
+}
+
+const JENIS_NOTIFIKASI_ORTU = ['pelanggaran_siswa', 'pelanggaran_ujian']
+
+function NotifikasiAnakCard({ notif, onBuka, onLihatSemua }) {
+  const terbaru = (notif.daftar || []).slice(0, 3)
+
+  return (
+    <div className="bg-white/70 backdrop-blur-md rounded-2xl border border-white/60 shadow-sm p-5 mb-6">
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <div className="flex items-center gap-2.5">
+          <span
+            className={`h-9 w-9 rounded-full flex items-center justify-center ${
+              notif.belumDibaca > 0 ? 'bg-red-500 text-white' : 'bg-emerald-500 text-white'
+            }`}
+          >
+            <NotifBellIcon className="h-4.5 w-4.5" />
+          </span>
+          <h2 className="text-sm font-bold text-navy">Notifikasi Anak</h2>
+          {notif.belumDibaca > 0 && (
+            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-red-100 text-red-600">
+              {notif.belumDibaca} belum dibaca
+            </span>
+          )}
+        </div>
+        <button onClick={onLihatSemua} className="text-xs font-semibold text-emerald-700 hover:underline shrink-0">
+          Lihat semua →
+        </button>
+      </div>
+      {notif.daftar === null && <p className="text-sm text-navy/40 py-4 text-center">Memuat...</p>}
+      {notif.daftar !== null && terbaru.length === 0 && (
+        <p className="text-sm text-navy/40 py-4 text-center">Tidak ada catatan pelanggaran. Ananda baik-baik saja.</p>
+      )}
+      <div className="space-y-1.5">
+        {terbaru.map((n) => (
+          <NotifikasiItem key={n.id} n={n} onClick={onBuka} ringkas />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function NotifikasiAnakView({ notif, onBuka, onBack }) {
+  const [filter, setFilter] = useState('semua')
+  const daftar = (notif.daftar || []).filter((n) => {
+    if (filter === 'semua') return true
+    if (filter === 'belum') return !n.dibaca_at
+    return n.jenis === filter
+  })
+  const jumlahJenis = (jenis) => (notif.daftar || []).filter((n) => n.jenis === jenis).length
+
+  return (
+    <PageShell title="Notifikasi Anak" onBack={onBack}>
+      <div className="bg-white/70 backdrop-blur-md rounded-2xl border border-white/60 shadow-sm p-5">
+        <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+          <div className="flex gap-2 flex-wrap">
+            {[
+              ['semua', 'Semua'],
+              ['belum', `Belum dibaca${notif.belumDibaca ? ` (${notif.belumDibaca})` : ''}`],
+              ...JENIS_NOTIFIKASI_ORTU.map((key) => [
+                key,
+                `${JENIS_NOTIFIKASI[key].label}${jumlahJenis(key) ? ` (${jumlahJenis(key)})` : ''}`,
+              ]),
+            ].map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => setFilter(key)}
+                className={`text-xs font-semibold rounded-full px-3.5 py-1.5 transition-colors ${
+                  filter === key ? 'bg-navy text-white' : 'bg-navy/5 text-navy/60 hover:bg-navy/10'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {notif.belumDibaca > 0 && (
+            <button onClick={notif.tandaiSemuaDibaca} className="text-xs font-semibold text-emerald-700 hover:underline">
+              Tandai semua sudah dibaca
+            </button>
+          )}
+        </div>
+
+        {notif.daftar === null && <EmptyState text="Memuat..." />}
+        {notif.daftar !== null && daftar.length === 0 && (
+          <EmptyState
+            text={
+              filter === 'semua'
+                ? 'Belum ada notifikasi. Tidak ada catatan pelanggaran untuk ananda.'
+                : filter === 'belum'
+                  ? 'Semua notifikasi sudah dibaca.'
+                  : 'Belum ada notifikasi jenis ini.'
+            }
+          />
+        )}
+        <div className="space-y-1.5">
+          {daftar.map((n) => (
+            <NotifikasiItem key={n.id} n={n} onClick={onBuka} />
+          ))}
+        </div>
+      </div>
+    </PageShell>
   )
 }
 

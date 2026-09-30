@@ -297,35 +297,50 @@ class StudentSelfController extends Controller
      */
     private function beriTahuGuruPelanggaran(Ujian $ujian, Siswa $siswa, UjianAttempt $attempt, string $jenis): void
     {
-        $guruUserId = $ujian->guru?->user_id;
-        if (! $guruUserId) {
-            return;
-        }
-
         $keterangan = [
             'keluar_layar_penuh' => 'keluar dari layar penuh',
             'pindah_tab' => 'pindah ke tab lain',
             'pindah_jendela' => 'pindah ke jendela/aplikasi lain',
         ][$jenis];
         $kelas = $siswa->kelas?->nama_kelas;
+        $namaDanKelas = $siswa->nama.($kelas ? " ({$kelas})" : '');
+        $kunci = "pelanggaran_ujian:{$ujian->id}:{$siswa->id}";
+        $data = [
+            'ujian_id' => $ujian->id,
+            'siswa_id' => $siswa->id,
+            'kelas_id' => $ujian->kelas_id,
+            'mata_pelajaran_id' => $ujian->mata_pelajaran_id,
+            'jenis_terakhir' => $jenis,
+        ];
 
-        Notifikasi::updateOrCreate(
-            ['user_id' => $guruUserId, 'kunci' => "pelanggaran_ujian:{$ujian->id}:{$siswa->id}"],
-            [
-                'jenis' => 'pelanggaran_ujian',
-                'judul' => "{$siswa->nama} keluar dari halaman kuis",
-                'pesan' => $siswa->nama.($kelas ? " ({$kelas})" : '')." {$keterangan} saat mengerjakan \"{$ujian->judul}\". Total keluar {$attempt->pelanggaran}×.",
-                'data' => [
-                    'ujian_id' => $ujian->id,
-                    'siswa_id' => $siswa->id,
-                    'kelas_id' => $ujian->kelas_id,
-                    'mata_pelajaran_id' => $ujian->mata_pelajaran_id,
-                    'jenis_terakhir' => $jenis,
-                ],
-                'jumlah' => $attempt->pelanggaran,
-                'dibaca_at' => null,
-            ]
-        );
+        // Guru pembuat kuis dan wali kelas siswa.
+        $penerima = collect([$ujian->guru?->user_id, $siswa->kelas?->waliKelas?->user_id])->filter()->unique();
+        foreach ($penerima as $userId) {
+            Notifikasi::kirim(
+                $userId,
+                'pelanggaran_ujian',
+                $kunci,
+                "{$siswa->nama} keluar dari halaman kuis",
+                "{$namaDanKelas} {$keterangan} saat mengerjakan \"{$ujian->judul}\". Total keluar {$attempt->pelanggaran}×.",
+                $data,
+                $attempt->pelanggaran
+            );
+        }
+
+        // Orang tua / wali siswa.
+        $mapel = $ujian->mataPelajaran?->nama_mapel;
+        foreach ($siswa->walis()->pluck('users.id') as $userId) {
+            Notifikasi::kirim(
+                $userId,
+                'pelanggaran_ujian',
+                $kunci,
+                "Ananda {$siswa->nama} keluar dari halaman kuis",
+                "Ananda {$namaDanKelas} {$keterangan} saat mengerjakan kuis \"{$ujian->judul}\"".($mapel ? " ({$mapel})" : '').
+                    ". Total keluar {$attempt->pelanggaran}×.",
+                $data,
+                $attempt->pelanggaran
+            );
+        }
     }
 
     public function ujianJawab(Request $request, Ujian $ujian): JsonResponse

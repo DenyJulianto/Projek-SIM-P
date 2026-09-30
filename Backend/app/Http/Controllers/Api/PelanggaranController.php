@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Notifikasi;
 use App\Models\Pelanggaran;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class PelanggaranController extends Controller
 {
@@ -37,7 +39,43 @@ class PelanggaranController extends Controller
 
         activity()->causedBy($request->user())->log("Mencatat pelanggaran \"{$pelanggaran->jenis}\".");
 
+        $this->beriTahuOrangTua($pelanggaran);
+
         return response()->json($pelanggaran->load('siswa:id,nama,kelas_id'), 201);
+    }
+
+    /**
+     * Beri tahu orang tua / wali siswa bahwa anaknya tercatat melakukan
+     * pelanggaran tata tertib sekolah.
+     */
+    private function beriTahuOrangTua(Pelanggaran $pelanggaran): void
+    {
+        $siswa = $pelanggaran->siswa()->with('kelas:id,nama_kelas')->first();
+        if (! $siswa) {
+            return;
+        }
+
+        $kelas = $siswa->kelas?->nama_kelas;
+        $tanggal = Carbon::parse($pelanggaran->tanggal)->locale('id')->translatedFormat('l, j F Y');
+        $pesan = "Ananda {$siswa->nama}".($kelas ? " ({$kelas})" : '').
+            " tercatat melakukan pelanggaran {$pelanggaran->tingkat}: {$pelanggaran->jenis} pada {$tanggal}.".
+            ($pelanggaran->keterangan ? " Keterangan: {$pelanggaran->keterangan}." : '').
+            ($pelanggaran->tindakan ? " Tindakan: {$pelanggaran->tindakan}." : '');
+
+        foreach ($siswa->walis()->pluck('users.id') as $userId) {
+            Notifikasi::kirim(
+                $userId,
+                'pelanggaran_siswa',
+                "pelanggaran_siswa:{$pelanggaran->id}",
+                "Ananda {$siswa->nama} melakukan pelanggaran",
+                $pesan,
+                [
+                    'pelanggaran_id' => $pelanggaran->id,
+                    'siswa_id' => $siswa->id,
+                    'tingkat' => $pelanggaran->tingkat,
+                ]
+            );
+        }
     }
 
     public function update(Request $request, Pelanggaran $pelanggaran): JsonResponse
