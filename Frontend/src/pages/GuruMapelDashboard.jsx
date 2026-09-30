@@ -2,6 +2,7 @@ import logoLambang from '../assets/logo-sim-lambang.png'
 import { useEffect, useState } from 'react'
 import ComingSoon from '../components/ComingSoon'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
+import NotifikasiBell from '../components/NotifikasiBell'
 import { useAuth } from '../lib/AuthContext'
 import { api, BASE_URL } from '../lib/api'
 import KehadiranGuruMapel from './KehadiranGuruMapel'
@@ -61,6 +62,21 @@ export default function GuruMapelDashboard() {
   const [view, setView] = useState('home')
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const [openSection, setOpenSection] = useState(null)
+  // Ujian yang dibuka dari notifikasi: { ujianId, siswaId, n } (n = pemicu remount)
+  const [fokusUjian, setFokusUjian] = useState(null)
+
+  function bukaNotifikasi(n) {
+    if (n.jenis === 'pelanggaran_ujian' && n.data?.ujian_id) {
+      setFokusUjian({
+        ujianId: n.data.ujian_id,
+        siswaId: n.data.siswa_id,
+        kelasId: n.data.kelas_id,
+        mapelId: n.data.mata_pelajaran_id,
+        n: Date.now(),
+      })
+      setView('ujian')
+    }
+  }
 
   useEffect(() => {
     const activeGroup = MENU_GROUPS.find(
@@ -179,6 +195,9 @@ export default function GuruMapelDashboard() {
         <GuruMapelDoodleBackground />
 
         <div className="relative p-6 sm:p-8">
+          <div className="flex justify-end -mt-2 mb-3">
+            <NotifikasiBell onPilih={bukaNotifikasi} />
+          </div>
         {view === 'home' && <GuruMapelHome user={user} onNavigate={setView} />}
         {view === 'jadwal-mengajar' && <JadwalMengajarView onBack={() => setView('home')} />}
         {view === 'kelas-saya' && <KelasSayaView onBack={() => setView('home')} />}
@@ -191,7 +210,9 @@ export default function GuruMapelDashboard() {
         {view === 'input-rapor' && <InputRaporView onBack={() => setView('home')} />}
         {view === 'materi' && <MateriManagement onBack={() => setView('home')} />}
         {view === 'tugas' && <TugasPerKelas onBack={() => setView('home')} />}
-        {view === 'ujian' && <UjianPerKelas onBack={() => setView('home')} />}
+        {view === 'ujian' && (
+          <UjianPerKelas key={fokusUjian?.n ?? 0} fokus={fokusUjian} onBack={() => setView('home')} />
+        )}
         {view === 'pengumuman' && <PengumumanView onBack={() => setView('home')} />}
         {view === 'profile' && <MyProfile onBack={() => setView('home')} guruProfile roleLabel="Guru Mata Pelajaran" />}
         {COMING_SOON_LABEL[view] && (
@@ -1341,7 +1362,7 @@ export function MateriManagement({ onBack, bare }) {
 
 // Alur kelas -> mata pelajaran -> isi (dipakai Tugas & Ujian). `loadItems(guruId)` harus
 // mengembalikan promise berisi daftar item ber-kelas_id & mata_pelajaran_id.
-function KelasMapelFlow({ onBack, title, itemLabel, sumLabel, sumOf, loadItems, renderContent }) {
+function KelasMapelFlow({ onBack, title, itemLabel, sumLabel, sumOf, loadItems, renderContent, awal }) {
   const { guru, pilihan } = useGuruContext()
   const [kelasList, setKelasList] = useState(null)
   const [tugas, setTugas] = useState(null)
@@ -1351,6 +1372,15 @@ function KelasMapelFlow({ onBack, title, itemLabel, sumLabel, sumOf, loadItems, 
   useEffect(() => {
     api.getMyGuruKelas().then(setKelasList).catch(() => setKelasList([]))
   }, [])
+
+  // Dibuka dari notifikasi: langsung masuk ke kelas & mapel yang dituju.
+  useEffect(() => {
+    if (!awal?.kelasId || !pilihan || !kelasList) return
+    const p = pilihan.find((x) => x.kelas_id === awal.kelasId && x.mata_pelajaran_id === awal.mapelId)
+    if (!p) return
+    setKelas(kelasList.find((k) => k.id === awal.kelasId) ?? { id: p.kelas_id, nama_kelas: p.nama_kelas })
+    setMapel(p)
+  }, [awal, pilihan, kelasList])
 
   useEffect(() => {
     if (!guru) return
@@ -1505,16 +1535,17 @@ function TugasPerKelas({ onBack }) {
   )
 }
 
-function UjianPerKelas({ onBack }) {
+function UjianPerKelas({ onBack, fokus }) {
   return (
     <KelasMapelFlow
       onBack={onBack}
+      awal={fokus}
       title="Ujian"
       itemLabel="Ujian"
       sumLabel="Mengerjakan"
       sumOf={(u) => u.attempts_count ?? 0}
       loadItems={(guruId) => api.listUjian({ 'filter[guru_id]': guruId, per_page: 200 }).then((r) => r.data)}
-      renderContent={(scope) => <UjianManagement bare scope={scope} />}
+      renderContent={(scope) => <UjianManagement bare scope={scope} fokus={fokus} />}
     />
   )
 }
@@ -1974,7 +2005,7 @@ function TugasJawabanRow({ jawaban, onGraded }) {
   )
 }
 
-function UjianManagement({ onBack, bare, scope }) {
+function UjianManagement({ onBack, bare, scope, fokus }) {
   const [askConfirm, confirmModal] = useThemedConfirm()
   const { guru, pilihan } = useGuruContext()
   const [items, setItems] = useState(null)
@@ -1992,7 +2023,7 @@ function UjianManagement({ onBack, bare, scope }) {
   const [showSoalForm, setShowSoalForm] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [openId, setOpenId] = useState(null)
+  const [openId, setOpenId] = useState(fokus?.ujianId ?? null)
 
   function load() {
     if (!guru) return
@@ -2291,7 +2322,14 @@ function UjianManagement({ onBack, bare, scope }) {
               </div>
             </div>
 
-            {openId === u.id && <UjianDetail ujian={u} onChanged={load} />}
+            {openId === u.id && (
+              <UjianDetail
+                ujian={u}
+                onChanged={load}
+                awalTab={fokus?.ujianId === u.id ? 'hasil' : 'soal'}
+                sorotSiswaId={fokus?.ujianId === u.id ? fokus.siswaId : null}
+              />
+            )}
           </div>
         ))}
       </div>
@@ -2462,9 +2500,9 @@ function SoalEditor({ onSubmit, onCancel, submitLabel = 'Simpan Soal', initial }
   )
 }
 
-function UjianDetail({ ujian, onChanged }) {
+function UjianDetail({ ujian, onChanged, awalTab = 'soal', sorotSiswaId = null }) {
   const [askConfirm, confirmModal] = useThemedConfirm()
-  const [tab, setTab] = useState('soal')
+  const [tab, setTab] = useState(awalTab)
   const [soal, setSoal] = useState(null)
   const [attempts, setAttempts] = useState(null)
   const [koreksi, setKoreksi] = useState(null) // attempt yang sedang dikoreksi
@@ -2658,12 +2696,30 @@ function UjianDetail({ ujian, onChanged }) {
       {tab === 'hasil' && !koreksi && (
         <div className="space-y-2">
           {(attempts || []).map((a) => (
-            <div key={a.id} className="bg-navy/[0.03] rounded-xl p-3 flex items-center justify-between gap-3 flex-wrap">
+            <div
+              key={a.id}
+              ref={(el) => a.siswa_id === sorotSiswaId && el?.scrollIntoView({ block: 'center', behavior: 'smooth' })}
+              className={`rounded-xl p-3 flex items-center justify-between gap-3 flex-wrap ${
+                a.siswa_id === sorotSiswaId ? 'bg-red-50 ring-2 ring-red-300' : 'bg-navy/[0.03]'
+              }`}
+            >
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-navy">{a.siswa?.nama}</p>
                 <p className="text-xs text-navy/50">
                   {a.finished_at ? `Nilai: ${a.nilai}` : 'Sedang mengerjakan...'}
                 </p>
+                {a.pelanggaran > 0 ? (
+                  <p
+                    className="text-[11px] font-semibold text-red-600"
+                    title={(a.pelanggaran_log || [])
+                      .map((l) => `${new Date(l.waktu).toLocaleTimeString('id-ID')} - ${l.jenis.replaceAll('_', ' ')}`)
+                      .join('\n')}
+                  >
+                    ⚠ Keluar dari halaman ujian {a.pelanggaran}×
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-emerald-700">✓ Tidak pernah keluar halaman</p>
+                )}
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 {a.essay_belum_dinilai > 0 && (

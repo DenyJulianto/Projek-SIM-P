@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import ComingSoon from '../components/ComingSoon'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
+import ModeUjianAman, { keluarLayarPenuh, siapkanModeUjian } from '../components/ModeUjianAman'
 import { useAuth } from '../lib/AuthContext'
 import { api, BASE_URL } from '../lib/api'
 import MyProfile from './MyProfile'
@@ -2122,6 +2123,8 @@ function UjianSayaView({ onBack }) {
   useEffect(load, [])
 
   async function handleMulai(ujian) {
+    // Harus dipanggil sebelum await: layar penuh & audio butuh aksi klik langsung.
+    siapkanModeUjian()
     setError('')
     setBusy(true)
     try {
@@ -2133,6 +2136,7 @@ function UjianSayaView({ onBack }) {
       })
       setSession({ ujian, attempt: res.attempt, soal: res.soal, jawaban })
     } catch (err) {
+      keluarLayarPenuh()
       setError(err.message)
     } finally {
       setBusy(false)
@@ -2160,8 +2164,9 @@ function UjianSayaView({ onBack }) {
     }
   }
 
+  // Konfirmasi ditampilkan di dalam ModeUjianAman (bukan window.confirm,
+  // yang bisa memicu deteksi keluar halaman). false = gagal, tetap di kuis.
   async function handleSelesai() {
-    if (!window.confirm('Selesaikan ujian sekarang? Jawaban tidak bisa diubah lagi setelah ini.')) return
     setBusy(true)
     try {
       // pastikan semua jawaban essay yang masih di layar ikut tersimpan
@@ -2173,8 +2178,10 @@ function UjianSayaView({ onBack }) {
       await api.selesaiMySiswaUjian(session.ujian.id)
       setSession(null)
       load()
+      return true
     } catch (err) {
       setError(err.message)
+      return false
     } finally {
       setBusy(false)
     }
@@ -2193,9 +2200,14 @@ function UjianSayaView({ onBack }) {
   if (session) {
     const terjawab = Object.values(session.jawaban).filter((v) => v && String(v).trim() !== '').length
     return (
-      <div>
-        <p className="text-sm text-navy/50 mb-1">{session.ujian.mata_pelajaran?.nama_mapel}</p>
-        <h1 className="text-xl font-extrabold text-navy mb-1">{session.ujian.judul}</h1>
+      <ModeUjianAman
+        ujianId={session.ujian.id}
+        awalPelanggaran={session.attempt?.pelanggaran ?? 0}
+        judul={session.ujian.judul}
+        subjudul={session.ujian.mata_pelajaran?.nama_mapel}
+        onSelesai={handleSelesai}
+        busy={busy}
+      >
         <p className="text-xs text-navy/50 mb-5">
           Terjawab {terjawab} dari {session.soal.length} soal
         </p>
@@ -2249,15 +2261,7 @@ function UjianSayaView({ onBack }) {
         </div>
 
         {error && <p className="text-sm text-red-500 mt-3">{error}</p>}
-
-        <button
-          onClick={handleSelesai}
-          disabled={busy}
-          className="mt-5 w-full sm:w-auto text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-full px-6 py-3 transition-colors disabled:opacity-50"
-        >
-          {busy ? 'Menyimpan...' : 'Selesaikan Ujian'}
-        </button>
-      </div>
+      </ModeUjianAman>
     )
   }
 
