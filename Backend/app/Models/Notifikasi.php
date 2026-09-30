@@ -25,4 +25,28 @@ class Notifikasi extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    /**
+     * Kirim (atau perbarui) notifikasi ke satu user. Notifikasi dengan
+     * `kunci` yang sama digabung menjadi satu baris yang diperbarui dan
+     * ditandai belum dibaca lagi, supaya daftar notifikasi tidak banjir.
+     */
+    public static function kirim(?int $userId, string $jenis, string $kunci, string $judul, string $pesan, array $data = [], int $jumlah = 1): void
+    {
+        if (! $userId) {
+            return;
+        }
+
+        static::updateOrCreate(
+            ['user_id' => $userId, 'kunci' => $kunci],
+            [
+                'jenis' => $jenis,
+                'judul' => $judul,
+                'pesan' => $pesan,
+                'data' => $data,
+                'jumlah' => $jumlah,
+                'dibaca_at' => null,
+            ]
+        );
+    }
 }

@@ -21,7 +21,7 @@ class NotifikasiController extends Controller
 
         return response()->json([
             'belum_dibaca' => Notifikasi::where('user_id', $userId)->whereNull('dibaca_at')->count(),
-            'data' => Notifikasi::where('user_id', $userId)->latest('updated_at')->limit(30)->get(),
+            'data' => Notifikasi::where('user_id', $userId)->latest('updated_at')->limit(100)->get(),
         ]);
     }
 

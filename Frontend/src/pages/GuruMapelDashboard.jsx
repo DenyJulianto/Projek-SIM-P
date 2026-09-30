@@ -2,7 +2,7 @@ import logoLambang from '../assets/logo-sim-lambang.png'
 import { useEffect, useState } from 'react'
 import ComingSoon from '../components/ComingSoon'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
-import NotifikasiBell from '../components/NotifikasiBell'
+import { BellIcon as NotifBellIcon, JENIS_NOTIFIKASI, NotifikasiItem, useNotifikasi } from '../components/Notifikasi'
 import { useAuth } from '../lib/AuthContext'
 import { api, BASE_URL } from '../lib/api'
 import KehadiranGuruMapel from './KehadiranGuruMapel'
@@ -22,6 +22,7 @@ const MENU_GROUPS = [
       { key: 'kelas-saya', label: 'Kelas Saya', icon: ClassIcon },
       { key: 'mapel-saya', label: 'Mata Pelajaran Saya', icon: BookIcon },
       { key: 'modul-ajar', label: 'Manajemen RPP / Modul Ajar', icon: DocIcon },
+      { key: 'notifikasi', label: 'Notifikasi Siswa', icon: NotifBellIcon },
     ],
   },
   {
@@ -62,19 +63,23 @@ export default function GuruMapelDashboard() {
   const [view, setView] = useState('home')
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const [openSection, setOpenSection] = useState(null)
-  // Ujian yang dibuka dari notifikasi: { ujianId, siswaId, n } (n = pemicu remount)
-  const [fokusUjian, setFokusUjian] = useState(null)
+  // Item yang dibuka dari notifikasi (n = pemicu remount)
+  const [fokusUjian, setFokusUjian] = useState(null) // { ujianId, siswaId, kelasId, mapelId, n }
+  const [fokusTugas, setFokusTugas] = useState(null) // { tugasId, kelasId, mapelId, n }
+
+  const notif = useNotifikasi()
 
   function bukaNotifikasi(n) {
-    if (n.jenis === 'pelanggaran_ujian' && n.data?.ujian_id) {
-      setFokusUjian({
-        ujianId: n.data.ujian_id,
-        siswaId: n.data.siswa_id,
-        kelasId: n.data.kelas_id,
-        mapelId: n.data.mata_pelajaran_id,
-        n: Date.now(),
-      })
+    notif.tandaiDibaca(n)
+    const d = n.data || {}
+    if ((n.jenis === 'pelanggaran_ujian' || n.jenis === 'ujian_selesai') && d.ujian_id) {
+      setFokusUjian({ ujianId: d.ujian_id, siswaId: d.siswa_id, kelasId: d.kelas_id, mapelId: d.mata_pelajaran_id, n: Date.now() })
       setView('ujian')
+    } else if (n.jenis === 'tugas_dikumpulkan' && d.tugas_id) {
+      setFokusTugas({ tugasId: d.tugas_id, kelasId: d.kelas_id, mapelId: d.mata_pelajaran_id, n: Date.now() })
+      setView('tugas')
+    } else if (n.jenis === 'izin_siswa') {
+      setView('absensi-siswa')
     }
   }
 
@@ -152,7 +157,12 @@ export default function GuruMapelDashboard() {
                     hasActiveItem ? 'text-white' : 'text-white/70 hover:text-white'
                   }`}
                 >
-                  <span className="truncate min-w-0">{group.section}</span>
+                  <span className="truncate min-w-0 flex items-center gap-2">
+                    {group.section}
+                    {!isOpen && notif.belumDibaca > 0 && group.items.some((item) => item.key === 'notifikasi') && (
+                      <span className="h-2 w-2 rounded-full bg-red-500" />
+                    )}
+                  </span>
                   <ChevronIcon className={`h-3.5 w-3.5 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {isOpen && (
@@ -172,6 +182,11 @@ export default function GuruMapelDashboard() {
                         >
                           <Icon className="h-4.5 w-4.5 shrink-0" />
                           <span className="truncate min-w-0">{item.label}</span>
+                          {item.key === 'notifikasi' && notif.belumDibaca > 0 && (
+                            <span className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-red-600 text-white text-[11px] font-bold flex items-center justify-center">
+                              {notif.belumDibaca > 99 ? '99+' : notif.belumDibaca}
+                            </span>
+                          )}
                         </button>
                       )
                     })}
@@ -195,10 +210,10 @@ export default function GuruMapelDashboard() {
         <GuruMapelDoodleBackground />
 
         <div className="relative p-6 sm:p-8">
-          <div className="flex justify-end -mt-2 mb-3">
-            <NotifikasiBell onPilih={bukaNotifikasi} />
-          </div>
-        {view === 'home' && <GuruMapelHome user={user} onNavigate={setView} />}
+        {view === 'home' && <GuruMapelHome user={user} onNavigate={setView} notif={notif} />}
+        {view === 'notifikasi' && (
+          <NotifikasiSiswaView notif={notif} onBuka={bukaNotifikasi} onBack={() => setView('home')} />
+        )}
         {view === 'jadwal-mengajar' && <JadwalMengajarView onBack={() => setView('home')} />}
         {view === 'kelas-saya' && <KelasSayaView onBack={() => setView('home')} />}
         {view === 'mapel-saya' && <MapelSayaView onBack={() => setView('home')} />}
@@ -209,7 +224,9 @@ export default function GuruMapelDashboard() {
         {view === 'rekap-nilai' && <RekapNilaiView onBack={() => setView('home')} />}
         {view === 'input-rapor' && <InputRaporView onBack={() => setView('home')} />}
         {view === 'materi' && <MateriManagement onBack={() => setView('home')} />}
-        {view === 'tugas' && <TugasPerKelas onBack={() => setView('home')} />}
+        {view === 'tugas' && (
+          <TugasPerKelas key={fokusTugas?.n ?? 0} fokus={fokusTugas} onBack={() => setView('home')} />
+        )}
         {view === 'ujian' && (
           <UjianPerKelas key={fokusUjian?.n ?? 0} fokus={fokusUjian} onBack={() => setView('home')} />
         )}
@@ -233,7 +250,7 @@ export default function GuruMapelDashboard() {
   )
 }
 
-function GuruMapelHome({ user, onNavigate }) {
+function GuruMapelHome({ user, onNavigate, notif }) {
   const [kelas, setKelas] = useState(null)
   const [mapel, setMapel] = useState(null)
   const [jadwal, setJadwal] = useState(null)
@@ -274,7 +291,7 @@ function GuruMapelHome({ user, onNavigate }) {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <StatIllustrationCard
           label="Kelas Diampu"
           value={kelas?.length}
@@ -298,6 +315,14 @@ function GuruMapelHome({ user, onNavigate }) {
           iconTone="bg-amber-50 text-amber-600"
           illustration={<ClockIllustration className="h-16 w-16" />}
           onClick={() => onNavigate('jadwal-mengajar')}
+        />
+        <StatIllustrationCard
+          label="Notifikasi Siswa"
+          value={notif.daftar === null ? null : notif.belumDibaca}
+          icon={NotifBellIcon}
+          iconTone={notif.belumDibaca > 0 ? 'bg-red-50 text-red-600' : 'bg-violet-50 text-violet-600'}
+          illustration={<BellIllustration aktif={notif.belumDibaca > 0} className="h-16 w-16" />}
+          onClick={() => onNavigate('notifikasi')}
         />
       </div>
 
@@ -374,6 +399,76 @@ function GuruMapelHome({ user, onNavigate }) {
 
 function BareShell({ children }) {
   return <div>{children}</div>
+}
+
+function NotifikasiSiswaView({ notif, onBuka, onBack }) {
+  const [filter, setFilter] = useState('semua')
+  const daftar = (notif.daftar || []).filter((n) => {
+    if (filter === 'semua') return true
+    if (filter === 'belum') return !n.dibaca_at
+    return n.jenis === filter
+  })
+  const jumlahJenis = (jenis) => (notif.daftar || []).filter((n) => n.jenis === jenis).length
+
+  return (
+    <PageShell title="Notifikasi Siswa" onBack={onBack}>
+      <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5">
+        <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+          <div className="flex gap-2 flex-wrap">
+            {[
+              ['semua', 'Semua'],
+              ['belum', `Belum dibaca${notif.belumDibaca ? ` (${notif.belumDibaca})` : ''}`],
+              ...Object.entries(JENIS_NOTIFIKASI).map(([key, j]) => [key, `${j.label}${jumlahJenis(key) ? ` (${jumlahJenis(key)})` : ''}`]),
+            ].map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => setFilter(key)}
+                className={`text-xs font-semibold rounded-full px-3.5 py-1.5 transition-colors ${
+                  filter === key ? 'bg-navy text-white' : 'bg-navy/5 text-navy/60 hover:bg-navy/10'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {notif.belumDibaca > 0 && (
+            <button onClick={notif.tandaiSemuaDibaca} className="text-xs font-semibold text-emerald-700 hover:underline">
+              Tandai semua sudah dibaca
+            </button>
+          )}
+        </div>
+
+        {notif.daftar === null && <EmptyState text="Memuat..." />}
+        {notif.daftar !== null && daftar.length === 0 && (
+          <EmptyState
+            text={
+              filter === 'semua'
+                ? 'Belum ada notifikasi dari siswa.'
+                : filter === 'belum'
+                  ? 'Semua notifikasi sudah dibaca.'
+                  : 'Belum ada notifikasi jenis ini.'
+            }
+          />
+        )}
+        <div className="space-y-1.5">
+          {daftar.map((n) => (
+            <NotifikasiItem key={n.id} n={n} onClick={onBuka} />
+          ))}
+        </div>
+      </div>
+    </PageShell>
+  )
+}
+
+function BellIllustration({ aktif, ...props }) {
+  return (
+    <svg {...props} viewBox="0 0 64 64" fill="none">
+      <circle cx="32" cy="32" r="28" fill={aktif ? '#fee2e2' : '#ede9fe'} />
+      <path d="M20 38c2-2 3-5 3-12a9 9 0 0 1 18 0c0 7 1 10 3 12H20Z" fill={aktif ? '#ef4444' : '#8b5cf6'} />
+      <path d="M28.5 42a3.5 3.5 0 0 0 7 0" stroke={aktif ? '#ef4444' : '#8b5cf6'} strokeWidth="3" strokeLinecap="round" />
+      {aktif && <circle cx="43" cy="20" r="6" fill="#dc2626" stroke="#fff" strokeWidth="2" />}
+    </svg>
+  )
 }
 
 function PageShell({ title, onBack, children }) {
@@ -1521,16 +1616,17 @@ function KelasMapelFlow({ onBack, title, itemLabel, sumLabel, sumOf, loadItems, 
   )
 }
 
-function TugasPerKelas({ onBack }) {
+function TugasPerKelas({ onBack, fokus }) {
   return (
     <KelasMapelFlow
       onBack={onBack}
+      awal={fokus}
       title="Tugas"
       itemLabel="Tugas"
       sumLabel="Jawaban"
       sumOf={(t) => t.jawaban_count ?? 0}
       loadItems={(guruId) => api.listTugas({ 'filter[guru_id]': guruId, per_page: 200 }).then((r) => r.data)}
-      renderContent={(scope) => <TugasManagement bare scope={scope} />}
+      renderContent={(scope) => <TugasManagement bare scope={scope} fokus={fokus} />}
     />
   )
 }
@@ -1550,7 +1646,7 @@ function UjianPerKelas({ onBack, fokus }) {
   )
 }
 
-export function TugasManagement({ onBack, bare, scope }) {
+export function TugasManagement({ onBack, bare, scope, fokus }) {
   const [askConfirm, confirmModal] = useThemedConfirm()
   const { guru, pilihan } = useGuruContext()
   const [items, setItems] = useState(null)
@@ -1562,8 +1658,13 @@ export function TugasManagement({ onBack, bare, scope }) {
   const [file, setFile] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [openJawabanId, setOpenJawabanId] = useState(null)
+  const [openJawabanId, setOpenJawabanId] = useState(fokus?.tugasId ?? null)
   const [jawabanList, setJawabanList] = useState(null)
+
+  // Dibuka dari notifikasi "tugas dikumpulkan": langsung tampilkan jawaban siswa.
+  useEffect(() => {
+    if (fokus?.tugasId) reloadJawaban(fokus.tugasId)
+  }, [fokus])
   const [search, setSearch] = useState('')
   const [showFilter, setShowFilter] = useState(false)
   const [filterKelas, setFilterKelas] = useState('')
