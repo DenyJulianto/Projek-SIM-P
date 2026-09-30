@@ -771,7 +771,14 @@ export const api = {
   jawabMySiswaUjian: (ujianId, data) =>
     request(`/me/siswa/ujian/${ujianId}/jawab`, { method: 'POST', body: JSON.stringify(data) }),
   selesaiMySiswaUjian: (ujianId) => request(`/me/siswa/ujian/${ujianId}/selesai`, { method: 'POST' }),
+  laporPelanggaranUjian: (ujianId, jenis) =>
+    request(`/me/siswa/ujian/${ujianId}/pelanggaran`, { method: 'POST', body: JSON.stringify({ jenis }) }),
   getMySiswaUjianHasil: (ujianId) => request(`/me/siswa/ujian/${ujianId}/hasil`),
+
+  // Notifikasi milik user yang login
+  getNotifikasi: () => request('/me/notifikasi'),
+  bacaNotifikasi: (id) => request(`/me/notifikasi/${id}/baca`, { method: 'POST' }),
+  bacaSemuaNotifikasi: () => request('/me/notifikasi/baca-semua', { method: 'POST' }),
 
   getMyAnak: () => request('/me/anak'),
   getAnakJadwal: (siswaId) => request(`/me/anak/${siswaId}/jadwal`),

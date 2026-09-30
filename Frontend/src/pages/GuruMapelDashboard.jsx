@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import ComingSoon from '../components/ComingSoon'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
+import NotifikasiBell from '../components/NotifikasiBell'
 import { useAuth } from '../lib/AuthContext'
 import { api, BASE_URL } from '../lib/api'
 import AttendanceRecap from './AttendanceRecap'
@@ -57,6 +58,15 @@ export default function GuruMapelDashboard() {
   const [view, setView] = useState('home')
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const [openSection, setOpenSection] = useState(null)
+  // Ujian yang dibuka dari notifikasi: { ujianId, siswaId, n } (n = pemicu remount)
+  const [fokusUjian, setFokusUjian] = useState(null)
+
+  function bukaNotifikasi(n) {
+    if (n.jenis === 'pelanggaran_ujian' && n.data?.ujian_id) {
+      setFokusUjian({ ujianId: n.data.ujian_id, siswaId: n.data.siswa_id, n: Date.now() })
+      setView('ujian')
+    }
+  }
 
   useEffect(() => {
     const activeGroup = MENU_GROUPS.find(
@@ -154,6 +164,9 @@ export default function GuruMapelDashboard() {
       </aside>
 
       <main className="flex-1 p-6 sm:p-8 overflow-y-auto">
+        <div className="flex justify-end mb-3">
+          <NotifikasiBell onPilih={bukaNotifikasi} />
+        </div>
         {view === 'home' && <GuruMapelHome user={user} onNavigate={setView} />}
         {view === 'jadwal-mengajar' && <JadwalMengajarView onBack={() => setView('home')} />}
         {view === 'kelas-saya' && <KelasSayaView onBack={() => setView('home')} />}
@@ -171,7 +184,9 @@ export default function GuruMapelDashboard() {
         )}
         {view === 'materi' && <MateriManagement onBack={() => setView('home')} />}
         {view === 'tugas' && <TugasManagement onBack={() => setView('home')} />}
-        {view === 'ujian' && <UjianManagement onBack={() => setView('home')} />}
+        {view === 'ujian' && (
+          <UjianManagement key={fokusUjian?.n ?? 0} fokus={fokusUjian} onBack={() => setView('home')} />
+        )}
         {view === 'pengumuman' && <PengumumanView onBack={() => setView('home')} />}
         {view === 'profile' && <MyProfile onBack={() => setView('home')} />}
         {COMING_SOON_LABEL[view] && (
@@ -860,7 +875,7 @@ function TugasJawabanRow({ jawaban, onGraded }) {
   )
 }
 
-function UjianManagement({ onBack }) {
+function UjianManagement({ onBack, fokus }) {
   const { guru, pilihan } = useGuruContext()
   const [items, setItems] = useState(null)
   const [showForm, setShowForm] = useState(false)
@@ -872,7 +887,7 @@ function UjianManagement({ onBack }) {
   const [durasi, setDurasi] = useState(60)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [openId, setOpenId] = useState(null)
+  const [openId, setOpenId] = useState(fokus?.ujianId ?? null)
 
   function load() {
     if (!guru) return
@@ -1037,7 +1052,14 @@ function UjianManagement({ onBack }) {
               </div>
             </div>
 
-            {openId === u.id && <UjianDetail ujian={u} onChanged={load} />}
+            {openId === u.id && (
+              <UjianDetail
+                ujian={u}
+                onChanged={load}
+                awalTab={fokus?.ujianId === u.id ? 'hasil' : 'soal'}
+                sorotSiswaId={fokus?.ujianId === u.id ? fokus.siswaId : null}
+              />
+            )}
           </div>
         ))}
       </div>
@@ -1047,8 +1069,8 @@ function UjianManagement({ onBack }) {
   )
 }
 
-function UjianDetail({ ujian, onChanged }) {
-  const [tab, setTab] = useState('soal')
+function UjianDetail({ ujian, onChanged, awalTab = 'soal', sorotSiswaId = null }) {
+  const [tab, setTab] = useState(awalTab)
   const [soal, setSoal] = useState(null)
   const [attempts, setAttempts] = useState(null)
   const [showForm, setShowForm] = useState(false)
@@ -1229,8 +1251,28 @@ function UjianDetail({ ujian, onChanged }) {
       {tab === 'hasil' && (
         <div className="space-y-2">
           {(attempts || []).map((a) => (
-            <div key={a.id} className="bg-navy/[0.03] rounded-xl p-3 flex items-center justify-between">
-              <p className="text-sm font-semibold text-navy">{a.siswa?.nama}</p>
+            <div
+              key={a.id}
+              ref={(el) => a.siswa_id === sorotSiswaId && el?.scrollIntoView({ block: 'center', behavior: 'smooth' })}
+              className={`rounded-xl p-3 flex items-center justify-between ${
+                a.siswa_id === sorotSiswaId ? 'bg-red-50 ring-2 ring-red-300' : 'bg-navy/[0.03]'
+              }`}
+            >
+              <div>
+                <p className="text-sm font-semibold text-navy">{a.siswa?.nama}</p>
+                {a.pelanggaran > 0 ? (
+                  <p
+                    className="text-[11px] font-semibold text-red-600"
+                    title={(a.pelanggaran_log || [])
+                      .map((l) => `${new Date(l.waktu).toLocaleTimeString('id-ID')} - ${l.jenis.replaceAll('_', ' ')}`)
+                      .join('\n')}
+                  >
+                    ⚠ Keluar dari halaman ujian {a.pelanggaran}×
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-emerald-700">✓ Tidak pernah keluar halaman</p>
+                )}
+              </div>
               <p className="text-xs text-navy/60">
                 {a.finished_at ? `Nilai: ${a.nilai}` : 'Sedang mengerjakan...'}
               </p>
