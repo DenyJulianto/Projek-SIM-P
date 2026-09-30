@@ -1896,8 +1896,8 @@ function AdminSekolahManagement() {
                 <span className="font-mono font-semibold">{createdInfo.password}</span>
               </p>
               <p className="text-xs text-navy/50 mt-1">
-                Catat &amp; bagikan password ini secara aman ke pihak sekolah — password ini hanya
-                ditampilkan sekali dan tidak bisa dilihat lagi setelah ini.
+                Bagikan password ini secara aman ke pihak sekolah. Password juga tampil di kolom
+                Password Sementara sampai admin menggantinya sendiri.
               </p>
             </div>
           )}
@@ -1908,6 +1908,7 @@ function AdminSekolahManagement() {
                 <tr className="bg-navy/5 text-navy/60 text-xs uppercase text-left">
                   <th className="px-4 py-3 whitespace-nowrap">Nama</th>
                   <th className="px-4 py-3 whitespace-nowrap">Email</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Password Sementara</th>
                   <th className="px-4 py-3 whitespace-nowrap">Status Akun</th>
                   <th className="px-4 py-3 whitespace-nowrap">Login Terakhir</th>
                   <th className="px-4 py-3 whitespace-nowrap">Aksi</th>
@@ -1916,13 +1917,13 @@ function AdminSekolahManagement() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-6 text-center text-navy/40">
+                    <td colSpan={6} className="px-4 py-6 text-center text-navy/40">
                       Memuat...
                     </td>
                   </tr>
                 ) : admins.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-6 text-center text-navy/40">
+                    <td colSpan={6} className="px-4 py-6 text-center text-navy/40">
                       Belum ada admin sekolah untuk sekolah ini.
                     </td>
                   </tr>
@@ -1933,6 +1934,15 @@ function AdminSekolahManagement() {
                         {admin.name}
                       </td>
                       <td className="px-4 py-3 text-navy/70 whitespace-nowrap">{admin.email}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {admin.temporary_password ? (
+                          <span className="font-mono font-semibold text-navy select-all">
+                            {admin.temporary_password}
+                          </span>
+                        ) : (
+                          <span className="text-navy/30" title="Sudah diganti oleh admin, atau akun dibuat sebelum fitur ini ada">—</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <span
                           className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
