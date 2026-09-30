@@ -18,7 +18,9 @@ use Spatie\Permission\Traits\HasRoles;
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden([
     'password', 'remember_token', 'verification_code', 'verification_code_expires_at',
+    'email_verification_token', 'email_verification_expires_at',
     'password_reset_code', 'password_reset_code_expires_at', 'temporary_password',
+    'password_reset_token', 'password_reset_expires_at',
     'two_factor_secret', 'two_factor_recovery_codes',
 ])]
 class User extends Authenticatable
@@ -36,7 +38,9 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'verification_code_expires_at' => 'datetime',
+            'email_verification_expires_at' => 'datetime',
             'password_reset_code_expires_at' => 'datetime',
+            'password_reset_expires_at' => 'datetime',
             'password' => 'hashed',
             'is_super_admin' => 'boolean',
             'is_active' => 'boolean',

@@ -101,20 +101,22 @@ export const api = {
       body: JSON.stringify({ email, password }),
     }),
 
-  register: (email, password, passwordConfirmation) =>
+  register: (name, email, password, passwordConfirmation, recaptchaToken) =>
     request('/register', {
       method: 'POST',
       body: JSON.stringify({
+        name,
         email,
         password,
         password_confirmation: passwordConfirmation,
+        recaptcha_token: recaptchaToken || undefined,
       }),
     }),
 
-  verifyEmail: (email, code) =>
+  verifyEmailLink: (email, token) =>
     request('/verify-email', {
       method: 'POST',
-      body: JSON.stringify({ email, code }),
+      body: JSON.stringify({ email, token }),
     }),
 
   resendVerificationCode: (email) =>
@@ -123,16 +125,16 @@ export const api = {
       body: JSON.stringify({ email }),
     }),
 
-  forgotPassword: (email) =>
+  forgotPassword: (email, recaptchaToken) =>
     request('/forgot-password', {
       method: 'POST',
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, recaptcha_token: recaptchaToken || undefined }),
     }),
 
-  resetPassword: (email, code, password, passwordConfirmation) =>
+  resetPassword: (email, token, password, passwordConfirmation) =>
     request('/reset-password', {
       method: 'POST',
-      body: JSON.stringify({ email, code, password, password_confirmation: passwordConfirmation }),
+      body: JSON.stringify({ email, token, password, password_confirmation: passwordConfirmation }),
     }),
 
   logout: () => request(IS_CENTRAL_DOMAIN ? '/api/logout' : '/logout', { method: 'POST' }),

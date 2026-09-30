@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    // reCAPTCHA v3 untuk form registrasi. Kalau secret kosong (belum
+    // dikonfigurasi), verifikasi captcha dilewati otomatis — lihat
+    // AuthController::verifyRecaptcha().
+    'recaptcha' => [
+        'site_key' => env('RECAPTCHA_SITE_KEY'),
+        'secret' => env('RECAPTCHA_SECRET_KEY'),
+    ],
+
 ];
