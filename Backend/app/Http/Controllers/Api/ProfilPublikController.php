@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Kegiatan;
 use App\Models\Pengumuman;
+use App\Models\PpdbPeriode;
 use App\Models\Prestasi;
 use App\Settings\ProfilSekolahSettings;
 use Illuminate\Http\JsonResponse;
@@ -122,6 +123,59 @@ class ProfilPublikController extends Controller
         }
 
         return Storage::disk('public')->response($path);
+    }
+
+    /**
+     * Info PPDB untuk landing page: periode yang sedang berjalan (bukan
+     * Draft/Selesai), berisi jadwal, kuota, jalur aktif, dan persyaratan
+     * dokumen. Tidak ada data pendaftar di sini. null jika tidak ada PPDB.
+     */
+    public function ppdb(): JsonResponse
+    {
+        $label = [
+            'dibuka' => 'Pendaftaran Dibuka', 'ditutup' => 'Pendaftaran Ditutup', 'seleksi' => 'Proses Seleksi',
+            'pengumuman' => 'Pengumuman', 'daftar_ulang' => 'Daftar Ulang',
+        ];
+
+        $p = PpdbPeriode::query()
+            ->whereIn('status', array_keys($label))
+            ->with(['tahunAjaran:id,nama', 'jalur', 'persyaratan'])
+            ->orderByDesc('tanggal_mulai')
+            ->first();
+
+        if (! $p) {
+            return response()->json(null);
+        }
+
+        $tgl = fn ($d) => $d ? substr((string) $d, 0, 10) : null;
+        $jalur = $p->jalur->where('aktif', true)->values();
+
+        return response()->json([
+            'nama' => $p->nama,
+            'tahun_ajaran' => $p->tahunAjaran?->nama,
+            'jenjang' => $p->jenjang,
+            'status' => $p->status,
+            'status_label' => $label[$p->status],
+            'tanggal_mulai' => $tgl($p->tanggal_mulai),
+            'tanggal_selesai' => $tgl($p->tanggal_selesai),
+            'jadwal_seleksi' => $tgl($p->jadwal_seleksi),
+            'jadwal_pengumuman' => $tgl($p->jadwal_pengumuman),
+            'daftar_ulang_mulai' => $tgl($p->daftar_ulang_mulai),
+            'daftar_ulang_selesai' => $tgl($p->daftar_ulang_selesai),
+            'kuota' => $p->kuota,
+            'catatan' => $p->catatan,
+            'jalur' => $jalur->map(fn ($j) => [
+                'id' => $j->id, 'nama' => $j->nama, 'kuota' => $j->kuota, 'deskripsi' => $j->deskripsi,
+            ]),
+            'persyaratan' => $p->persyaratan
+                ->where('tahap', 'pendaftaran')
+                ->filter(fn ($r) => ! $r->ppdb_jalur_id || $jalur->contains('id', $r->ppdb_jalur_id))
+                ->values()
+                ->map(fn ($r) => [
+                    'nama' => $r->nama, 'wajib' => (bool) $r->wajib, 'keterangan' => $r->keterangan,
+                    'jalur' => $r->ppdb_jalur_id ? $jalur->firstWhere('id', $r->ppdb_jalur_id)?->nama : null,
+                ]),
+        ]);
     }
 
     public function pengumuman(Request $request): JsonResponse

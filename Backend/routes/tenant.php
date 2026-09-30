@@ -160,6 +160,7 @@ Route::middleware([
         Route::get('/pengumuman', [ProfilPublikController::class, 'pengumuman']);
         Route::get('/kegiatan', [ProfilPublikController::class, 'kegiatan']);
         Route::get('/prestasi', [ProfilPublikController::class, 'prestasi']);
+        Route::get('/ppdb', [ProfilPublikController::class, 'ppdb']);
     });
 
     Route::middleware('auth:sanctum')->group(function () {

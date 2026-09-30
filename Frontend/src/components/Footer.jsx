@@ -2,7 +2,7 @@ import { IS_CENTRAL_DOMAIN, SUPER_ADMIN_URL } from '../lib/api'
 
 import { EditableText, useLandingEdit } from './landing/LandingEdit'
 
-export default function Footer({ profil }) {
+export default function Footer({ profil, ppdb }) {
   const sosmed = profil?.sosial_media || {}
   const editing = !!useLandingEdit()
 
@@ -39,6 +39,7 @@ export default function Footer({ profil }) {
           <p className="text-white font-semibold mb-3">Navigasi</p>
           <ul className="space-y-2 text-sm">
             <li><a href="#beranda" className="hover:text-gold">Beranda</a></li>
+            {ppdb?.nama && <li><a href="#ppdb" className="hover:text-gold">PPDB</a></li>}
             <li><a href="#tentang" className="hover:text-gold">Tentang Kami</a></li>
             <li><a href="#kegiatan" className="hover:text-gold">Kegiatan</a></li>
             <li><a href="#prestasi" className="hover:text-gold">Prestasi</a></li>

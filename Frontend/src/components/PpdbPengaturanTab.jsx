@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../lib/api'
+import { useAuth } from '../lib/AuthContext'
+import TahunAjaranFormModal from './TahunAjaranFormModal'
 import { Badge, Btn, Field, Kosong, ModalShell, Pesan } from './PpdbUI'
 import { STATUS_PERIODE_TONE, tgl } from './ppdbKonstanta'
 
@@ -38,8 +40,8 @@ const FORM_KOSONG = {
   catatan: '',
 }
 
-function FormPeriode({ periode, opsi, onSimpan, onBatal }) {
-  const [f, setF] = useState(() => (periode ? Object.fromEntries(Object.keys(FORM_KOSONG).map((k) => [k, periode[k] ?? ''])) : { ...FORM_KOSONG, jenjang: opsi.jenjang_sekolah ?? '', tahun_ajaran_id: opsi.tahun_ajaran.find((t) => t.is_active)?.id ?? '' }))
+function FormPeriode({ periode, opsi, onSimpan, onBatal, onTambahTahunAjaran }) {
+  const [f, setF] = useState(() => (periode ? Object.fromEntries(Object.keys(FORM_KOSONG).map((k) => [k, periode[k] ?? ''])) : { ...FORM_KOSONG, jenjang: opsi.jenjang_sekolah ?? '', tahun_ajaran_id: opsi.tahun_ajaran.find((t) => t.is_active)?.id ?? (opsi.tahun_ajaran.length === 1 ? opsi.tahun_ajaran[0].id : '') }))
   const [error, setError] = useState('')
   const [simpan, setSimpan] = useState(false)
   const u = (k, v) => setF((x) => ({ ...x, [k]: v }))
@@ -70,6 +72,23 @@ function FormPeriode({ periode, opsi, onSimpan, onBatal }) {
   return (
     <form onSubmit={kirim} className="bg-white rounded-2xl border border-navy/10 p-5 space-y-4">
       <Pesan error={error} />
+      {opsi.tahun_ajaran.length === 0 && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 flex flex-wrap items-center gap-3">
+          <div className="flex-1 min-w-60">
+            <p className="font-semibold">Belum ada Tahun Ajaran.</p>
+            <p className="text-xs mt-0.5">
+              {onTambahTahunAjaran
+                ? 'PPDB harus terhubung ke tahun ajaran. Tambahkan tahun ajaran dulu, lalu pilih di bawah.'
+                : 'PPDB harus terhubung ke tahun ajaran. Minta Admin Sekolah menambahkannya di menu Konfigurasi Sistem.'}
+            </p>
+          </div>
+          {onTambahTahunAjaran && (
+            <Btn utama type="button" onClick={onTambahTahunAjaran}>
+              + Tambah Tahun Ajaran
+            </Btn>
+          )}
+        </div>
+      )}
       <div className="grid sm:grid-cols-3 gap-3">
         <Field label="Tahun Ajaran">
           <select required value={f.tahun_ajaran_id} onChange={(e) => u('tahun_ajaran_id', e.target.value)} className={input}>
@@ -300,7 +319,9 @@ function PersyaratanModal({ periode, item, onClose, onSaved }) {
 }
 
 export default function PpdbPengaturanTab({ periodeId, mulaiBaru, onDibuat, onBerubah, onDihapus }) {
+  const { hasPermission } = useAuth()
   const [opsi, setOpsi] = useState(null)
+  const [tambahTahun, setTambahTahun] = useState(false)
   const [periode, setPeriode] = useState(null)
   const [membuat, setMembuat] = useState(Boolean(mulaiBaru) || !periodeId)
   const [mengubah, setMengubah] = useState(false)
@@ -350,13 +371,25 @@ export default function PpdbPengaturanTab({ periodeId, mulaiBaru, onDibuat, onBe
         <h2 className="text-base font-bold text-navy">PPDB Baru</h2>
         <p className="text-xs text-navy/50">Isi konfigurasi dasar. Jalur, kuota jalur, dan persyaratan diatur setelah PPDB dibuat, sebelum pendaftaran dibuka.</p>
         <FormPeriode
+          key={opsi.tahun_ajaran.length}
           opsi={opsi}
           onSimpan={async (data) => {
             const baru = await api.ppdbCreatePeriode(data)
             onDibuat(baru.id)
           }}
           onBatal={periodeId ? () => setMembuat(false) : undefined}
+          onTambahTahunAjaran={hasPermission('pengguna.manage') ? () => setTambahTahun(true) : undefined}
         />
+        {tambahTahun && (
+          <TahunAjaranFormModal
+            item={null}
+            onClose={() => setTambahTahun(false)}
+            onSaved={() => {
+              setTambahTahun(false)
+              api.ppdbOpsi().then(setOpsi).catch((e) => setError(e.message))
+            }}
+          />
+        )}
       </div>
     )
   }

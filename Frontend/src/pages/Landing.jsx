@@ -7,6 +7,7 @@ import Hero from '../components/Hero'
 import Kegiatan from '../components/Kegiatan'
 import Kontak from '../components/Kontak'
 import Pengumuman from '../components/Pengumuman'
+import PpdbInfo from '../components/PpdbInfo'
 import Prestasi from '../components/Prestasi'
 import SuperAdminHeroIllustration from '../components/SuperAdminHeroIllustration'
 import TopBar from '../components/TopBar'
@@ -463,6 +464,7 @@ function SekolahLanding() {
   const [pengumuman, setPengumuman] = useState(null)
   const [kegiatan, setKegiatan] = useState(null)
   const [prestasi, setPrestasi] = useState(null)
+  const [ppdb, setPpdb] = useState(null)
   const [error, setError] = useState('')
 
   function loadProfil() {
@@ -474,6 +476,7 @@ function SekolahLanding() {
     api.getPengumuman().then(setPengumuman).catch(() => {})
     api.getKegiatan().then(setKegiatan).catch(() => {})
     api.getPrestasiPublik().then(setPrestasi).catch(() => {})
+    api.getPpdbPublik().then(setPpdb).catch(() => {})
   }, [])
 
   if (error) {
@@ -494,14 +497,15 @@ function SekolahLanding() {
   return (
     <div>
       <TopBar profil={profil} />
-      <Header profil={profil} />
+      <Header profil={profil} ppdb={ppdb} />
       <Hero profil={profil} />
+      <PpdbInfo ppdb={ppdb} profil={profil} />
       <About profil={profil} onProfilUpdated={loadProfil} />
       <Kegiatan kegiatan={kegiatan} />
       <Prestasi prestasi={prestasi} />
       <Pengumuman pengumuman={pengumuman} />
       <Kontak profil={profil} />
-      <Footer profil={profil} />
+      <Footer profil={profil} ppdb={ppdb} />
     </div>
   )
 }

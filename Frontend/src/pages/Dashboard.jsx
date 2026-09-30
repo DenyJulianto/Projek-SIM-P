@@ -13,6 +13,7 @@ import LogoHorizontal from '../components/LogoHorizontal'
 // memecahnya jadi chunk terpisah per halaman, diunduh hanya saat dibuka.
 const AdminHome = lazy(() => import('./admin/AdminHome'))
 const LandingEditor = lazy(() => import('./LandingEditor'))
+const PpdbManagement = lazy(() => import('./PpdbManagement'))
 const AttendanceRecap = lazy(() => import('./AttendanceRecap'))
 const AuditLog = lazy(() => import('./AuditLog'))
 const BackupRestore = lazy(() => import('./BackupRestore'))
@@ -71,6 +72,7 @@ const MENU_GROUPS = [
       { key: 'siswa', label: 'Data Siswa', icon: StudentIcon, permission: 'siswa.manage' },
       { key: 'guru', label: 'Data Guru & Pegawai', icon: StaffIcon, permission: 'pegawai.manage' },
       { key: 'kelas', label: 'Data Kelas', icon: ClassIcon, permission: 'kurikulum.manage' },
+      { key: 'ppdb', label: 'PPDB', icon: PpdbIcon, permission: 'ppdb.manage' },
       { key: 'absensi-guru', label: 'Monitoring Absensi Guru', icon: AttendanceIcon, permission: 'monitoring-guru.absensi-guru' },
       { key: 'inventaris', label: 'Sarana & Prasarana', icon: InventoryIcon, permission: 'sarpras.inventaris' },
       { key: 'persuratan', label: 'Surat & Kearsipan', icon: ArchiveIcon, permission: 'persuratan.manage' },
@@ -312,6 +314,8 @@ export default function Dashboard() {
             <AuditLog onBack={() => setView('home')} />
           ) : view === 'profile' ? (
             <MyProfile onBack={() => setView('home')} />
+          ) : view === 'ppdb' && hasPermission('ppdb.manage') ? (
+            <PpdbManagement onBack={() => setView('home')} />
           ) : view === 'landing' && hasPermission('humas.informasi') ? (
             <LandingEditor onBack={() => setView('home')} />
           ) : isAdmin ? (
@@ -536,6 +540,15 @@ function AttendanceIcon(props) {
       <circle cx="10" cy="8" r="3.5" />
       <path d="M3 20c0-3.9 3.1-6.5 7-6.5" />
       <path d="m14 18 3 3 5-5" />
+    </svg>
+  )
+}
+
+function PpdbIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="5" y="4" width="14" height="17" rx="2" />
+      <path d="M9 4V3h6v1M9 11h6M9 15h4" />
     </svg>
   )
 }

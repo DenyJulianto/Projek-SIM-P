@@ -6,6 +6,7 @@ import Hero from '../components/Hero'
 import Kegiatan from '../components/Kegiatan'
 import Kontak from '../components/Kontak'
 import Pengumuman from '../components/Pengumuman'
+import PpdbInfo from '../components/PpdbInfo'
 import Prestasi from '../components/Prestasi'
 import TopBar from '../components/TopBar'
 import { EditableImage, LandingEditProvider } from '../components/landing/LandingEdit'
@@ -48,6 +49,7 @@ export default function LandingEditor({ onBack }) {
   const [kegiatan, setKegiatan] = useState(null)
   const [pengumuman, setPengumuman] = useState(null)
   const [prestasi, setPrestasi] = useState(null)
+  const [ppdb, setPpdb] = useState(null)
   const [loadError, setLoadError] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -64,6 +66,7 @@ export default function LandingEditor({ onBack }) {
     api.getKegiatan().then(setKegiatan).catch(() => {})
     api.getPengumuman().then(setPengumuman).catch(() => {})
     api.getPrestasiPublik().then(setPrestasi).catch(() => {})
+    api.getPpdbPublik().then(setPpdb).catch(() => {})
   }, [])
 
   const dirty = useMemo(
@@ -175,8 +178,17 @@ export default function LandingEditor({ onBack }) {
       <LandingEditProvider draft={draft} onChange={update}>
         <div className="rounded-2xl border border-navy/10 overflow-hidden bg-white shadow-sm">
           <TopBar profil={preview} />
-          <Header profil={preview} />
+          <Header profil={preview} ppdb={ppdb} />
           <Hero profil={preview} />
+          <OtomatisSection note="Diambil dari menu PPDB (periode yang sedang berjalan)">
+            {ppdb?.nama ? (
+              <PpdbInfo ppdb={ppdb} profil={preview} />
+            ) : (
+              <div className="py-10 px-4 text-center text-sm text-navy/50 bg-emerald-50/40">
+                Bagian PPDB tampil otomatis di sini setelah PPDB dibuka (status bukan Draft) di menu PPDB.
+              </div>
+            )}
+          </OtomatisSection>
           <About profil={preview} onProfilUpdated={() => {}} />
           <OtomatisSection note="Diambil dari data Kegiatan yang dipublikasikan">
             <Kegiatan kegiatan={kegiatan} />
@@ -188,7 +200,7 @@ export default function LandingEditor({ onBack }) {
             <Pengumuman pengumuman={pengumuman} />
           </OtomatisSection>
           <Kontak profil={preview} />
-          <Footer profil={preview} />
+          <Footer profil={preview} ppdb={ppdb} />
         </div>
 
         <PengaturanTambahan draft={draft} onChange={update} />

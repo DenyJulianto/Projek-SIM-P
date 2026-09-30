@@ -9,8 +9,11 @@ const NAV_ITEMS = [
 
 import { EditableImage, EditableText, useLandingEdit } from './landing/LandingEdit'
 
-export default function Header({ profil }) {
+export default function Header({ profil, ppdb }) {
   const editing = !!useLandingEdit()
+  const navItems = ppdb?.nama
+    ? [NAV_ITEMS[0], { label: 'PPDB', href: '#ppdb' }, ...NAV_ITEMS.slice(1)]
+    : NAV_ITEMS
 
   return (
     <header className={`bg-white shadow-sm z-40 ${editing ? 'relative' : 'sticky top-0'}`}>
@@ -44,7 +47,7 @@ export default function Header({ profil }) {
         </div>
 
         <nav className="hidden lg:flex items-center gap-7 text-sm font-medium text-navy/80">
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <a key={item.href} href={item.href} className="hover:text-gold transition-colors">
               {item.label}
             </a>
