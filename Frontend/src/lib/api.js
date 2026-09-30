@@ -142,6 +142,11 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
+  uploadGambarLanding: (file) => {
+    const formData = new FormData()
+    formData.append('gambar', file)
+    return requestForm('/profil/gambar', formData)
+  },
 
   createPengumuman: (data) =>
     request('/pengumuman', {

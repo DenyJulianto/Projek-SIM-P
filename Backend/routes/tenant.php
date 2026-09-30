@@ -143,6 +143,7 @@ Route::middleware([
     Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:reset-password');
 
     Route::get('avatar/{path}', [AvatarController::class, 'show'])->where('path', '.*');
+    Route::get('landing-gambar/{file}', [ProfilPublikController::class, 'showGambar']);
     Route::get('sertifikat-staf-file/{path}', [StaffProfileController::class, 'showSertifikatFile'])->where('path', '.*');
     Route::get('surat-file/{path}', [SuratController::class, 'showFile'])->where('path', '.*');
     Route::get('arsip-file/{path}', [ArsipDokumenController::class, 'showFile'])->where('path', '.*');
@@ -832,6 +833,8 @@ Route::middleware([
         Route::get('siswa/{siswa}/rapor', [RaporController::class, 'show']);
 
         Route::put('/profil', [ProfilPublikController::class, 'updateProfil'])
+            ->middleware('permission:humas.informasi');
+        Route::post('/profil/gambar', [ProfilPublikController::class, 'uploadGambar'])
             ->middleware('permission:humas.informasi');
 
         Route::apiResource('pengumuman', PengumumanController::class)

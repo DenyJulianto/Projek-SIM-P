@@ -11,6 +11,9 @@ use App\Models\Prestasi;
 use App\Settings\ProfilSekolahSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ProfilPublikController extends Controller
 {
@@ -90,6 +93,35 @@ class ProfilPublikController extends Controller
         $settings->fill($settingsFields)->save();
 
         return $this->profil($settings);
+    }
+
+    /**
+     * Upload gambar untuk landing page (logo, gambar hero, latar login)
+     * dari editor landing page Admin Sekolah. Yang disimpan di profil
+     * tetap berupa URL, jadi field lama yang berisi URL eksternal tetap jalan.
+     */
+    public function uploadGambar(Request $request): JsonResponse
+    {
+        $request->validate([
+            'gambar' => ['required', 'image', 'max:4096'],
+        ]);
+
+        $path = $request->file('gambar')->store('landing', 'public');
+
+        return response()->json([
+            'url' => url('landing-gambar/'.basename($path)),
+        ]);
+    }
+
+    public function showGambar(string $file): StreamedResponse|Response
+    {
+        $path = 'landing/'.basename($file);
+
+        if (! Storage::disk('public')->exists($path)) {
+            abort(404);
+        }
+
+        return Storage::disk('public')->response($path);
     }
 
     public function pengumuman(Request $request): JsonResponse

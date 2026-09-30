@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useAuth } from '../lib/AuthContext'
 import EditProfilModal from './EditProfilModal'
+import { EditableImage, EditableText, useLandingEdit } from './landing/LandingEdit'
 
 export default function About({ profil, onProfilUpdated }) {
   const { hasPermission } = useAuth()
   const [editing, setEditing] = useState(false)
-  const canEdit = hasPermission('humas.informasi')
+  const inEditor = !!useLandingEdit()
+  const canEdit = hasPermission('humas.informasi') && !inEditor
 
   return (
     <section id="tentang" className="bg-neutral-50 py-20">
@@ -27,29 +29,47 @@ export default function About({ profil, onProfilUpdated }) {
           </div>
 
           <div className="space-y-4 text-navy/70">
-            <p>
+            <div>
               <span className="font-semibold text-navy">Visi: </span>
-              {profil?.visi || 'Belum diisi.'}
-            </p>
-            <p>
+              {inEditor ? (
+                <EditableText field="visi" placeholder="Tulis visi sekolah" multiline />
+              ) : (
+                profil?.visi || 'Belum diisi.'
+              )}
+            </div>
+            <div>
               <span className="font-semibold text-navy">Misi: </span>
-              {profil?.misi || 'Belum diisi.'}
-            </p>
+              {inEditor ? (
+                <EditableText field="misi" placeholder="Tulis misi sekolah" multiline />
+              ) : (
+                profil?.misi || 'Belum diisi.'
+              )}
+            </div>
           </div>
 
-          {profil?.sambutan_kepala_sekolah && (
+          {(inEditor || profil?.sambutan_kepala_sekolah) && (
             <blockquote className="mt-6 border-l-4 border-gold pl-4 italic text-navy/70">
-              “{profil.sambutan_kepala_sekolah}”
+              {inEditor ? (
+                <EditableText
+                  field="sambutan_kepala_sekolah"
+                  placeholder="Tulis sambutan kepala sekolah"
+                  multiline
+                />
+              ) : (
+                <>“{profil.sambutan_kepala_sekolah}”</>
+              )}
               <footer className="mt-2 not-italic font-semibold text-navy text-sm">— Kepala Sekolah</footer>
             </blockquote>
           )}
         </div>
 
-        <div className="rounded-2xl overflow-hidden bg-gradient-to-br from-navy via-emerald-700 to-navy-light aspect-4/3 shadow-xl shadow-emerald-900/20">
-          {profil?.hero_image && (
-            <img src={profil.hero_image} alt="Sekolah" className="h-full w-full object-cover" />
-          )}
-        </div>
+        <EditableImage field="hero_image" className="rounded-2xl">
+          <div className="rounded-2xl overflow-hidden bg-gradient-to-br from-navy via-emerald-700 to-navy-light aspect-4/3 shadow-xl shadow-emerald-900/20">
+            {profil?.hero_image && (
+              <img src={profil.hero_image} alt="Sekolah" className="h-full w-full object-cover" />
+            )}
+          </div>
+        </EditableImage>
       </div>
 
       {editing && (

@@ -1,3 +1,8 @@
+import { EditableImage, EditableText } from './landing/LandingEdit'
+
+const HERO_FALLBACK =
+  'Lingkungan belajar yang mendukung siswa untuk tumbuh, berkembang, dan menjadi pemimpin masa depan.'
+
 export default function Hero({ profil }) {
   return (
     <section id="beranda" className="relative overflow-hidden bg-gradient-to-b from-emerald-50 via-white to-white">
@@ -9,9 +14,9 @@ export default function Hero({ profil }) {
             <br />
             <span className="text-gold">Membangun Masa Depan.</span>
           </h1>
-          <p className="mt-5 text-navy/70 max-w-md">
-            {profil?.visi || 'Lingkungan belajar yang mendukung siswa untuk tumbuh, berkembang, dan menjadi pemimpin masa depan.'}
-          </p>
+          <div className="mt-5 text-navy/70 max-w-md">
+            <EditableText field="visi" value={profil?.visi || HERO_FALLBACK} placeholder={HERO_FALLBACK} multiline />
+          </div>
           <div className="mt-8 flex flex-wrap gap-3">
             <a
               href="#tentang"
@@ -29,11 +34,13 @@ export default function Hero({ profil }) {
         </div>
 
         <div className="relative">
-          <div className="aspect-4/3 rounded-2xl overflow-hidden bg-gradient-to-br from-navy via-emerald-700 to-navy-light shadow-xl shadow-emerald-900/20">
-            {profil?.hero_image && (
-              <img src={profil.hero_image} alt="Sekolah" className="h-full w-full object-cover" />
-            )}
-          </div>
+          <EditableImage field="hero_image" className="rounded-2xl">
+            <div className="aspect-4/3 rounded-2xl overflow-hidden bg-gradient-to-br from-navy via-emerald-700 to-navy-light shadow-xl shadow-emerald-900/20">
+              {profil?.hero_image && (
+                <img src={profil.hero_image} alt="Sekolah" className="h-full w-full object-cover" />
+              )}
+            </div>
+          </EditableImage>
           {profil?.npsn && (
             <div className="absolute -bottom-6 -left-6 bg-white rounded-xl shadow-lg px-5 py-4 hidden sm:block">
               <p className="text-xs text-navy/50">NPSN Terdaftar</p>

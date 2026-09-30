@@ -1,4 +1,7 @@
+import { EditableText, useLandingEdit } from './landing/LandingEdit'
+
 export default function Kontak({ profil }) {
+  const editing = !!useLandingEdit()
   return (
     <section id="kontak" className="py-20">
       <div className="mx-auto max-w-5xl px-4">
@@ -9,9 +12,21 @@ export default function Kontak({ profil }) {
             Hubungi kami untuk informasi pendaftaran, kunjungan sekolah, atau pertanyaan lainnya.
           </p>
           <div className="flex flex-wrap justify-center gap-x-8 gap-y-3 text-white/90 text-sm">
-            {profil?.alamat && <span>📍 {profil.alamat}</span>}
-            {profil?.telepon && <span>📞 {profil.telepon}</span>}
-            {profil?.email && <span>✉️ {profil.email}</span>}
+            {(editing || profil?.alamat) && (
+              <span>
+                📍 <EditableText field="alamat" value={profil?.alamat} placeholder="Alamat sekolah" />
+              </span>
+            )}
+            {(editing || profil?.telepon) && (
+              <span>
+                📞 <EditableText field="telepon" value={profil?.telepon} placeholder="Telepon" />
+              </span>
+            )}
+            {(editing || profil?.email) && (
+              <span>
+                ✉️ <EditableText field="email" value={profil?.email} placeholder="Email sekolah" />
+              </span>
+            )}
           </div>
         </div>
       </div>

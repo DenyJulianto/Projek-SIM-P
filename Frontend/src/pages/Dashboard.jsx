@@ -1,5 +1,4 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
-import EditProfilModal from '../components/EditProfilModal'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import MiniCalendar from '../components/MiniCalendar'
 import { useAuth } from '../lib/AuthContext'
@@ -13,6 +12,7 @@ import LogoHorizontal from '../components/LogoHorizontal'
 // apa pun rolenya — inilah penyebab utama "menu lambat dimuat". React.lazy
 // memecahnya jadi chunk terpisah per halaman, diunduh hanya saat dibuka.
 const AdminHome = lazy(() => import('./admin/AdminHome'))
+const LandingEditor = lazy(() => import('./LandingEditor'))
 const AttendanceRecap = lazy(() => import('./AttendanceRecap'))
 const AuditLog = lazy(() => import('./AuditLog'))
 const BackupRestore = lazy(() => import('./BackupRestore'))
@@ -86,14 +86,11 @@ const MENU_GROUPS = [
 export default function Dashboard() {
   const { user, logout, hasPermission, isSuperAdmin } = useAuth()
   const [view, setView] = useState('home')
-  const [profil, setProfil] = useState(null)
-  const [editingProfil, setEditingProfil] = useState(false)
   const [stats, setStats] = useState({ siswa: null, guru: null, kelas: null })
   const [notices, setNotices] = useState([])
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const [openSection, setOpenSection] = useState(null)
 
-  const canEditProfil = hasPermission('humas.informasi')
   const isAdmin = hasPermission('pengguna.manage')
   const menuGroups = MENU_GROUPS.map((group) => ({
     ...group,
@@ -113,7 +110,6 @@ export default function Dashboard() {
   }
 
   useEffect(() => {
-    if (canEditProfil) api.getProfil().then(setProfil).catch(() => {})
     if (hasPermission('siswa.manage')) {
       api.countSiswa().then((r) => setStats((s) => ({ ...s, siswa: r.total }))).catch(() => {})
     }
@@ -156,10 +152,6 @@ export default function Dashboard() {
   })
 
   function handleAction(item) {
-    if (item.key === 'landing') {
-      setEditingProfil(true)
-      return
-    }
     setView(item.key)
   }
 
@@ -320,6 +312,8 @@ export default function Dashboard() {
             <AuditLog onBack={() => setView('home')} />
           ) : view === 'profile' ? (
             <MyProfile onBack={() => setView('home')} />
+          ) : view === 'landing' && hasPermission('humas.informasi') ? (
+            <LandingEditor onBack={() => setView('home')} />
           ) : isAdmin ? (
             <AdminHome user={user} onNavigate={(key) => setView(key)} />
           ) : (
@@ -469,17 +463,6 @@ export default function Dashboard() {
           )}
           </Suspense>
         </main>
-
-      {editingProfil && (
-        <EditProfilModal
-          profil={profil}
-          onClose={() => setEditingProfil(false)}
-          onSaved={() => {
-            setEditingProfil(false)
-            api.getProfil().then(setProfil).catch(() => {})
-          }}
-        />
-      )}
 
       {confirmingLogout && (
         <LogoutConfirmModal onClose={() => setConfirmingLogout(false)} onConfirm={logout} />
