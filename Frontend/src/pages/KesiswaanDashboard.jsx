@@ -1,23 +1,24 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import ComingSoon from '../components/ComingSoon'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import { useAuth } from '../lib/AuthContext'
 import { api } from '../lib/api'
-import AttendanceRecap from './AttendanceRecap'
-import KelasManagement from './KelasManagement'
-import MyProfile from './MyProfile'
-import PelanggaranManagement from './PelanggaranManagement'
-import EkskulManagement from './EkskulManagement'
-import LaporanKesiswaanManagement from './LaporanKesiswaanManagement'
-import PpdbManagement from './PpdbManagement'
-import PrestasiManagement from './PrestasiManagement'
-import RekapPelanggaran from './RekapPelanggaran'
-import RekapPembinaanManagement from './RekapPembinaanManagement'
-import RekapPrestasi from './RekapPrestasi'
-import SiswaManagement from './SiswaManagement'
-import StatistikSiswa from './StatistikSiswa'
 import LogoHorizontal from '../components/LogoHorizontal'
 import NotifBell from '../components/NotifBell'
+
+const AttendanceRecap = lazy(() => import('./AttendanceRecap'))
+const KelasManagement = lazy(() => import('./KelasManagement'))
+const MyProfile = lazy(() => import('./MyProfile'))
+const PelanggaranManagement = lazy(() => import('./PelanggaranManagement'))
+const EkskulManagement = lazy(() => import('./EkskulManagement'))
+const LaporanKesiswaanManagement = lazy(() => import('./LaporanKesiswaanManagement'))
+const PpdbManagement = lazy(() => import('./PpdbManagement'))
+const PrestasiManagement = lazy(() => import('./PrestasiManagement'))
+const RekapPelanggaran = lazy(() => import('./RekapPelanggaran'))
+const RekapPembinaanManagement = lazy(() => import('./RekapPembinaanManagement'))
+const RekapPrestasi = lazy(() => import('./RekapPrestasi'))
+const SiswaManagement = lazy(() => import('./SiswaManagement'))
+const StatistikSiswa = lazy(() => import('./StatistikSiswa'))
 
 const MENU_GROUPS = [
   { section: null, items: [{ key: 'home', label: 'Dashboard', icon: GridIcon }] },
@@ -33,6 +34,7 @@ const MENU_GROUPS = [
     section: 'Pembinaan',
     items: [
       { key: 'pelanggaran', label: 'Pelanggaran', icon: AlertIcon },
+      { key: 'persetujuan-poin', label: 'Persetujuan Pengurangan Poin', icon: FlagIcon },
       { key: 'prestasi', label: 'Prestasi', icon: TrophyIcon },
       { key: 'ekstrakurikuler', label: 'Ekstrakurikuler', icon: FlagIcon },
       { key: 'organisasi-siswa', label: 'Organisasi Siswa', icon: UsersIcon },
@@ -157,6 +159,7 @@ export default function KesiswaanDashboard() {
 
       <main className="flex-1 p-6 sm:p-8 overflow-y-auto">
         {view === 'home' && <KesiswaanHome user={user} onNavigate={setView} />}
+        <Suspense fallback={<p className="text-sm text-navy/40 text-center py-14">Memuat...</p>}>
         {view === 'siswa' && <SiswaManagement onBack={() => setView('home')} />}
         {view === 'ppdb' && <PpdbManagement onBack={() => setView('home')} />}
         {view === 'ekstrakurikuler' && <EkskulManagement onBack={() => setView('home')} />}
@@ -164,6 +167,7 @@ export default function KesiswaanDashboard() {
         {view === 'rekap-ekskul' && <EkskulManagement onBack={() => setView('home')} tabAwal="laporan" />}
         {view === 'kelas-rombel' && <KelasManagement onBack={() => setView('home')} />}
         {view === 'pelanggaran' && <PelanggaranManagement onBack={() => setView('home')} />}
+        {view === 'persetujuan-poin' && <PersetujuanPoinView onBack={() => setView('home')} />}
         {view === 'prestasi' && <PrestasiManagement onBack={() => setView('home')} />}
         {view === 'kehadiran-siswa' && (
           <AttendanceRecap onBack={() => setView('home')} canSiswa canGuru={false} />
@@ -173,6 +177,7 @@ export default function KesiswaanDashboard() {
         {view === 'rekap-prestasi' && <RekapPrestasi onBack={() => setView('home')} />}
         {view === 'statistik-siswa' && <StatistikSiswa onBack={() => setView('home')} />}
         {view === 'profile' && <MyProfile onBack={() => setView('home')} />}
+        </Suspense>
         {COMING_SOON_LABEL[view] && (
           <div>
             <button onClick={() => setView('home')} className="text-sm text-navy/50 hover:text-navy mb-1">
@@ -185,6 +190,193 @@ export default function KesiswaanDashboard() {
 
       {confirmingLogout && (
         <LogoutConfirmModal onClose={() => setConfirmingLogout(false)} onConfirm={logout} />
+      )}
+    </div>
+  )
+}
+
+const PENGAJUAN_STATUS_STYLE = {
+  menunggu: { label: 'Menunggu', badge: 'bg-amber-100 text-amber-700' },
+  disetujui: { label: 'Disetujui', badge: 'bg-emerald-100 text-emerald-700' },
+  ditolak: { label: 'Ditolak', badge: 'bg-red-100 text-red-600' },
+}
+
+function PersetujuanPoinView({ onBack }) {
+  const [statusFilter, setStatusFilter] = useState('menunggu')
+  const [pengajuan, setPengajuan] = useState(null)
+  const [busyId, setBusyId] = useState(null)
+  const [error, setError] = useState('')
+  const [rejectTarget, setRejectTarget] = useState(null)
+  const [catatanTolak, setCatatanTolak] = useState('')
+
+  function load() {
+    setPengajuan(null)
+    api
+      .listPengajuanPenguranganPoin(statusFilter ? { status: statusFilter } : {})
+      .then((r) => setPengajuan(r.data))
+      .catch((err) => setError(err.message))
+  }
+
+  useEffect(load, [statusFilter])
+
+  async function handleSetujui(id) {
+    setBusyId(id)
+    setError('')
+    try {
+      await api.setujuiPengajuanPenguranganPoin(id)
+      load()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function handleTolak() {
+    if (!catatanTolak.trim()) return
+    setBusyId(rejectTarget)
+    setError('')
+    try {
+      await api.tolakPengajuanPenguranganPoin(rejectTarget, { catatan_kesiswaan: catatanTolak })
+      setRejectTarget(null)
+      setCatatanTolak('')
+      load()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  return (
+    <div>
+      <button onClick={onBack} className="text-sm text-navy/50 hover:text-navy mb-1">
+        ← Kembali ke Dashboard
+      </button>
+      <h1 className="text-xl font-extrabold text-navy mb-5">Persetujuan Pengurangan Poin</h1>
+
+      <div className="flex gap-2 mb-4">
+        {['menunggu', 'disetujui', 'ditolak', ''].map((s) => (
+          <button
+            key={s || 'semua'}
+            onClick={() => setStatusFilter(s)}
+            className={`text-xs font-semibold px-3 py-1.5 rounded-full border ${
+              statusFilter === s
+                ? 'bg-navy text-white border-navy'
+                : 'text-navy/60 border-navy/15 hover:bg-navy/5'
+            }`}
+          >
+            {s ? PENGAJUAN_STATUS_STYLE[s].label : 'Semua'}
+          </button>
+        ))}
+      </div>
+
+      {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
+
+      <div className="bg-white rounded-2xl border border-navy/10 overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-navy/5 text-navy/60 text-xs uppercase tracking-wide">
+            <tr>
+              <th className="text-left px-5 py-3">Siswa</th>
+              <th className="text-left px-5 py-3">Pelanggaran</th>
+              <th className="text-left px-5 py-3">Diajukan Oleh</th>
+              <th className="text-left px-5 py-3">Poin</th>
+              <th className="text-left px-5 py-3">Alasan</th>
+              <th className="text-left px-5 py-3">Status</th>
+              <th className="text-left px-5 py-3">Aksi</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-navy/5">
+            {(pengajuan || []).map((p) => {
+              const style = PENGAJUAN_STATUS_STYLE[p.status] ?? PENGAJUAN_STATUS_STYLE.menunggu
+              return (
+                <tr key={p.id}>
+                  <td className="px-5 py-3 text-navy font-medium">
+                    {p.siswa?.nama}
+                    <span className="block text-xs text-navy/40">
+                      Sisa poin: {p.siswa?.poin_disiplin}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3 text-navy/70">{p.pelanggaran?.jenis}</td>
+                  <td className="px-5 py-3 text-navy/70">{p.diajukan_oleh?.name}</td>
+                  <td className="px-5 py-3 text-navy/70">{p.poin_diajukan}</td>
+                  <td className="px-5 py-3 text-navy/50 max-w-[200px] truncate" title={p.alasan}>
+                    {p.alasan}
+                  </td>
+                  <td className="px-5 py-3">
+                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${style.badge}`}>
+                      {style.label}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3 whitespace-nowrap">
+                    {p.status === 'menunggu' ? (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleSetujui(p.id)}
+                          disabled={busyId === p.id}
+                          className="text-xs font-semibold text-emerald-700 border border-emerald-200 rounded-full px-3 py-1 hover:bg-emerald-50 disabled:opacity-50"
+                        >
+                          Setujui
+                        </button>
+                        <button
+                          onClick={() => setRejectTarget(p.id)}
+                          disabled={busyId === p.id}
+                          className="text-xs font-semibold text-red-600 border border-red-200 rounded-full px-3 py-1 hover:bg-red-50 disabled:opacity-50"
+                        >
+                          Tolak
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-navy/40">{p.catatan_kesiswaan || '-'}</span>
+                    )}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+        {pengajuan && pengajuan.length === 0 && (
+          <p className="text-sm text-navy/40 text-center py-10">Tidak ada pengajuan.</p>
+        )}
+        {pengajuan === null && <p className="text-sm text-navy/40 text-center py-10">Memuat...</p>}
+      </div>
+
+      {rejectTarget && (
+        <div className="fixed inset-0 z-[100] bg-navy/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full shadow-2xl p-6">
+            <h2 className="text-lg font-bold text-navy mb-3">Tolak Pengajuan</h2>
+            <label className="block mb-4">
+              <span className="block text-xs font-semibold text-navy/70 mb-1">
+                Alasan Penolakan
+              </span>
+              <textarea
+                rows={3}
+                value={catatanTolak}
+                onChange={(e) => setCatatanTolak(e.target.value)}
+                className="w-full border border-navy/15 rounded-lg px-3 py-2 text-sm"
+                autoFocus
+              />
+            </label>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setRejectTarget(null)
+                  setCatatanTolak('')
+                }}
+                className="px-4 py-2 text-sm font-medium text-navy/70 hover:text-navy"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleTolak}
+                disabled={!catatanTolak.trim() || busyId === rejectTarget}
+                className="bg-red-500 hover:bg-red-600 text-white text-sm font-semibold px-5 py-2 rounded-md disabled:opacity-50"
+              >
+                {busyId === rejectTarget ? 'Menolak...' : 'Tolak'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

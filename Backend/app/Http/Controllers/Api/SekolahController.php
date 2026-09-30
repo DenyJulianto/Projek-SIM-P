@@ -99,7 +99,10 @@ class SekolahController extends Controller
             'nama_sekolah' => ['required', 'string', 'max:255'],
             'npsn' => ['nullable', 'string', 'max:20', 'unique:tenants,npsn'],
             'jenjang' => ['nullable', 'string', 'max:20'],
+            'status_sekolah' => ['nullable', 'in:negeri,swasta'],
+            'akreditasi' => ['nullable', 'in:A,B,C,Belum Terakreditasi'],
             'alamat' => ['nullable', 'string'],
+            'rt_rw' => ['nullable', 'string', 'max:20'],
             'kecamatan' => ['nullable', 'string', 'max:255'],
             'kelurahan' => ['nullable', 'string', 'max:255'],
             'kode_pos' => ['nullable', 'string', 'max:10'],
@@ -109,8 +112,17 @@ class SekolahController extends Controller
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'telepon' => ['nullable', 'string', 'max:20'],
             'email' => ['nullable', 'email', 'max:255'],
+            'website' => ['nullable', 'string', 'max:255'],
+            'nama_kepala_sekolah' => ['nullable', 'string', 'max:255'],
+            'nama_yayasan' => ['nullable', 'string', 'max:255'],
+            'tahun_berdiri' => ['nullable', 'integer', 'digits:4'],
+            'no_sk_pendirian' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'in:active,inactive'],
-            'domain' => ['required', 'string', 'max:255'],
+            // Format hostname biasa saja (huruf/angka/strip per label, titik
+            // sebagai pemisah) — mencegah typo seperti "loaclhost" atau
+            // karakter tidak valid (mis. "@") lolos tersimpan sebagai domain
+            // login sekolah, yang bikin link-nya tidak pernah bisa dibuka.
+            'domain' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i'],
         ]);
 
         $sekolah = Sekolah::create([
@@ -118,7 +130,10 @@ class SekolahController extends Controller
             'nama_sekolah' => $data['nama_sekolah'],
             'npsn' => $data['npsn'] ?? null,
             'jenjang' => $data['jenjang'] ?? null,
+            'status_sekolah' => $data['status_sekolah'] ?? null,
+            'akreditasi' => $data['akreditasi'] ?? null,
             'alamat' => $data['alamat'] ?? null,
+            'rt_rw' => $data['rt_rw'] ?? null,
             'kecamatan' => $data['kecamatan'] ?? null,
             'kelurahan' => $data['kelurahan'] ?? null,
             'kode_pos' => $data['kode_pos'] ?? null,
@@ -128,6 +143,11 @@ class SekolahController extends Controller
             'longitude' => $data['longitude'] ?? null,
             'telepon' => $data['telepon'] ?? null,
             'email' => $data['email'] ?? null,
+            'website' => $data['website'] ?? null,
+            'nama_kepala_sekolah' => $data['nama_kepala_sekolah'] ?? null,
+            'nama_yayasan' => $data['nama_yayasan'] ?? null,
+            'tahun_berdiri' => $data['tahun_berdiri'] ?? null,
+            'no_sk_pendirian' => $data['no_sk_pendirian'] ?? null,
             'status' => $data['status'] ?? 'active',
         ]);
 
@@ -149,7 +169,10 @@ class SekolahController extends Controller
             'nama_sekolah' => ['sometimes', 'string', 'max:255'],
             'npsn' => ['nullable', 'string', 'max:20', 'unique:tenants,npsn,' . $sekolah->id],
             'jenjang' => ['nullable', 'string', 'max:20'],
+            'status_sekolah' => ['nullable', 'in:negeri,swasta'],
+            'akreditasi' => ['nullable', 'in:A,B,C,Belum Terakreditasi'],
             'alamat' => ['nullable', 'string'],
+            'rt_rw' => ['nullable', 'string', 'max:20'],
             'kecamatan' => ['nullable', 'string', 'max:255'],
             'kelurahan' => ['nullable', 'string', 'max:255'],
             'kode_pos' => ['nullable', 'string', 'max:10'],
@@ -159,10 +182,16 @@ class SekolahController extends Controller
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'telepon' => ['nullable', 'string', 'max:20'],
             'email' => ['nullable', 'email', 'max:255'],
+            'website' => ['nullable', 'string', 'max:255'],
+            'nama_kepala_sekolah' => ['nullable', 'string', 'max:255'],
+            'nama_yayasan' => ['nullable', 'string', 'max:255'],
+            'tahun_berdiri' => ['nullable', 'integer', 'digits:4'],
+            'no_sk_pendirian' => ['nullable', 'string', 'max:255'],
             'status' => ['sometimes', 'in:active,inactive'],
         ]);
 
         $sekolah->update($data);
+        $sekolah->loadCount(['guruDirectory as jumlah_guru', 'siswaDirectory as jumlah_siswa']);
 
         return response()->json($sekolah->load('domains'));
     }

@@ -92,6 +92,8 @@ export const api = {
   getProfil: () => request('/public/profil'),
   getPengumuman: () => request('/public/pengumuman'),
   getKegiatan: () => request('/public/kegiatan'),
+  getPrestasiPublik: () => request('/public/prestasi'),
+  getPpdbPublik: () => request('/public/ppdb'),
 
   login: (email, password) =>
     request(IS_CENTRAL_DOMAIN ? '/api/login' : '/login', {
@@ -141,6 +143,11 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
+  uploadGambarLanding: (file) => {
+    const formData = new FormData()
+    formData.append('gambar', file)
+    return requestForm('/profil/gambar', formData)
+  },
 
   createPengumuman: (data) =>
     request('/pengumuman', {
@@ -240,10 +247,41 @@ export const api = {
     return requestForm('/api/direktori-guru/import', formData)
   },
 
+  getGuruAlamat: (sekolahId, guruId) =>
+    request(`/api/direktori-guru/${sekolahId}/${guruId}/alamat`),
+
+  updateGuruDirektori: (sekolahId, guruId, data) =>
+    request(`/api/direktori-guru/${sekolahId}/${guruId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  deleteGuruDirektori: (sekolahId, guruId) =>
+    request(`/api/direktori-guru/${sekolahId}/${guruId}`, {
+      method: 'DELETE',
+    }),
+
   getSiswaDirectoryNasional: (params = {}) => {
     const query = new URLSearchParams(params).toString()
     return request(`/api/direktori-siswa${query ? `?${query}` : ''}`)
   },
+
+  getSiswaWali: (sekolahId, siswaId) =>
+    request(`/api/direktori-siswa/${sekolahId}/${siswaId}/wali`),
+
+  getSiswaAlamat: (sekolahId, siswaId) =>
+    request(`/api/direktori-siswa/${sekolahId}/${siswaId}/alamat`),
+
+  updateSiswaDirektori: (sekolahId, siswaId, data) =>
+    request(`/api/direktori-siswa/${sekolahId}/${siswaId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  deleteSiswaDirektori: (sekolahId, siswaId) =>
+    request(`/api/direktori-siswa/${sekolahId}/${siswaId}`, {
+      method: 'DELETE',
+    }),
 
   exportSiswaDirectoryNasional: (params = {}) => {
     const query = new URLSearchParams(params).toString()
@@ -272,6 +310,17 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  updateSekolah: (sekolahId, data) =>
+    request(`/api/sekolah/${sekolahId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  deleteSekolah: (sekolahId) =>
+    request(`/api/sekolah/${sekolahId}`, {
+      method: 'DELETE',
+    }),
+
   downloadSekolahImportTemplate: () =>
     downloadFile('/api/sekolah/import-template', 'template-import-sekolah.xlsx'),
 
@@ -287,10 +336,13 @@ export const api = {
   },
 
   // Akses & Hak Sekolah (Super Admin)
-  updateSekolahStatus: (sekolahId, status) =>
+  updateSekolahStatus: (sekolahId, status, alasanNonaktif) =>
     request(`/api/sekolah/${sekolahId}/status`, {
       method: 'PATCH',
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({
+        status,
+        ...(status === 'inactive' ? { alasan_nonaktif: alasanNonaktif } : {}),
+      }),
     }),
 
   getSekolahAdmins: (sekolahId) => request(`/api/sekolah/${sekolahId}/admins`),
@@ -753,6 +805,7 @@ export const api = {
   getMySiswaSaldo: () => request('/me/siswa/saldo'),
   getMySiswaTagihan: () => request('/me/siswa/tagihan'),
   getMySiswaPrestasi: () => request('/me/siswa/prestasi'),
+  getMySiswaPelanggaran: () => request('/me/siswa/pelanggaran'),
   submitPrestasiSaya: ({ judul, tingkat, tanggal, keterangan, file }) => {
     const formData = new FormData()
     formData.append('judul', judul)
@@ -789,6 +842,8 @@ export const api = {
   getAnakTagihan: (siswaId) => request(`/me/anak/${siswaId}/tagihan`),
   getAnakRiwayatPembayaran: (siswaId) => request(`/me/anak/${siswaId}/riwayat-pembayaran`),
   getAnakPrestasi: (siswaId) => request(`/me/anak/${siswaId}/prestasi`),
+
+  getAnakPelanggaran: (siswaId) => request(`/me/anak/${siswaId}/pelanggaran`),
   getAnakWaliKelas: (siswaId) => request(`/me/anak/${siswaId}/wali-kelas`),
   getAnakVirtualAccount: (siswaId) => request(`/me/anak/${siswaId}/virtual-account`),
   getAnakQris: (siswaId, tagihanId) => request(`/me/anak/${siswaId}/tagihan/${tagihanId}/qris`),
@@ -1366,6 +1421,18 @@ export const api = {
   updatePelanggaran: (id, data) => request(`/pelanggaran/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deletePelanggaran: (id) => request(`/pelanggaran/${id}`, { method: 'DELETE' }),
 
+  // Alur poin kedisiplinan: BK mengajukan, Kesiswaan menyetujui/menolak.
+  listPengajuanPenguranganPoin: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/pengajuan-pengurangan-poin${query ? `?${query}` : ''}`)
+  },
+  createPengajuanPenguranganPoin: (data) =>
+    request('/pengajuan-pengurangan-poin', { method: 'POST', body: JSON.stringify(data) }),
+  setujuiPengajuanPenguranganPoin: (id, data = {}) =>
+    request(`/pengajuan-pengurangan-poin/${id}/setujui`, { method: 'POST', body: JSON.stringify(data) }),
+  tolakPengajuanPenguranganPoin: (id, data) =>
+    request(`/pengajuan-pengurangan-poin/${id}/tolak`, { method: 'POST', body: JSON.stringify(data) }),
+
   // Bimbingan Konseling
   listKonseling: (params = {}) => {
     const query = new URLSearchParams(params).toString()
@@ -1726,4 +1793,10 @@ export const api = {
   labLaporan: (jenis, params = {}) => request(`/laboratorium/laporan/${jenis}?${new URLSearchParams(params).toString()}`),
   labLaporanExport: (jenis, params = {}) => downloadFile(`/laboratorium/laporan/${jenis}/export?${new URLSearchParams(params).toString()}`, `laporan-lab-${jenis}.xlsx`),
   labLaporanPdf: (jenis, params = {}) => downloadFile(`/laboratorium/laporan/${jenis}/pdf?${new URLSearchParams(params).toString()}`, `laporan-lab-${jenis}.pdf`),
+
+  // Laporan Tata Usaha
+  getLaporanTuSiswa: () => request('/laporan-tu/siswa'),
+  getLaporanTuPegawai: () => request('/laporan-tu/pegawai'),
+  getLaporanTuAbsensi: (params = {}) => request(`/laporan-tu/absensi?${new URLSearchParams(params).toString()}`),
+  getLaporanTuAdministrasi: (params = {}) => request(`/laporan-tu/administrasi?${new URLSearchParams(params).toString()}`),
 }

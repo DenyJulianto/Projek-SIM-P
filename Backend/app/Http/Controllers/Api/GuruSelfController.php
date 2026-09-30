@@ -9,8 +9,10 @@ use App\Models\Guru;
 use App\Models\GuruSertifikat;
 use App\Models\JadwalPelajaran;
 use App\Models\Nilai;
+use App\Models\Siswa;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -142,8 +144,13 @@ class GuruSelfController extends Controller
             ->unique('id')
             ->values();
 
-        $kelas = $kelas->map(function ($k) {
-            $k->jumlah_siswa = $k->siswa()->count();
+        $jumlahSiswaPerKelas = Siswa::whereIn('kelas_id', $kelas->pluck('id'))
+            ->select('kelas_id', DB::raw('count(*) as total'))
+            ->groupBy('kelas_id')
+            ->pluck('total', 'kelas_id');
+
+        $kelas = $kelas->map(function ($k) use ($jumlahSiswaPerKelas) {
+            $k->jumlah_siswa = (int) $jumlahSiswaPerKelas->get($k->id, 0);
 
             return $k;
         });

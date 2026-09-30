@@ -1,16 +1,32 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../lib/AuthContext'
+import { EditableText, useLandingEdit } from './landing/LandingEdit'
 
 export default function TopBar({ profil }) {
-  const { user, logout } = useAuth()
+  const { user: authUser, logout } = useAuth()
+  const editing = !!useLandingEdit()
+  // Di editor tampilkan versi pengunjung (tombol Daftar/Login), bukan sesi admin.
+  const user = editing ? null : authUser
 
   return (
     <div className="bg-gradient-to-r from-navy via-emerald-800 to-navy-light text-white text-xs sm:text-sm">
       <div className="mx-auto max-w-7xl px-4 py-2 flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-white/80">
-          {profil?.alamat && <span>📍 {profil.alamat}</span>}
-          {profil?.telepon && <span>📞 {profil.telepon}</span>}
-          {profil?.email && <span>✉️ {profil.email}</span>}
+          {(editing || profil?.alamat) && (
+            <span>
+              📍 <EditableText field="alamat" value={profil?.alamat} placeholder="Alamat sekolah" />
+            </span>
+          )}
+          {(editing || profil?.telepon) && (
+            <span>
+              📞 <EditableText field="telepon" value={profil?.telepon} placeholder="Telepon" />
+            </span>
+          )}
+          {(editing || profil?.email) && (
+            <span>
+              ✉️ <EditableText field="email" value={profil?.email} placeholder="Email sekolah" />
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-3">
           {user ? (

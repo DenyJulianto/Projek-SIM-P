@@ -14,6 +14,7 @@ use App\Models\Siswa;
 use App\Services\DirectorySyncService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Spatie\QueryBuilder\QueryBuilder;
 
 /**
@@ -88,6 +89,19 @@ class SchoolSyncController extends Controller
      */
     public function conflicts(): JsonResponse
     {
+        // Membuka koneksi database SEMUA sekolah setiap kali menu ini dibuka
+        // itu berat dan makin lambat seiring sekolah bertambah, padahal
+        // konfliknya tidak berubah tiap detik — cache pendek 60 detik supaya
+        // dashboard tetap responsif tanpa datanya terasa basi.
+        $conflicts = Cache::remember('super-admin:sync-conflicts', 60, function () {
+            return $this->buildConflicts();
+        });
+
+        return response()->json($conflicts);
+    }
+
+    private function buildConflicts(): array
+    {
         $conflicts = [];
 
         foreach (Sekolah::all() as $sekolah) {
@@ -120,6 +134,6 @@ class SchoolSyncController extends Controller
             ];
         }
 
-        return response()->json($conflicts);
+        return $conflicts;
     }
 }

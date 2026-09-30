@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -155,7 +156,31 @@ class AuthController extends Controller
 
         $user = User::where('email', $data['email'])->first();
 
-        if (! $user || ! Schema::hasColumn('users', 'password_reset_code') || $user->password_reset_code !== $data['code']) {
+        // Kode cuma 6 digit, jadi batasi tebakan: setelah 5 kali salah, kode
+        // dihanguskan dan pengguna harus minta kode baru.
+        $attemptKey = $this->passwordResetAttemptKey($data['email']);
+
+        if (RateLimiter::tooManyAttempts($attemptKey, 5)) {
+            throw ValidationException::withMessages([
+                'code' => ['Terlalu banyak percobaan kode yang salah. Silakan minta kode baru.'],
+            ]);
+        }
+
+        if (
+            ! $user
+            || ! Schema::hasColumn('users', 'password_reset_code')
+            || ! is_string($user->password_reset_code)
+            || ! hash_equals($user->password_reset_code, $data['code'])
+        ) {
+            RateLimiter::hit($attemptKey, 15 * 60);
+
+            if ($user && RateLimiter::tooManyAttempts($attemptKey, 5)) {
+                $user->forceFill([
+                    'password_reset_code' => null,
+                    'password_reset_code_expires_at' => null,
+                ])->save();
+            }
+
             throw ValidationException::withMessages([
                 'code' => ['Kode reset password salah.'],
             ]);
@@ -174,6 +199,7 @@ class AuthController extends Controller
         ])->save();
 
         $user->tokens()->delete();
+        RateLimiter::clear($attemptKey);
 
         return response()->json([
             'message' => 'Password berhasil diubah. Silakan masuk dengan password baru Anda.',
@@ -356,6 +382,9 @@ class AuthController extends Controller
             'password_reset_code_expires_at' => now()->addMinutes(15),
         ])->save();
 
+        // Kode baru = jatah percobaan baru.
+        RateLimiter::clear($this->passwordResetAttemptKey($user->email));
+
         try {
             Mail::raw(
                 "Kode reset password akun SIM Pendidikan Anda: {$code}\n\nKode berlaku selama 15 menit. Jika Anda tidak meminta ini, abaikan email ini.",
@@ -364,6 +393,11 @@ class AuthController extends Controller
         } catch (\Throwable $e) {
             report($e);
         }
+    }
+
+    private function passwordResetAttemptKey(string $email): string
+    {
+        return 'reset-password:'.tenant('id').':'.mb_strtolower($email);
     }
 
     public function logout(Request $request): JsonResponse

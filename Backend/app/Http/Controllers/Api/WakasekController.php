@@ -23,6 +23,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Endpoint read-only untuk dashboard Wakil Kepala Sekolah: rekap/agregat dari
@@ -120,15 +121,24 @@ class WakasekController extends Controller
             ->get()
             ->groupBy('kelas_id');
 
-        $rows = Kelas::orderBy('tingkat')->orderBy('nama_kelas')->get()->map(function (Kelas $k) use ($rapor) {
-            $nilai = Nilai::whereHas('siswa', fn ($q) => $q->where('kelas_id', $k->id));
+        // Satu query agregat (join+groupBy) dipakai semua kelas, bukan
+        // ->avg('nilai')/->count() terpisah per kelas di dalam map() (N+1).
+        $nilaiPerKelas = Nilai::query()
+            ->join('siswa', 'nilai.siswa_id', '=', 'siswa.id')
+            ->select('siswa.kelas_id', DB::raw('sum(nilai.nilai) as total_nilai'), DB::raw('count(*) as jumlah_nilai'))
+            ->groupBy('siswa.kelas_id')
+            ->get()
+            ->keyBy('kelas_id');
+
+        $rows = Kelas::orderBy('tingkat')->orderBy('nama_kelas')->get()->map(function (Kelas $k) use ($rapor, $nilaiPerKelas) {
+            $nilai = $nilaiPerKelas->get($k->id);
             $status = ($rapor[$k->id] ?? collect())->pluck('total', 'status');
 
             return [
                 'id' => $k->id,
                 'kelas' => $k->nama_kelas,
-                'jumlah_nilai' => (clone $nilai)->count(),
-                'rata_rata' => ($avg = (clone $nilai)->avg('nilai')) ? round((float) $avg, 2) : null,
+                'jumlah_nilai' => $nilai->jumlah_nilai ?? 0,
+                'rata_rata' => $nilai ? round((float) $nilai->total_nilai / $nilai->jumlah_nilai, 2) : null,
                 'rapor_diajukan' => (int) ($status['diajukan'] ?? 0),
                 'rapor_disahkan' => (int) ($status['disahkan'] ?? 0),
                 'rapor_ditolak' => (int) ($status['ditolak'] ?? 0),
@@ -138,29 +148,44 @@ class WakasekController extends Controller
         return response()->json($rows);
     }
 
+    // Endpoint di bawah ini sengaja diberi batas jumlah baris (bukan
+    // pagination penuh, supaya tidak mengubah bentuk response yang sudah
+    // dipakai frontend sebagai array biasa) — jaring pengaman kalau
+    // datanya bertambah banyak, tanpa perlu ubah UI daftar/tabelnya.
+    private const SAFETY_LIMIT_BESAR = 1000;
+
+    private const SAFETY_LIMIT_SEDANG = 500;
+
     public function siswa(): JsonResponse
     {
         return response()->json(
-            Siswa::with('kelas:id,nama_kelas')->orderBy('nama')->get(['id', 'kelas_id', 'nis', 'nisn', 'nama', 'jenis_kelamin', 'status'])
+            Siswa::with('kelas:id,nama_kelas')->orderBy('nama')
+                ->limit(self::SAFETY_LIMIT_BESAR)
+                ->get(['id', 'kelas_id', 'nis', 'nisn', 'nama', 'jenis_kelamin', 'status'])
         );
     }
 
     public function pelanggaran(): JsonResponse
     {
-        return response()->json($this->pelanggaranQuery()->get());
+        return response()->json($this->pelanggaranQuery()->limit(self::SAFETY_LIMIT_SEDANG)->get());
     }
 
     public function prestasi(): JsonResponse
     {
         return response()->json(
-            Prestasi::with('siswa:id,nama,kelas_id', 'siswa.kelas:id,nama_kelas')->orderByDesc('tanggal')->get()
+            Prestasi::with('siswa:id,nama,kelas_id', 'siswa.kelas:id,nama_kelas')
+                ->orderByDesc('tanggal')
+                ->limit(self::SAFETY_LIMIT_SEDANG)
+                ->get()
         );
     }
 
     public function guru(): JsonResponse
     {
         return response()->json(
-            Guru::orderBy('nama')->get(['id', 'nip', 'nuptk', 'nama', 'gelar', 'jabatan', 'pendidikan_terakhir', 'tahun_mulai_mengajar', 'no_telepon', 'status'])
+            Guru::orderBy('nama')
+                ->limit(300)
+                ->get(['id', 'nip', 'nuptk', 'nama', 'gelar', 'jabatan', 'pendidikan_terakhir', 'tahun_mulai_mengajar', 'no_telepon', 'status'])
         );
     }
 
@@ -231,7 +256,9 @@ class WakasekController extends Controller
         $guru = Guru::pluck('nama', 'id');
         $hari = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 
-        $rows = JadwalPelajaran::with('kelas:id,nama_kelas', 'mataPelajaran:id,nama_mapel')->get()
+        $rows = JadwalPelajaran::with('kelas:id,nama_kelas', 'mataPelajaran:id,nama_mapel')
+            ->limit(self::SAFETY_LIMIT_BESAR)
+            ->get()
             ->map(fn (JadwalPelajaran $j) => [
                 'id' => $j->id,
                 'hari' => $j->hari,
@@ -284,7 +311,7 @@ class WakasekController extends Controller
                 'tanggal_keputusan' => $p->tanggal_keputusan,
             ]);
 
-        return response()->json($kepegawaian->concat($anggaran)->sortByDesc('tanggal')->values());
+        return response()->json($kepegawaian->concat($anggaran)->sortByDesc('tanggal')->take(self::SAFETY_LIMIT_SEDANG)->values());
     }
 
     private function pelanggaranQuery()
@@ -303,11 +330,22 @@ class WakasekController extends Controller
     /** Persentase kehadiran siswa per bulan sepanjang tahun ini (null = belum ada data). */
     private function trenKehadiran(): array
     {
-        return collect(range(1, 12))->map(function (int $bulan) {
-            $q = Absensi::whereMonth('tanggal', $bulan)->whereYear('tanggal', now()->year);
-            $total = (clone $q)->count();
+        $perBulan = Absensi::query()
+            ->whereYear('tanggal', now()->year)
+            ->select(
+                DB::raw("cast(strftime('%m', tanggal) as integer) as bulan"),
+                DB::raw('count(*) as total'),
+                DB::raw("sum(case when status = 'hadir' then 1 else 0 end) as hadir")
+            )
+            ->groupBy('bulan')
+            ->get()
+            ->keyBy('bulan');
 
-            return ['bulan' => $bulan, 'persen' => $total > 0 ? round(((clone $q)->where('status', 'hadir')->count() / $total) * 100, 1) : null];
+        return collect(range(1, 12))->map(function (int $bulan) use ($perBulan) {
+            $row = $perBulan->get($bulan);
+            $total = $row ? (int) $row->total : 0;
+
+            return ['bulan' => $bulan, 'persen' => $total > 0 ? round(($row->hadir / $total) * 100, 1) : null];
         })->all();
     }
 

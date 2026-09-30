@@ -1,5 +1,6 @@
 import logoLambang from '../assets/logo-sim-lambang.png'
 import ModalCloseButton from '../components/ModalCloseButton'
+import NotifBell from '../components/NotifBell'
 import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import { useAuth } from '../lib/AuthContext'
@@ -31,9 +32,16 @@ const MENU_GROUPS = [
     items: [
       { key: 'tugas', label: 'Tugas', icon: TaskIcon },
       { key: 'prestasi', label: 'Prestasi', icon: TrophyIcon },
+      { key: 'pelanggaran', label: 'Pelanggaran', icon: ShieldIcon },
     ],
   },
 ]
+
+const TINGKAT_PELANGGARAN_STYLE = {
+  ringan: { label: 'Ringan', badge: 'bg-amber-100 text-amber-700', icon: 'bg-amber-500' },
+  sedang: { label: 'Sedang', badge: 'bg-orange-100 text-orange-700', icon: 'bg-orange-500' },
+  berat: { label: 'Berat', badge: 'bg-red-100 text-red-600', icon: 'bg-red-500' },
+}
 
 const KONFIRMASI_STATUS_TONE = {
   menunggu: 'bg-amber-100 text-amber-700',
@@ -169,6 +177,8 @@ export default function OrangTuaDashboard() {
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0">
+          <NotifBell />
+
           <button
             onClick={() => navigate('profile')}
             className={`flex items-center gap-2.5 pl-1.5 pr-3 py-1 rounded-full transition-colors ${
@@ -265,6 +275,7 @@ export default function OrangTuaDashboard() {
               {view === 'wali-kelas' && <WaliKelasView onBack={() => setView('home')} anak={anak} />}
               {view === 'tugas' && <TugasAnakView onBack={() => setView('home')} anak={anak} />}
               {view === 'prestasi' && <PrestasiAnakView onBack={() => setView('home')} anak={anak} />}
+              {view === 'pelanggaran' && <PelanggaranAnakView onBack={() => setView('home')} anak={anak} />}
               {view === 'pengumuman' && <PengumumanView onBack={() => setView('home')} />}
               {view === 'profile' && <MyProfile onBack={() => setView('home')} />}
             </>
@@ -2564,6 +2575,90 @@ function PrestasiAnakView({ onBack, anak }) {
             Beri semangat dan dampingi {anak?.nama ?? 'anak'} Anda pada setiap langkah kecil menuju pencapaian berikutnya.
           </p>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function PelanggaranAnakView({ onBack, anak }) {
+  const [pelanggaran, setPelanggaran] = useState(null)
+
+  useEffect(() => {
+    if (!anak) return
+    setPelanggaran(null)
+    api.getAnakPelanggaran(anak.id).then(setPelanggaran).catch(() => setPelanggaran([]))
+  }, [anak?.id])
+
+  const list = pelanggaran || []
+  const total = list.length
+  const tigaBulanTerakhir = list.filter(
+    (p) => p.tanggal && (Date.now() - new Date(p.tanggal).getTime()) / (1000 * 60 * 60 * 24) <= 90
+  ).length
+  const berat = list.filter((p) => p.tingkat === 'berat').length
+
+  const sorted = [...list].sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
+
+  return (
+    <div>
+      <button onClick={onBack} className="text-sm text-navy/50 hover:text-navy mb-3 block">
+        ← Kembali ke Dashboard
+      </button>
+      <div className="flex items-center gap-3 mb-6">
+        <div className="h-11 w-11 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+          <ShieldIcon className="h-5.5 w-5.5 text-amber-700" />
+        </div>
+        <div>
+          <h1 className="text-xl font-extrabold text-navy">Pelanggaran</h1>
+          <p className="text-xs text-navy/40">Catatan pelanggaran {anak?.nama ?? 'anak'} Anda di sekolah.</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <PrestasiStatCard icon={ShieldIcon} colorClass="bg-amber-100 text-amber-600" label="Total Pelanggaran" value={total} sublabel="catatan" />
+        <PrestasiStatCard icon={BoltIcon} colorClass="bg-red-100 text-red-600" label="Sisa Poin Kedisiplinan" value={anak?.poin_disiplin ?? '-'} />
+        <PrestasiStatCard icon={CalendarIcon} colorClass="bg-blue-100 text-blue-600" label="3 Bulan Terakhir" value={tigaBulanTerakhir} sublabel="catatan" />
+        <PrestasiStatCard icon={StarIcon} colorClass="bg-orange-100 text-orange-600" label="Tingkat Berat" value={berat} sublabel="catatan" />
+      </div>
+
+      <div className="bg-white rounded-2xl border border-emerald-100 shadow-sm p-5">
+        <div className="flex items-center gap-2.5 mb-3">
+          <div className="h-8 w-8 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+            <ShieldIcon className="h-4 w-4 text-amber-700" />
+          </div>
+          <h2 className="text-sm font-bold text-navy">Riwayat Pelanggaran</h2>
+        </div>
+
+        <div className="divide-y divide-navy/5">
+          {sorted.map((p) => {
+            const style = TINGKAT_PELANGGARAN_STYLE[p.tingkat] ?? TINGKAT_PELANGGARAN_STYLE.ringan
+            return (
+              <div key={p.id} className="flex items-center gap-3 py-3 flex-wrap sm:flex-nowrap">
+                <div className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${style.icon}`}>
+                  <ShieldIcon className="h-4.5 w-4.5 text-white" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-navy truncate">{p.jenis}</p>
+                  {(p.keterangan || p.tindakan) && (
+                    <p className="text-xs text-navy/40 truncate">
+                      {p.keterangan}
+                      {p.tindakan ? ` — Tindakan: ${p.tindakan}` : ''}
+                    </p>
+                  )}
+                </div>
+                <span className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full ${style.badge}`}>
+                  {style.label}
+                </span>
+                <span className="shrink-0 text-xs text-navy/40 flex items-center gap-1">
+                  <CalendarIcon className="h-3 w-3" />
+                  {formatTanggal(p.tanggal)}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+
+        {pelanggaran && sorted.length === 0 && <EmptyState text="Tidak ada catatan pelanggaran. Pertahankan!" />}
+        {pelanggaran === null && <EmptyState text="Memuat..." />}
       </div>
     </div>
   )

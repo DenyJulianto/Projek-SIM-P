@@ -25,10 +25,17 @@ export default function ForgotPassword() {
   const [loading, setLoading] = useState(false)
   const [resending, setResending] = useState(false)
   const [background, setBackground] = useState('')
+  const [profil, setProfil] = useState(null)
 
   useEffect(() => {
     if (IS_CENTRAL_DOMAIN) return
-    api.getProfil().then((p) => setBackground(p.auth_background || '')).catch(() => {})
+    api
+      .getProfil()
+      .then((p) => {
+        setBackground(p.auth_background || '')
+        setProfil(p)
+      })
+      .catch(() => {})
   }, [])
 
   async function handleRequest(e) {
@@ -133,6 +140,8 @@ export default function ForgotPassword() {
                 </div>
               </form>
 
+              <BantuanAdmin profil={profil} />
+
               <hr className="border-navy/10 mt-6" />
 
               <a href="/login" className="block text-center text-xs text-navy/40 hover:text-navy mt-4">
@@ -226,6 +235,8 @@ export default function ForgotPassword() {
               >
                 ← Ganti Email
               </button>
+
+              <BantuanAdmin profil={profil} />
             </>
           )}
         </div>
@@ -237,6 +248,29 @@ export default function ForgotPassword() {
           description="Tenang, kami kirimkan kode reset ke email akun Anda supaya bisa masuk lagi."
         />
       </div>
+    </div>
+  )
+}
+
+/**
+ * Jalur cadangan untuk pengguna yang emailnya tidak aktif / tidak bisa
+ * dibuka (umum pada akun siswa & orang tua): password direset oleh Admin
+ * Sekolah lewat menu Pengguna, lalu password sementara diserahkan langsung.
+ */
+function BantuanAdmin({ profil }) {
+  if (IS_CENTRAL_DOMAIN) return null
+
+  const kontak = [profil?.telepon, profil?.email].filter(Boolean).join(' · ')
+
+  return (
+    <div className="mt-6 rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-900 leading-relaxed">
+      <p className="font-semibold mb-0.5">Tidak bisa membuka email akun Anda?</p>
+      <p>
+        Hubungi Admin Sekolah atau Tata Usaha{profil?.nama_sekolah ? ` ${profil.nama_sekolah}` : ''} untuk
+        mereset password. Anda akan diberi password sementara — segera ganti lewat menu Profil setelah
+        masuk.
+      </p>
+      {kontak && <p className="mt-1 font-semibold">{kontak}</p>}
     </div>
   )
 }

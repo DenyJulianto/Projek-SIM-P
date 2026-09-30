@@ -1,23 +1,24 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import QRCode from 'qrcode'
 import ComingSoon from '../components/ComingSoon'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import ModalCloseButton from '../components/ModalCloseButton'
 import { useAuth } from '../lib/AuthContext'
 import { api, BASE_URL } from '../lib/api'
-import AnggaranPosManagement from './AnggaranPosManagement'
-import MyProfile from './MyProfile'
-import PendapatanManagement from './PendapatanManagement'
-import PengeluaranManagement from './PengeluaranManagement'
-import RealisasiManagement from './RealisasiManagement'
-import SaldoManagement from './SaldoManagement'
-import SumberDanaManagement from './SumberDanaManagement'
-import TagihanManagement from './TagihanManagement'
-import PembayaranManagement from './PembayaranManagement'
-import KuitansiManagement from './KuitansiManagement'
 import logoLambang from '../assets/logo-sim-lambang.png'
 import FilterSelect from '../components/FilterSelect'
 import InitialsAvatar from '../components/InitialsAvatar'
+
+const AnggaranPosManagement = lazy(() => import('./AnggaranPosManagement'))
+const MyProfile = lazy(() => import('./MyProfile'))
+const PendapatanManagement = lazy(() => import('./PendapatanManagement'))
+const PengeluaranManagement = lazy(() => import('./PengeluaranManagement'))
+const RealisasiManagement = lazy(() => import('./RealisasiManagement'))
+const SaldoManagement = lazy(() => import('./SaldoManagement'))
+const SumberDanaManagement = lazy(() => import('./SumberDanaManagement'))
+const TagihanManagement = lazy(() => import('./TagihanManagement'))
+const PembayaranManagement = lazy(() => import('./PembayaranManagement'))
+const KuitansiManagement = lazy(() => import('./KuitansiManagement'))
 import PageBanner from '../components/PageBanner'
 import Pager from '../components/Pager'
 import QrisModal from '../components/QrisModal'
@@ -328,6 +329,7 @@ export default function BendaharaDashboard() {
         )}
         <div className={`px-6 sm:px-10 pb-8 *:mx-auto *:max-w-7xl ${view === 'home' ? 'pt-[1cm]' : 'pt-6 sm:pt-8'}`}>
         {view === 'home' && <BendaharaHome user={user} onNavigate={setView} />}
+        <Suspense fallback={<p className="text-sm text-navy/40 text-center py-14">Memuat...</p>}>
         {view === 'tagihan' && <TagihanManagement onBack={() => setView('home')} title="Tagihan" />}
         {view === 'tunggakan' && (
           <TagihanManagement onBack={() => setView('home')} title="Tunggakan" onlyTunggakan />
@@ -349,6 +351,7 @@ export default function BendaharaDashboard() {
         {view === 'laporan-anggaran' && <LaporanAnggaranView onBack={() => setView('home')} />}
         {view === 'laporan-keuangan' && <LaporanKeuanganView onBack={() => setView('home')} />}
         {view === 'profile' && <MyProfile onBack={() => setView('home')} staffProfile />}
+        </Suspense>
         {COMING_SOON_LABEL[view] && (
           <div>
             <button onClick={() => setView('home')} className="text-sm text-navy/50 hover:text-navy mb-1">

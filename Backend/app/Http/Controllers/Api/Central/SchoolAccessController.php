@@ -10,6 +10,7 @@ use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
@@ -31,13 +32,22 @@ class SchoolAccessController extends Controller
      * bisa lagi login (lihat AuthController::login) — dipakai untuk
      * menangguhkan sekolah tanpa menghapus datanya.
      */
+    /**
+     * Menonaktifkan sekolah WAJIB disertai alasan (audit trail kenapa suatu
+     * sekolah kehilangan akses login) — tapi alasan itu tidak relevan lagi
+     * begitu sekolah diaktifkan kembali, makanya dikosongkan lagi saat itu.
+     */
     public function updateStatus(Request $request, Sekolah $sekolah): JsonResponse
     {
         $data = $request->validate([
             'status' => ['required', 'in:active,inactive'],
+            'alasan_nonaktif' => ['required_if:status,inactive', 'nullable', 'string', 'max:1000'],
         ]);
 
-        $sekolah->update(['status' => $data['status']]);
+        $sekolah->update([
+            'status' => $data['status'],
+            'alasan_nonaktif' => $data['status'] === 'inactive' ? $data['alasan_nonaktif'] : null,
+        ]);
 
         return response()->json($sekolah->load('domains'));
     }
@@ -56,7 +66,8 @@ class SchoolAccessController extends Controller
         $admins = $sekolah->run(function () {
             return User::role(self::ADMIN_ROLE)
                 ->orderBy('name')
-                ->get(['id', 'name', 'email', 'is_active', 'last_login_at', 'created_at'])
+                ->get(['id', 'name', 'email', 'is_active', 'last_login_at', 'created_at', 'temporary_password'])
+                ->each->makeVisible('temporary_password')
                 ->toArray();
         });
 
@@ -89,7 +100,7 @@ class SchoolAccessController extends Controller
                 'password' => $password,
             ]);
 
-            $user->forceFill(['email_verified_at' => now()])->save();
+            $user->forceFill(['email_verified_at' => now(), 'temporary_password' => $password])->save();
             $user->assignRole(self::ADMIN_ROLE);
 
             return ['user' => $user->toArray(), 'password' => $password];
@@ -117,31 +128,34 @@ class SchoolAccessController extends Controller
     {
         $search = $request->string('search')->value();
         $status = $request->string('status')->value();
-
-        $sekolahs = $request->filled('sekolah_id')
-            ? Sekolah::where('id', $request->string('sekolah_id')->value())->get()
-            : Sekolah::all();
+        $sekolahIdFilter = $request->string('sekolah_id')->value();
 
         $page = max(1, $request->integer('page', 1));
         $perPage = $request->integer('per_page', 20);
 
-        $rows = [];
-        foreach ($sekolahs as $sekolah) {
-            $admins = $sekolah->run(function () use ($search, $status) {
-                return User::role(self::ADMIN_ROLE)
-                    ->when($search !== '', fn ($q) => $q->where(function ($q2) use ($search) {
-                        $q2->where('name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%");
-                    }))
-                    ->when($status === 'aktif', fn ($q) => $q->where('is_active', true))
-                    ->when($status === 'nonaktif', fn ($q) => $q->where('is_active', false))
-                    ->orderBy('name')
-                    ->get(['id', 'name', 'email', 'is_active', 'last_login_at', 'created_at'])
-                    ->toArray();
+        // Mengambil admin dari SEMUA sekolah berarti membuka koneksi ke
+        // setiap database tenant satu per satu — satu-satunya bagian yang
+        // benar-benar mahal di sini. Itu di-cache TANPA filter (supaya cache
+        // yang sama dipakai ulang apa pun kata kunci pencariannya), lalu
+        // search/status/pagination-nya dikerjakan di memori dari hasil cache.
+        if ($sekolahIdFilter !== '') {
+            $rows = $this->fetchNationalAdmins(Sekolah::where('id', $sekolahIdFilter)->get());
+        } else {
+            $rows = Cache::remember('super-admin:national-admins', 60, function () {
+                return $this->fetchNationalAdmins(Sekolah::all());
             });
+        }
 
-            foreach ($admins as $admin) {
-                $rows[] = [...$admin, 'sekolah_id' => $sekolah->id, 'nama_sekolah' => $sekolah->nama_sekolah];
-            }
+        if ($search !== '') {
+            $rows = array_values(array_filter($rows, function ($row) use ($search) {
+                return str_contains(mb_strtolower($row['name'] ?? ''), mb_strtolower($search))
+                    || str_contains(mb_strtolower($row['email'] ?? ''), mb_strtolower($search));
+            }));
+        }
+        if ($status === 'aktif') {
+            $rows = array_values(array_filter($rows, fn ($row) => $row['is_active']));
+        } elseif ($status === 'nonaktif') {
+            $rows = array_values(array_filter($rows, fn ($row) => ! $row['is_active']));
         }
 
         usort($rows, fn ($a, $b) => strcmp($a['name'], $b['name']));
@@ -160,6 +174,30 @@ class SchoolAccessController extends Controller
     }
 
     /**
+     * @param  \Illuminate\Support\Collection<int, Sekolah>  $sekolahs
+     * @return array<int, array<string, mixed>>
+     */
+    private function fetchNationalAdmins($sekolahs): array
+    {
+        $rows = [];
+
+        foreach ($sekolahs as $sekolah) {
+            $admins = $sekolah->run(function () {
+                return User::role(self::ADMIN_ROLE)
+                    ->orderBy('name')
+                    ->get(['id', 'name', 'email', 'is_active', 'last_login_at', 'created_at'])
+                    ->toArray();
+            });
+
+            foreach ($admins as $admin) {
+                $rows[] = [...$admin, 'sekolah_id' => $sekolah->id, 'nama_sekolah' => $sekolah->nama_sekolah];
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
      * Reset password akun admin sekolah tersebut ke password acak baru.
      * Dipakai kalau admin sekolah lupa password dan tidak bisa memakai
      * alur lupa password mandiri (mis. email sudah tidak aktif).
@@ -175,6 +213,7 @@ class SchoolAccessController extends Controller
 
             $password = Str::password(10, symbols: false);
             $user->password = $password;
+            $user->temporary_password = $password;
             $user->tokens()->delete();
             $user->save();
 

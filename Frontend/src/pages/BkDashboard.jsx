@@ -27,6 +27,7 @@ const MENU_GROUPS = [
       { key: 'kasus-aktif', label: 'Kasus Aktif', icon: AlertIcon },
       { key: 'tindakan', label: 'Tindakan', icon: TaskIcon },
       { key: 'status-kasus', label: 'Status Kasus', icon: FlagIcon },
+      { key: 'pengurangan-poin', label: 'Pengurangan Poin', icon: FlagIcon },
     ],
   },
   {
@@ -178,6 +179,7 @@ export default function BkDashboard() {
         {view === 'status-kasus' && (
           <KasusManagement onBack={() => setView('home')} title="Status Kasus" />
         )}
+        {view === 'pengurangan-poin' && <PenguranganPoinView onBack={() => setView('home')} />}
         {view === 'pemanggilan-ortu' && (
           <PemanggilanManagement onBack={() => setView('home')} title="Pemanggilan Orang Tua" />
         )}
@@ -305,6 +307,225 @@ function DaftarSiswaView({ onBack }) {
         {siswa === null && <EmptyState text="Memuat..." />}
       </div>
     </PageShell>
+  )
+}
+
+const PENGAJUAN_STATUS_STYLE = {
+  menunggu: { label: 'Menunggu Persetujuan', badge: 'bg-amber-100 text-amber-700' },
+  disetujui: { label: 'Disetujui', badge: 'bg-emerald-100 text-emerald-700' },
+  ditolak: { label: 'Ditolak', badge: 'bg-red-100 text-red-600' },
+}
+
+function PenguranganPoinView({ onBack }) {
+  const [pengajuan, setPengajuan] = useState(null)
+  const [showForm, setShowForm] = useState(false)
+  const [error, setError] = useState('')
+
+  function load() {
+    api
+      .listPengajuanPenguranganPoin()
+      .then((r) => setPengajuan(r.data))
+      .catch((err) => setError(err.message))
+  }
+
+  useEffect(load, [])
+
+  return (
+    <PageShell title="Pengurangan Poin" onBack={onBack}>
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm text-navy/50">
+          Ajukan pengurangan poin kedisiplinan siswa ke Kesiswaan. Poin baru berkurang setelah
+          disetujui.
+        </p>
+        <button
+          onClick={() => setShowForm(true)}
+          className="shrink-0 bg-navy hover:bg-navy-light text-white text-sm font-semibold px-4 py-2 rounded-full"
+        >
+          + Ajukan
+        </button>
+      </div>
+
+      {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
+
+      <div className="bg-white rounded-2xl border border-navy/10 overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-navy/5 text-navy/60 text-xs uppercase tracking-wide">
+            <tr>
+              <th className="text-left px-5 py-3">Siswa</th>
+              <th className="text-left px-5 py-3">Pelanggaran</th>
+              <th className="text-left px-5 py-3">Poin Diajukan</th>
+              <th className="text-left px-5 py-3">Status</th>
+              <th className="text-left px-5 py-3">Catatan Kesiswaan</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-navy/5">
+            {(pengajuan || []).map((p) => {
+              const style = PENGAJUAN_STATUS_STYLE[p.status] ?? PENGAJUAN_STATUS_STYLE.menunggu
+              return (
+                <tr key={p.id}>
+                  <td className="px-5 py-3 text-navy font-medium">{p.siswa?.nama}</td>
+                  <td className="px-5 py-3 text-navy/70">{p.pelanggaran?.jenis}</td>
+                  <td className="px-5 py-3 text-navy/70">{p.poin_diajukan}</td>
+                  <td className="px-5 py-3">
+                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${style.badge}`}>
+                      {style.label}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3 text-navy/50">{p.catatan_kesiswaan || '-'}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+        {pengajuan && pengajuan.length === 0 && <EmptyState text="Belum ada pengajuan." />}
+        {pengajuan === null && <EmptyState text="Memuat..." />}
+      </div>
+
+      {showForm && (
+        <AjukanPenguranganPoinModal
+          onClose={() => setShowForm(false)}
+          onSaved={() => {
+            setShowForm(false)
+            load()
+          }}
+        />
+      )}
+    </PageShell>
+  )
+}
+
+function AjukanPenguranganPoinModal({ onClose, onSaved }) {
+  const [siswaList, setSiswaList] = useState([])
+  const [pelanggaranList, setPelanggaranList] = useState([])
+  const [form, setForm] = useState({ siswa_id: '', pelanggaran_id: '', poin_diajukan: '', alasan: '' })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    api.listSiswa({ per_page: 200 }).then((r) => setSiswaList(r.data)).catch(() => setSiswaList([]))
+  }, [])
+
+  useEffect(() => {
+    if (!form.siswa_id) {
+      setPelanggaranList([])
+      return
+    }
+    api
+      .listPelanggaran({ siswa_id: form.siswa_id })
+      .then((r) => setPelanggaranList(r.data))
+      .catch(() => setPelanggaranList([]))
+  }, [form.siswa_id])
+
+  function update(field, value) {
+    setForm((f) => ({ ...f, [field]: value }))
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setSaving(true)
+    setError('')
+    try {
+      await api.createPengajuanPenguranganPoin({
+        siswa_id: Number(form.siswa_id),
+        pelanggaran_id: Number(form.pelanggaran_id),
+        poin_diajukan: Number(form.poin_diajukan),
+        alasan: form.alasan,
+      })
+      onSaved()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-navy/40 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl p-6">
+        <h2 className="text-lg font-bold text-navy mb-4">Ajukan Pengurangan Poin</h2>
+
+        {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <label className="block">
+            <span className="block text-xs font-semibold text-navy/70 mb-1">Siswa</span>
+            <select
+              required
+              value={form.siswa_id}
+              onChange={(e) => update('siswa_id', e.target.value)}
+              className="w-full border border-navy/15 rounded-lg px-3 py-2 text-sm"
+            >
+              <option value="">Pilih siswa</option>
+              {siswaList.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.nama}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="block text-xs font-semibold text-navy/70 mb-1">Pelanggaran Terkait</span>
+            <select
+              required
+              disabled={!form.siswa_id}
+              value={form.pelanggaran_id}
+              onChange={(e) => update('pelanggaran_id', e.target.value)}
+              className="w-full border border-navy/15 rounded-lg px-3 py-2 text-sm disabled:opacity-50"
+            >
+              <option value="">
+                {form.siswa_id ? 'Pilih pelanggaran' : 'Pilih siswa terlebih dahulu'}
+              </option>
+              {pelanggaranList.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.jenis} — {p.tanggal}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="block text-xs font-semibold text-navy/70 mb-1">Poin yang Diajukan</span>
+            <input
+              type="number"
+              required
+              min="1"
+              value={form.poin_diajukan}
+              onChange={(e) => update('poin_diajukan', e.target.value)}
+              className="w-full border border-navy/15 rounded-lg px-3 py-2 text-sm"
+            />
+          </label>
+
+          <label className="block">
+            <span className="block text-xs font-semibold text-navy/70 mb-1">Alasan</span>
+            <textarea
+              required
+              rows={3}
+              value={form.alasan}
+              onChange={(e) => update('alasan', e.target.value)}
+              className="w-full border border-navy/15 rounded-lg px-3 py-2 text-sm"
+            />
+          </label>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-navy/70 hover:text-navy"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="bg-navy hover:bg-navy-light text-white text-sm font-semibold px-5 py-2 rounded-md disabled:opacity-50"
+            >
+              {saving ? 'Mengajukan...' : 'Ajukan'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   )
 }
 
