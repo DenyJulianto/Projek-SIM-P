@@ -889,7 +889,7 @@ export function MateriManagement({ onBack, bare }) {
   return <PageShell title="Materi" onBack={onBack}>{body}</PageShell>
 }
 
-export function TugasManagement({ onBack, bare }) {
+export function TugasManagement({ onBack, bare, fokus }) {
   const { guru, pilihan } = useGuruContext()
   const [items, setItems] = useState(null)
   const [showForm, setShowForm] = useState(false)
@@ -900,8 +900,13 @@ export function TugasManagement({ onBack, bare }) {
   const [file, setFile] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [openJawabanId, setOpenJawabanId] = useState(null)
+  const [openJawabanId, setOpenJawabanId] = useState(fokus?.tugasId ?? null)
   const [jawabanList, setJawabanList] = useState(null)
+
+  // Dibuka dari notifikasi "tugas dikumpulkan": langsung tampilkan jawaban siswa.
+  useEffect(() => {
+    if (fokus?.tugasId) reloadJawaban(fokus.tugasId)
+  }, [fokus])
   const [search, setSearch] = useState('')
   const [showFilter, setShowFilter] = useState(false)
   const [filterKelas, setFilterKelas] = useState('')
