@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Absensi;
 use App\Models\JadwalPelajaran;
 use App\Models\Materi;
+use App\Models\Notifikasi;
 use App\Models\Prestasi;
 use App\Models\Siswa;
 use App\Models\Tagihan;
@@ -300,6 +301,73 @@ class StudentSelfController extends Controller
                 return $s;
             }),
         ]);
+    }
+
+    /**
+     * Catat pelanggaran mode ujian aman (keluar layar penuh, pindah tab,
+     * pindah jendela). Dikirim dari halaman kuis siswa; dilihat guru di
+     * daftar hasil kuis.
+     */
+    public function ujianPelanggaran(Request $request, Ujian $ujian): JsonResponse
+    {
+        $data = $request->validate([
+            'jenis' => ['required', 'in:keluar_layar_penuh,pindah_tab,pindah_jendela'],
+        ]);
+        $siswa = $this->siswaFor($request);
+
+        $attempt = UjianAttempt::where('ujian_id', $ujian->id)->where('siswa_id', $siswa->id)->first();
+        abort_unless($attempt, 404, 'Anda belum memulai ujian ini.');
+        abort_if($attempt->finished_at, 422, 'Ujian sudah diselesaikan.');
+
+        $log = $attempt->pelanggaran_log ?? [];
+        $log[] = ['jenis' => $data['jenis'], 'waktu' => now()->toIso8601String()];
+
+        $attempt->update([
+            'pelanggaran' => $attempt->pelanggaran + 1,
+            'pelanggaran_log' => array_slice($log, -50),
+        ]);
+
+        $this->beriTahuGuruPelanggaran($ujian, $siswa, $attempt, $data['jenis']);
+
+        return response()->json(['pelanggaran' => $attempt->pelanggaran]);
+    }
+
+    /**
+     * Beri tahu guru pembuat kuis. Kejadian berulang dari siswa yang sama di
+     * kuis yang sama digabung ke satu notifikasi yang diperbarui dan
+     * ditandai belum dibaca lagi, supaya lonceng guru tidak banjir.
+     */
+    private function beriTahuGuruPelanggaran(Ujian $ujian, Siswa $siswa, UjianAttempt $attempt, string $jenis): void
+    {
+        $guruUserId = $ujian->guru?->user_id;
+        if (! $guruUserId) {
+            return;
+        }
+
+        $keterangan = [
+            'keluar_layar_penuh' => 'keluar dari layar penuh',
+            'pindah_tab' => 'pindah ke tab lain',
+            'pindah_jendela' => 'pindah ke jendela/aplikasi lain',
+        ][$jenis];
+        $kelas = $siswa->kelas?->nama_kelas;
+
+        Notifikasi::updateOrCreate(
+            ['user_id' => $guruUserId, 'kunci' => "pelanggaran_ujian:{$ujian->id}:{$siswa->id}"],
+            [
+                'jenis' => 'pelanggaran_ujian',
+                'judul' => "{$siswa->nama} keluar dari halaman kuis",
+                'pesan' => $siswa->nama.($kelas ? " ({$kelas})" : '')." {$keterangan} saat mengerjakan \"{$ujian->judul}\". Total keluar {$attempt->pelanggaran}×.",
+                'data' => [
+                    'ujian_id' => $ujian->id,
+                    'siswa_id' => $siswa->id,
+                    'kelas_id' => $ujian->kelas_id,
+                    'mata_pelajaran_id' => $ujian->mata_pelajaran_id,
+                    'jenis_terakhir' => $jenis,
+                ],
+                'jumlah' => $attempt->pelanggaran,
+                'dibaca_at' => null,
+            ]
+        );
     }
 
     public function ujianJawab(Request $request, Ujian $ujian): JsonResponse
