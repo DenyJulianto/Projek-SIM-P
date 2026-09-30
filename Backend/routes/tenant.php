@@ -28,6 +28,7 @@ use App\Http\Controllers\Api\MataPelajaranController;
 use App\Http\Controllers\Api\MateriController;
 use App\Http\Controllers\Api\NilaiController;
 use App\Http\Controllers\Api\NilaiSikapController;
+use App\Http\Controllers\Api\NotifikasiController;
 use App\Http\Controllers\Api\PelanggaranController;
 use App\Http\Controllers\Api\PembayaranController;
 use App\Http\Controllers\Api\PemanggilanController;
@@ -120,6 +121,7 @@ Route::middleware([
         Route::get('/me/siswa/ujian', [StudentSelfController::class, 'ujianList']);
         Route::post('/me/siswa/ujian/{ujian}/mulai', [StudentSelfController::class, 'ujianMulai']);
         Route::post('/me/siswa/ujian/{ujian}/jawab', [StudentSelfController::class, 'ujianJawab']);
+        Route::post('/me/siswa/ujian/{ujian}/pelanggaran', [StudentSelfController::class, 'ujianPelanggaran']);
         Route::post('/me/siswa/ujian/{ujian}/selesai', [StudentSelfController::class, 'ujianSelesai']);
         Route::get('/me/siswa/ujian/{ujian}/hasil', [StudentSelfController::class, 'ujianHasil']);
 
@@ -141,6 +143,10 @@ Route::middleware([
         Route::get('/me/anak/{siswa}/saldo', [ParentSelfController::class, 'saldo']);
         Route::post('/me/anak/{siswa}/saldo/isi', [ParentSelfController::class, 'isiSaldo']);
         Route::get('/me/anak/{siswa}/tugas', [ParentSelfController::class, 'tugas']);
+
+        Route::get('/me/notifikasi', [NotifikasiController::class, 'index']);
+        Route::post('/me/notifikasi/baca-semua', [NotifikasiController::class, 'bacaSemua']);
+        Route::post('/me/notifikasi/{notifikasi}/baca', [NotifikasiController::class, 'baca']);
 
         Route::get('/me/guru', [GuruSelfController::class, 'profil']);
         Route::get('/me/guru/jadwal', [GuruSelfController::class, 'jadwal']);

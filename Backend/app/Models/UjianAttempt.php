@@ -12,13 +12,14 @@ class UjianAttempt extends Model
 {
     protected $table = 'ujian_attempt';
 
-    protected $fillable = ['ujian_id', 'siswa_id', 'started_at', 'finished_at', 'nilai'];
+    protected $fillable = ['ujian_id', 'siswa_id', 'started_at', 'finished_at', 'nilai', 'pelanggaran', 'pelanggaran_log'];
 
     protected function casts(): array
     {
         return [
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
+            'pelanggaran_log' => 'array',
         ];
     }
 
