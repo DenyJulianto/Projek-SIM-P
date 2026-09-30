@@ -66,7 +66,8 @@ class SchoolAccessController extends Controller
         $admins = $sekolah->run(function () {
             return User::role(self::ADMIN_ROLE)
                 ->orderBy('name')
-                ->get(['id', 'name', 'email', 'is_active', 'last_login_at', 'created_at'])
+                ->get(['id', 'name', 'email', 'is_active', 'last_login_at', 'created_at', 'temporary_password'])
+                ->each->makeVisible('temporary_password')
                 ->toArray();
         });
 
@@ -99,7 +100,7 @@ class SchoolAccessController extends Controller
                 'password' => $password,
             ]);
 
-            $user->forceFill(['email_verified_at' => now()])->save();
+            $user->forceFill(['email_verified_at' => now(), 'temporary_password' => $password])->save();
             $user->assignRole(self::ADMIN_ROLE);
 
             return ['user' => $user->toArray(), 'password' => $password];
@@ -212,6 +213,7 @@ class SchoolAccessController extends Controller
 
             $password = Str::password(10, symbols: false);
             $user->password = $password;
+            $user->temporary_password = $password;
             $user->tokens()->delete();
             $user->save();
 

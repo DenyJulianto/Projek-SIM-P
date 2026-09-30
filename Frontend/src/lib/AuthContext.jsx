@@ -55,19 +55,14 @@ export function AuthProvider({ children }) {
     return user
   }
 
-  async function register(email, password, passwordConfirmation) {
-    return api.register(email, password, passwordConfirmation)
+  async function register(name, email, password, passwordConfirmation, recaptchaToken) {
+    return api.register(name, email, password, passwordConfirmation, recaptchaToken)
   }
 
-  async function verifyEmail(email, code, remember = true) {
-    const { user, token } = await api.verifyEmail(email, code)
-    if (remember) {
-      localStorage.setItem('token', token)
-    } else {
-      sessionStorage.setItem('token', token)
-    }
-    setUser(user)
-    return user
+  // Tidak auto-login: link verifikasi hanya mengaktifkan akun, pengguna
+  // tetap harus masuk lewat halaman login secara terpisah.
+  async function verifyEmailLink(email, token) {
+    return api.verifyEmailLink(email, token)
   }
 
   async function resendVerificationCode(email) {
@@ -106,7 +101,7 @@ export function AuthProvider({ children }) {
         login,
         verifyTwoFactor,
         register,
-        verifyEmail,
+        verifyEmailLink,
         resendVerificationCode,
         logout,
         hasPermission,

@@ -4,6 +4,11 @@ import { api } from '../lib/api'
 
 const JENJANG_OPTIONS = ['PAUD', 'TK', 'SD', 'SMP', 'SMA', 'SMK', 'SLB']
 const AKREDITASI_OPTIONS = ['A', 'B', 'C', 'Belum Terakreditasi']
+// Pilihan tahun berdiri: dari tahun berjalan mundur ke 1900.
+const TAHUN_BERDIRI_OPTIONS = Array.from(
+  { length: new Date().getFullYear() - 1900 + 1 },
+  (_, i) => new Date().getFullYear() - i,
+)
 
 function buildSekolahUrl(domain) {
   if (!domain) return ''
@@ -385,13 +390,18 @@ export default function SekolahDetailPage({
             editing={editing}
           >
             <div className="flex gap-2">
-              <input
-                type="number"
+              <select
                 value={form.tahun_berdiri}
                 onChange={(e) => update('tahun_berdiri', e.target.value)}
                 className="input"
-                placeholder="Tahun"
-              />
+              >
+                <option value="">Tahun</option>
+                {TAHUN_BERDIRI_OPTIONS.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
               <input
                 type="text"
                 value={form.no_sk_pendirian}

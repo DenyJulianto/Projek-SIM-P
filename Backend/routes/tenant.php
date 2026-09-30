@@ -139,10 +139,11 @@ Route::middleware([
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/verify-email', [AuthController::class, 'verifyEmail']);
     Route::post('/resend-verification-code', [AuthController::class, 'resendVerificationCode']);
-    Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
-    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:forgot-password');
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:reset-password');
 
     Route::get('avatar/{path}', [AvatarController::class, 'show'])->where('path', '.*');
+    Route::get('landing-gambar/{file}', [ProfilPublikController::class, 'showGambar']);
     Route::get('sertifikat-staf-file/{path}', [StaffProfileController::class, 'showSertifikatFile'])->where('path', '.*');
     Route::get('surat-file/{path}', [SuratController::class, 'showFile'])->where('path', '.*');
     Route::get('arsip-file/{path}', [ArsipDokumenController::class, 'showFile'])->where('path', '.*');
@@ -158,6 +159,8 @@ Route::middleware([
         Route::get('/profil', [ProfilPublikController::class, 'profil']);
         Route::get('/pengumuman', [ProfilPublikController::class, 'pengumuman']);
         Route::get('/kegiatan', [ProfilPublikController::class, 'kegiatan']);
+        Route::get('/prestasi', [ProfilPublikController::class, 'prestasi']);
+        Route::get('/ppdb', [ProfilPublikController::class, 'ppdb']);
     });
 
     Route::middleware('auth:sanctum')->group(function () {
@@ -831,6 +834,8 @@ Route::middleware([
         Route::get('siswa/{siswa}/rapor', [RaporController::class, 'show']);
 
         Route::put('/profil', [ProfilPublikController::class, 'updateProfil'])
+            ->middleware('permission:humas.informasi');
+        Route::post('/profil/gambar', [ProfilPublikController::class, 'uploadGambar'])
             ->middleware('permission:humas.informasi');
 
         Route::apiResource('pengumuman', PengumumanController::class)

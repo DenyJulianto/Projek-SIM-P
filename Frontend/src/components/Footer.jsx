@@ -1,7 +1,10 @@
 import { IS_CENTRAL_DOMAIN, SUPER_ADMIN_URL } from '../lib/api'
 
-export default function Footer({ profil }) {
+import { EditableText, useLandingEdit } from './landing/LandingEdit'
+
+export default function Footer({ profil, ppdb }) {
   const sosmed = profil?.sosial_media || {}
+  const editing = !!useLandingEdit()
 
   return (
     <footer className="bg-gradient-to-b from-navy to-emerald-950 text-white/70 pt-14 pb-8">
@@ -10,19 +13,36 @@ export default function Footer({ profil }) {
           <p className="text-white font-bold text-lg mb-2">{profil?.nama_sekolah || 'Nama Sekolah'}</p>
           <p className="text-sm">{profil?.jenjang}</p>
           {profil?.npsn && <p className="text-sm mt-1">NPSN: {profil.npsn}</p>}
-          <div className="flex gap-3 mt-4">
-            {sosmed.facebook && <SocialLink label="Facebook" />}
-            {sosmed.instagram && <SocialLink label="Instagram" />}
-            {sosmed.youtube && <SocialLink label="YouTube" />}
-          </div>
+          {editing ? (
+            <div className="mt-4 space-y-2 text-xs">
+              {[
+                ['facebook', 'Facebook'],
+                ['instagram', 'Instagram'],
+                ['youtube', 'YouTube'],
+              ].map(([field, label]) => (
+                <p key={field} className="flex items-center gap-2">
+                  <span className="w-16 shrink-0 text-white/60">{label}</span>
+                  <EditableText field={field} placeholder={`Link ${label}`} className="w-full" />
+                </p>
+              ))}
+            </div>
+          ) : (
+            <div className="flex gap-3 mt-4">
+              {sosmed.facebook && <SocialLink label="Facebook" url={sosmed.facebook} />}
+              {sosmed.instagram && <SocialLink label="Instagram" url={sosmed.instagram} />}
+              {sosmed.youtube && <SocialLink label="YouTube" url={sosmed.youtube} />}
+            </div>
+          )}
         </div>
 
         <div>
           <p className="text-white font-semibold mb-3">Navigasi</p>
           <ul className="space-y-2 text-sm">
             <li><a href="#beranda" className="hover:text-gold">Beranda</a></li>
+            {ppdb?.nama && <li><a href="#ppdb" className="hover:text-gold">PPDB</a></li>}
             <li><a href="#tentang" className="hover:text-gold">Tentang Kami</a></li>
             <li><a href="#kegiatan" className="hover:text-gold">Kegiatan</a></li>
+            <li><a href="#prestasi" className="hover:text-gold">Prestasi</a></li>
             <li><a href="#pengumuman" className="hover:text-gold">Pengumuman</a></li>
           </ul>
         </div>
@@ -62,10 +82,17 @@ export default function Footer({ profil }) {
   )
 }
 
-function SocialLink({ label }) {
+function SocialLink({ label, url }) {
+  const href = /^https?:\/\//i.test(url) ? url : `https://${url}`
   return (
-    <span className="h-8 w-8 flex items-center justify-center rounded-full bg-white/10 text-xs hover:bg-gold hover:text-navy transition-colors cursor-pointer">
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      title={label}
+      className="h-8 w-8 flex items-center justify-center rounded-full bg-white/10 text-xs hover:bg-gold hover:text-navy transition-colors"
+    >
       {label[0]}
-    </span>
+    </a>
   )
 }

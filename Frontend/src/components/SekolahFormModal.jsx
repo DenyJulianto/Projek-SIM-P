@@ -9,6 +9,11 @@ const KODEPOS_SEARCH_URL = 'https://kodepos.vercel.app/search/?q='
 
 const JENJANG_OPTIONS = ['PAUD', 'TK', 'SD', 'SMP', 'SMA', 'SMK', 'SLB']
 const AKREDITASI_OPTIONS = ['A', 'B', 'C', 'Belum Terakreditasi']
+// Pilihan tahun berdiri: dari tahun berjalan mundur ke 1900.
+const TAHUN_BERDIRI_OPTIONS = Array.from(
+  { length: new Date().getFullYear() - 1900 + 1 },
+  (_, i) => new Date().getFullYear() - i,
+)
 
 // Domain login sekolah dibuat otomatis dari nama sekolah (bukan diisi manual
 // lagi) supaya selalu konsisten dengan pola yang sama dipakai di endpoint
@@ -44,7 +49,6 @@ export default function SekolahFormModal({ onClose, onSaved }) {
     longitude: '',
     telepon: '',
     email: '',
-    website: '',
     nama_kepala_sekolah: '',
     nama_yayasan: '',
     tahun_berdiri: '',
@@ -142,7 +146,6 @@ export default function SekolahFormModal({ onClose, onSaved }) {
         jenjang: form.jenjang || null,
         status_sekolah: form.status_sekolah || null,
         akreditasi: form.akreditasi || null,
-        website: form.website || null,
         nama_kepala_sekolah: form.nama_kepala_sekolah || null,
         nama_yayasan: form.nama_yayasan || null,
         tahun_berdiri: form.tahun_berdiri !== '' ? Number(form.tahun_berdiri) : null,
@@ -251,7 +254,7 @@ export default function SekolahFormModal({ onClose, onSaved }) {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <Field label="ID Sekolah" hint="huruf kecil, angka, strip">
+            <Field label="ID Sekolah">
               <input
                 type="text"
                 required
@@ -474,16 +477,6 @@ export default function SekolahFormModal({ onClose, onSaved }) {
             </Field>
           </div>
 
-          <Field label="Situs Web" hint="opsional">
-            <input
-              type="text"
-              value={form.website}
-              onChange={(e) => update('website', e.target.value)}
-              className="input"
-              placeholder="https://sekolah.sch.id"
-            />
-          </Field>
-
           <div className="grid grid-cols-2 gap-3">
             <Field label="Nama Kepala Sekolah">
               <input
@@ -505,13 +498,18 @@ export default function SekolahFormModal({ onClose, onSaved }) {
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Tahun Berdiri">
-              <input
-                type="number"
+              <select
                 value={form.tahun_berdiri}
                 onChange={(e) => update('tahun_berdiri', e.target.value)}
                 className="input"
-                placeholder="2010"
-              />
+              >
+                <option value="">Pilih tahun</option>
+                {TAHUN_BERDIRI_OPTIONS.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
             </Field>
             <Field label="No. SK Pendirian">
               <input

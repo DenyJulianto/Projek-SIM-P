@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import CompleteNameForm from '../components/CompleteNameForm'
+import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import PasswordInput from '../components/PasswordInput'
 import { useAuth } from '../lib/AuthContext'
 import { api, IS_CENTRAL_DOMAIN } from '../lib/api'
+import { getRecaptchaToken } from '../lib/recaptcha'
 import {
   WavyBackground,
   AuthHeroPanel,
@@ -15,18 +15,33 @@ import {
   ArrowRightIcon,
 } from '../components/AuthVisuals'
 
+const PASSWORD_RULES = [
+  { key: 'length', label: 'Minimal 8 karakter', test: (p) => p.length >= 8 },
+  { key: 'upper', label: 'Ada huruf besar', test: (p) => /[A-Z]/.test(p) },
+  { key: 'number', label: 'Ada angka', test: (p) => /[0-9]/.test(p) },
+]
+
+function PersonIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8" />
+    </svg>
+  )
+}
+
 export default function Register() {
-  const { register, verifyEmail, resendVerificationCode, setUser } = useAuth()
-  const navigate = useNavigate()
+  const { register, resendVerificationCode } = useAuth()
   const [step, setStep] = useState('form')
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [passwordConfirmation, setPasswordConfirmation] = useState('')
-  const [code, setCode] = useState('')
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
   const [loading, setLoading] = useState(false)
   const [resending, setResending] = useState(false)
+  const [cooldown, setCooldown] = useState(0)
   const [background, setBackground] = useState('')
 
   useEffect(() => {
@@ -34,41 +49,35 @@ export default function Register() {
     api.getProfil().then((p) => setBackground(p.auth_background || '')).catch(() => {})
   }, [])
 
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const timer = setInterval(() => setCooldown((c) => Math.max(0, c - 1)), 1000)
+    return () => clearInterval(timer)
+  }, [cooldown])
+
+  const passwordChecks = useMemo(() => PASSWORD_RULES.map((r) => ({ ...r, ok: r.test(password) })), [password])
+  const passwordValid = passwordChecks.every((r) => r.ok)
+  const formValid =
+    name.trim().length > 0 &&
+    /^\S+@\S+\.\S+$/.test(email) &&
+    passwordValid &&
+    password === passwordConfirmation &&
+    passwordConfirmation.length > 0
+
   async function handleSubmit(e) {
     e.preventDefault()
+    if (!formValid) return
     setLoading(true)
     setError('')
     try {
-      await register(email, password, passwordConfirmation)
-      setStep('verify')
+      const recaptchaToken = await getRecaptchaToken('register').catch(() => null)
+      await register(name.trim(), email, password, passwordConfirmation, recaptchaToken)
+      setStep('sent')
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
     }
-  }
-
-  async function handleVerify(e) {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    try {
-      const verifiedUser = await verifyEmail(email, code)
-      if (!verifiedUser.name) {
-        setStep('complete-name')
-      } else {
-        navigate('/')
-      }
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  function handleNameCompleted(updatedUser) {
-    setUser(updatedUser)
-    navigate('/')
   }
 
   async function handleResend() {
@@ -77,7 +86,8 @@ export default function Register() {
     setInfo('')
     try {
       await resendVerificationCode(email)
-      setInfo('Kode baru telah dikirim ke email Anda.')
+      setInfo('Jika email terdaftar dan belum diverifikasi, link baru telah dikirim.')
+      setCooldown(60)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -119,6 +129,19 @@ export default function Register() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-navy-light">
+                    <PersonIcon className="h-4.5 w-4.5" />
+                  </span>
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Nama Lengkap"
+                    className="w-full bg-emerald-50 rounded-full pl-11 pr-5 py-3 text-sm text-navy placeholder-navy/40 focus:outline-none focus:ring-2 focus:ring-navy-light/50"
+                  />
+                </div>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-navy-light">
                     <MailIcon className="h-4.5 w-4.5" />
                   </span>
                   <input
@@ -132,25 +155,41 @@ export default function Register() {
                 </div>
                 <PasswordInput
                   required
-                  minLength={8}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Password (min. 8)"
+                  placeholder="Password"
                   leftIcon={<LockIcon className="h-4.5 w-4.5" />}
                 />
+
+                {password.length > 0 && (
+                  <ul className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 -mt-1">
+                    {passwordChecks.map((r) => (
+                      <li
+                        key={r.key}
+                        className={`flex items-center gap-1.5 text-[11px] ${r.ok ? 'text-emerald-600' : 'text-navy/35'}`}
+                      >
+                        <CheckIcon className="h-3 w-3 shrink-0" />
+                        {r.label}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
                 <PasswordInput
                   required
-                  minLength={8}
                   value={passwordConfirmation}
                   onChange={(e) => setPasswordConfirmation(e.target.value)}
                   placeholder="Konfirmasi Password"
                   leftIcon={<LockIcon className="h-4.5 w-4.5" />}
                 />
+                {passwordConfirmation.length > 0 && password !== passwordConfirmation && (
+                  <p className="text-[11px] text-red-600 -mt-2">Konfirmasi password tidak sama.</p>
+                )}
 
                 <div className="pt-2">
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || !formValid}
                     className="w-full inline-flex items-center justify-center gap-2 bg-navy-light hover:bg-emerald-700 text-white font-bold tracking-wide py-3 rounded-full transition-colors disabled:opacity-50"
                   >
                     {loading ? 'MEMPROSES...' : 'DAFTAR'}
@@ -172,16 +211,16 @@ export default function Register() {
                 ← Kembali ke Beranda
               </a>
             </>
-          ) : step === 'verify' ? (
+          ) : (
             <>
               <div className="h-14 w-14 rounded-full bg-emerald-50 flex items-center justify-center mb-4">
                 <MailIcon className="h-7 w-7 text-navy-light" />
               </div>
-              <h1 className="text-2xl font-extrabold text-navy">Verifikasi Email</h1>
+              <h1 className="text-2xl font-extrabold text-navy">Cek Email Anda</h1>
               <p className="text-navy/50 text-sm mt-1 mb-6">
-                Kami telah mengirim kode verifikasi 6 digit ke{' '}
-                <span className="font-semibold text-navy">{email}</span>. Masukkan kodenya di bawah
-                untuk melanjutkan.
+                Kami telah mengirim link verifikasi ke{' '}
+                <span className="font-semibold text-navy">{email}</span>. Klik link di dalamnya untuk
+                mengaktifkan akun Anda, lalu masuk lewat halaman Login. Link berlaku 24 jam.
               </p>
 
               {error && (
@@ -201,41 +240,21 @@ export default function Register() {
                 </div>
               )}
 
-              <form onSubmit={handleVerify} className="space-y-4">
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={6}
-                  required
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-                  placeholder="000000"
-                  className="w-full bg-emerald-50 rounded-full px-5 py-3 text-center text-2xl tracking-[0.5em] font-bold text-navy placeholder-navy/20 focus:outline-none focus:ring-2 focus:ring-navy-light/50"
-                />
-
-                <div className="pt-2">
-                  <button
-                    type="submit"
-                    disabled={loading || code.length !== 6}
-                    className="w-full inline-flex items-center justify-center gap-2 bg-navy-light hover:bg-emerald-700 text-white font-bold tracking-wide py-3 rounded-full transition-colors disabled:opacity-50"
-                  >
-                    {loading ? 'MEMVERIFIKASI...' : 'VERIFIKASI'}
-                    {!loading && <ArrowRightIcon className="h-4 w-4" />}
-                  </button>
-                </div>
-              </form>
-
-              <p className="text-center text-sm text-navy/50 mt-6">
-                Tidak menerima kode?{' '}
+              <p className="text-center text-sm text-navy/50 mt-2">
+                Tidak menerima email?{' '}
                 <button
                   type="button"
                   onClick={handleResend}
-                  disabled={resending}
+                  disabled={resending || cooldown > 0}
                   className="text-navy-light font-semibold hover:underline disabled:opacity-50"
                 >
-                  {resending ? 'Mengirim...' : 'Kirim Ulang'}
+                  {resending ? 'Mengirim...' : cooldown > 0 ? `Kirim Ulang (${cooldown}s)` : 'Kirim Ulang'}
                 </button>
               </p>
+
+              <Link to="/login" className="block text-center text-sm font-semibold text-navy-light hover:underline mt-6">
+                Ke Halaman Login →
+              </Link>
 
               <button
                 type="button"
@@ -245,8 +264,6 @@ export default function Register() {
                 ← Kembali ke Form Daftar
               </button>
             </>
-          ) : (
-            <CompleteNameForm user={{ email }} onDone={handleNameCompleted} />
           )}
         </div>
 

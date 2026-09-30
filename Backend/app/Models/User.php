@@ -18,7 +18,9 @@ use Spatie\Permission\Traits\HasRoles;
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden([
     'password', 'remember_token', 'verification_code', 'verification_code_expires_at',
-    'password_reset_code', 'password_reset_code_expires_at',
+    'email_verification_token', 'email_verification_expires_at',
+    'password_reset_code', 'password_reset_code_expires_at', 'temporary_password',
+    'password_reset_token', 'password_reset_expires_at',
     'two_factor_secret', 'two_factor_recovery_codes',
 ])]
 class User extends Authenticatable
@@ -36,15 +38,33 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'verification_code_expires_at' => 'datetime',
+            'email_verification_expires_at' => 'datetime',
             'password_reset_code_expires_at' => 'datetime',
+            'password_reset_expires_at' => 'datetime',
             'password' => 'hashed',
             'is_super_admin' => 'boolean',
             'is_active' => 'boolean',
             'last_login_at' => 'datetime',
             'two_factor_secret' => 'encrypted',
+            'temporary_password' => 'encrypted',
             'two_factor_recovery_codes' => 'encrypted:array',
             'two_factor_confirmed_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        // Password sementara hanya berlaku sampai password diganti lewat
+        // jalur lain (profil, lupa password, reset oleh admin sekolah).
+        static::saving(function (User $user) {
+            if (
+                $user->isDirty('password')
+                && ! $user->isDirty('temporary_password')
+                && $user->getConnection()->getSchemaBuilder()->hasColumn('users', 'temporary_password')
+            ) {
+                $user->temporary_password = null;
+            }
+        });
     }
 
     public function sertifikat(): HasMany

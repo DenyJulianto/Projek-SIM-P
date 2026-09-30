@@ -215,6 +215,9 @@ class UserController extends Controller
         $user->password = $newPassword;
         $user->save();
 
+        // Keluarkan semua sesi lama, sama seperti reset lewat Super Admin.
+        $user->tokens()->delete();
+
         activity()
             ->causedBy($request->user())
             ->performedOn($user)

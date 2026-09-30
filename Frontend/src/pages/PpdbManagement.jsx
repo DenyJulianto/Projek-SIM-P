@@ -122,6 +122,16 @@ export default function PpdbManagement({ onBack }) {
         </div>
       )}
 
+      {tanpaPeriode && (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <p className="font-semibold">Belum ada PPDB di sekolah ini.</p>
+          <p className="text-xs mt-0.5">
+            Buat PPDB pertama lewat form di bawah. Tab Pendaftaran, Verifikasi, Seleksi, dan seterusnya aktif
+            setelah PPDB dibuat.
+          </p>
+        </div>
+      )}
+
       <div className="flex gap-1 border-b border-navy/10 mb-4 overflow-x-auto">
         {TABS.map(([key, label]) => {
           const nonaktif = tanpaPeriode && key !== 'pengaturan'
@@ -129,6 +139,7 @@ export default function PpdbManagement({ onBack }) {
             <button
               key={key}
               disabled={nonaktif}
+              title={nonaktif ? 'Buat PPDB terlebih dahulu di tab Pengaturan' : undefined}
               onClick={() => {
                 setTab(key)
                 if (key !== 'pengaturan') setBaru(false)

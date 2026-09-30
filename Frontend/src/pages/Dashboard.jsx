@@ -1,5 +1,4 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
-import EditProfilModal from '../components/EditProfilModal'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import MiniCalendar from '../components/MiniCalendar'
 import { useAuth } from '../lib/AuthContext'
@@ -13,6 +12,8 @@ import LogoHorizontal from '../components/LogoHorizontal'
 // apa pun rolenya — inilah penyebab utama "menu lambat dimuat". React.lazy
 // memecahnya jadi chunk terpisah per halaman, diunduh hanya saat dibuka.
 const AdminHome = lazy(() => import('./admin/AdminHome'))
+const LandingEditor = lazy(() => import('./LandingEditor'))
+const PpdbManagement = lazy(() => import('./PpdbManagement'))
 const AttendanceRecap = lazy(() => import('./AttendanceRecap'))
 const AuditLog = lazy(() => import('./AuditLog'))
 const BackupRestore = lazy(() => import('./BackupRestore'))
@@ -71,6 +72,7 @@ const MENU_GROUPS = [
       { key: 'siswa', label: 'Data Siswa', icon: StudentIcon, permission: 'siswa.manage' },
       { key: 'guru', label: 'Data Guru & Pegawai', icon: StaffIcon, permission: 'pegawai.manage' },
       { key: 'kelas', label: 'Data Kelas', icon: ClassIcon, permission: 'kurikulum.manage' },
+      { key: 'ppdb', label: 'PPDB', icon: PpdbIcon, permission: 'ppdb.manage' },
       { key: 'absensi-guru', label: 'Monitoring Absensi Guru', icon: AttendanceIcon, permission: 'monitoring-guru.absensi-guru' },
       { key: 'inventaris', label: 'Sarana & Prasarana', icon: InventoryIcon, permission: 'sarpras.inventaris' },
       { key: 'persuratan', label: 'Surat & Kearsipan', icon: ArchiveIcon, permission: 'persuratan.manage' },
@@ -86,14 +88,11 @@ const MENU_GROUPS = [
 export default function Dashboard() {
   const { user, logout, hasPermission, isSuperAdmin } = useAuth()
   const [view, setView] = useState('home')
-  const [profil, setProfil] = useState(null)
-  const [editingProfil, setEditingProfil] = useState(false)
   const [stats, setStats] = useState({ siswa: null, guru: null, kelas: null })
   const [notices, setNotices] = useState([])
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const [openSection, setOpenSection] = useState(null)
 
-  const canEditProfil = hasPermission('humas.informasi')
   const isAdmin = hasPermission('pengguna.manage')
   const menuGroups = MENU_GROUPS.map((group) => ({
     ...group,
@@ -113,7 +112,6 @@ export default function Dashboard() {
   }
 
   useEffect(() => {
-    if (canEditProfil) api.getProfil().then(setProfil).catch(() => {})
     if (hasPermission('siswa.manage')) {
       api.countSiswa().then((r) => setStats((s) => ({ ...s, siswa: r.total }))).catch(() => {})
     }
@@ -156,10 +154,6 @@ export default function Dashboard() {
   })
 
   function handleAction(item) {
-    if (item.key === 'landing') {
-      setEditingProfil(true)
-      return
-    }
     setView(item.key)
   }
 
@@ -320,6 +314,10 @@ export default function Dashboard() {
             <AuditLog onBack={() => setView('home')} />
           ) : view === 'profile' ? (
             <MyProfile onBack={() => setView('home')} />
+          ) : view === 'ppdb' && hasPermission('ppdb.manage') ? (
+            <PpdbManagement onBack={() => setView('home')} />
+          ) : view === 'landing' && hasPermission('humas.informasi') ? (
+            <LandingEditor onBack={() => setView('home')} />
           ) : isAdmin ? (
             <AdminHome user={user} onNavigate={(key) => setView(key)} />
           ) : (
@@ -470,17 +468,6 @@ export default function Dashboard() {
           </Suspense>
         </main>
 
-      {editingProfil && (
-        <EditProfilModal
-          profil={profil}
-          onClose={() => setEditingProfil(false)}
-          onSaved={() => {
-            setEditingProfil(false)
-            api.getProfil().then(setProfil).catch(() => {})
-          }}
-        />
-      )}
-
       {confirmingLogout && (
         <LogoutConfirmModal onClose={() => setConfirmingLogout(false)} onConfirm={logout} />
       )}
@@ -553,6 +540,15 @@ function AttendanceIcon(props) {
       <circle cx="10" cy="8" r="3.5" />
       <path d="M3 20c0-3.9 3.1-6.5 7-6.5" />
       <path d="m14 18 3 3 5-5" />
+    </svg>
+  )
+}
+
+function PpdbIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="5" y="4" width="14" height="17" rx="2" />
+      <path d="M9 4V3h6v1M9 11h6M9 15h4" />
     </svg>
   )
 }
