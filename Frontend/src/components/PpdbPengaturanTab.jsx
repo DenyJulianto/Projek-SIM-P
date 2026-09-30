@@ -6,6 +6,24 @@ import { Badge, Btn, Field, Kosong, ModalShell, Pesan } from './PpdbUI'
 import { STATUS_PERIODE_TONE, tgl } from './ppdbKonstanta'
 
 const SARAN_JALUR = ['Jalur Domisili', 'Jalur Afirmasi', 'Jalur Prestasi', 'Jalur Mutasi', 'Jalur Lainnya']
+
+// Template jalur standar (pola SPMB SMK). Persen dari kuota penerimaan;
+// sisa pembulatan masuk ke jalur Prestasi supaya total pas dengan kuota.
+const KRITERIA_RAPOR = { nama: 'Rata-rata Rapor', bobot: 1, maks: 100 }
+const JALUR_STANDAR = [
+  { nama: 'Jalur Afirmasi', persen: 15, deskripsi: 'Untuk calon siswa dari keluarga ekonomi tidak mampu (pemegang KIP/KKS/PKH) dan penyandang disabilitas.', kriteria: [KRITERIA_RAPOR] },
+  { nama: 'Jalur Prestasi', persen: 50, deskripsi: 'Berdasarkan nilai rata-rata rapor dan/atau prestasi akademik maupun non-akademik (lomba, sertifikat).', kriteria: [KRITERIA_RAPOR] },
+  { nama: 'Jalur Domisili Terdekat', persen: 10, deskripsi: 'Untuk calon siswa yang berdomisili paling dekat dengan sekolah, dibuktikan dengan Kartu Keluarga.', kriteria: [KRITERIA_RAPOR] },
+  { nama: 'Jalur Mutasi', persen: 5, deskripsi: 'Untuk calon siswa yang pindah domisili karena tugas orang tua/wali, serta anak guru/tenaga kependidikan.', kriteria: [KRITERIA_RAPOR] },
+  { nama: 'Jalur Reguler', persen: 20, deskripsi: 'Jalur umum bagi calon siswa yang tidak mendaftar melalui jalur lain, berdasarkan nilai rapor dan tes seleksi.', kriteria: [KRITERIA_RAPOR, { nama: 'Tes Seleksi', bobot: 1, maks: 100 }] },
+]
+
+function hitungJalurStandar(kuota) {
+  const daftar = JALUR_STANDAR.map(({ persen, ...j }) => ({ ...j, kuota: Math.floor((kuota * persen) / 100) }))
+  const sisa = kuota - daftar.reduce((a, j) => a + j.kuota, 0)
+  daftar.find((j) => j.nama === 'Jalur Prestasi').kuota += sisa
+  return daftar
+}
 const input = 'border border-navy/15 rounded-lg px-3 py-2 text-sm w-full bg-white'
 
 const AKSI_STATUS = {
@@ -496,9 +514,27 @@ export default function PpdbPengaturanTab({ periodeId, mulaiBaru, onDibuat, onBe
             </p>
           </div>
           {!terkunci && (
-            <Btn kecil utama onClick={() => setJalurModal({})}>
-              + Jalur
-            </Btn>
+            <div className="flex gap-2">
+              {periode.jalur.length === 0 && (
+                <Btn
+                  kecil
+                  title="Buat 5 jalur: Afirmasi 15%, Prestasi 50%, Domisili Terdekat 10%, Mutasi 5%, Reguler 20% dari kuota"
+                  onClick={() => {
+                    const daftar = hitungJalurStandar(periode.kuota)
+                    const ringkas = daftar.map((j) => `${j.nama} (${j.kuota})`).join(', ')
+                    if (!window.confirm(`Buat jalur standar SMK?\n\n${ringkas}\n\nKuota, deskripsi, dan kriteria bisa diubah setelahnya.`)) return
+                    jalankan(async () => {
+                      for (const j of daftar) await api.ppdbCreateJalur(periode.id, j)
+                    }, 'Jalur standar berhasil dibuat.')
+                  }}
+                >
+                  Gunakan Jalur Standar SMK
+                </Btn>
+              )}
+              <Btn kecil utama onClick={() => setJalurModal({})}>
+                + Jalur
+              </Btn>
+            </div>
           )}
         </div>
         <div className="bg-white rounded-2xl border border-navy/10 overflow-x-auto">
