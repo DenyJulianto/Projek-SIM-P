@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useViewUrl } from '../lib/useViewUrl'
 import ComingSoon from '../components/ComingSoon'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import ModeUjianAman, { keluarLayarPenuh, siapkanModeUjian } from '../components/ModeUjianAman'
@@ -75,7 +76,7 @@ function getSubjectEmoji(name = '') {
 
 export default function SiswaDashboard() {
   const { user, logout } = useAuth()
-  const [view, setView] = useState('home')
+  const [view, setView] = useViewUrl()
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const [siswa, setSiswa] = useState(null)
   const [openDropdown, setOpenDropdown] = useState(null)

@@ -16,8 +16,11 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          {/* /dashboard dan semua halaman dasbor lain (mis. /kelas-saya).
+              Halaman mana yang tampil & siapa yang boleh membukanya ditentukan
+              di Dashboard.jsx sesuai peran user. */}
           <Route
-            path="/dashboard"
+            path="/*"
             element={
               <ProtectedRoute>
                 <Dashboard />

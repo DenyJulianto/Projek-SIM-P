@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useViewUrl } from '../lib/useViewUrl'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import { useAuth } from '../lib/AuthContext'
 import { api } from '../lib/api'
@@ -66,7 +67,7 @@ function getGreeting(hour) {
 
 export default function PrincipalDashboard() {
   const { user, logout } = useAuth()
-  const [view, setView] = useState('home')
+  const [view, setView] = useViewUrl()
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const [openSection, setOpenSection] = useState(null)
   const [insights, setInsights] = useState(null)
