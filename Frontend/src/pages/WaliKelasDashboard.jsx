@@ -1,8 +1,9 @@
 import logoLambang from '../assets/logo-sim-lambang.png'
 import { useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useViewUrl } from '../lib/useViewUrl'
+import { createPortal } from 'react-dom'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
+import { BellIcon as NotifBellIcon, JENIS_NOTIFIKASI, NotifikasiItem, useNotifikasi } from '../components/Notifikasi'
 import { useAuth } from '../lib/AuthContext'
 import { api, BASE_URL } from '../lib/api'
 import MyProfile from './MyProfile'
@@ -30,7 +31,8 @@ const MENU_GROUPS = [
       { key: 'jadwal-mengajar', label: 'Jadwal Mengajar', icon: CalendarIcon },
       { key: 'input-nilai', label: 'Input Nilai', icon: PencilIcon },
       { key: 'materi-tugas', label: 'Materi / Tugas', icon: FolderIcon },
-      { key: 'modul-ajar', label: 'Manajemen RPP / Modul Ajar', icon: DocIcon },
+      { key: 'modul-ajar', label: 'Perangkat Ajar', icon: DocIcon },
+      { key: 'notifikasi', label: 'Notifikasi Siswa', icon: NotifBellIcon },
     ],
   },
   {
@@ -68,6 +70,19 @@ export default function WaliKelasDashboard() {
   const [kelasList, setKelasList] = useState(null)
   const [selectedKelasId, setSelectedKelasId] = useState(null)
   const [openSection, setOpenSection] = useState(null)
+  const notif = useNotifikasi()
+  // Tugas yang dibuka dari notifikasi (n = pemicu remount)
+  const [fokusTugas, setFokusTugas] = useState(null)
+
+  function bukaNotifikasi(n) {
+    notif.tandaiDibaca(n)
+    if (n.jenis === 'tugas_dikumpulkan' && n.data?.tugas_id) {
+      setFokusTugas({ tugasId: n.data.tugas_id, n: Date.now() })
+      setView('materi-tugas')
+    } else if (n.jenis === 'izin_siswa') {
+      setView('kehadiran')
+    }
+  }
 
   useEffect(() => {
     const activeGroup = MENU_GROUPS.find(
@@ -155,7 +170,12 @@ export default function WaliKelasDashboard() {
                     hasActiveItem ? 'text-white' : 'text-white/70 hover:text-white'
                   }`}
                 >
-                  <span className="truncate min-w-0">{group.section}</span>
+                  <span className="truncate min-w-0 flex items-center gap-2">
+                    {group.section}
+                    {!isOpen && notif.belumDibaca > 0 && group.items.some((item) => item.key === 'notifikasi') && (
+                      <span className="h-2 w-2 rounded-full bg-red-500" />
+                    )}
+                  </span>
                   <ChevronIcon className={`h-3.5 w-3.5 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {isOpen && (
@@ -175,6 +195,11 @@ export default function WaliKelasDashboard() {
                         >
                           <Icon className="h-4.5 w-4.5 shrink-0" />
                           <span className="truncate min-w-0">{item.label}</span>
+                          {item.key === 'notifikasi' && notif.belumDibaca > 0 && (
+                            <span className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-red-600 text-white text-[11px] font-bold flex items-center justify-center">
+                              {notif.belumDibaca > 99 ? '99+' : notif.belumDibaca}
+                            </span>
+                          )}
                         </button>
                       )
                     })}
@@ -220,10 +245,15 @@ export default function WaliKelasDashboard() {
                 <KelasSelector kelasList={kelasList} selectedKelasId={selectedKelasId} onChange={setSelectedKelasId} />
               )}
 
-            {view === 'home' && <WaliKelasHome user={user} kelas={kelas} onNavigate={setView} />}
+            {view === 'home' && <WaliKelasHome user={user} kelas={kelas} onNavigate={setView} notif={notif} onBukaNotifikasi={bukaNotifikasi} />}
+            {view === 'notifikasi' && (
+              <NotifikasiSiswaView notif={notif} onBuka={bukaNotifikasi} onBack={() => setView('home')} />
+            )}
             {view === 'jadwal-mengajar' && <JadwalMengajarView onBack={() => setView('home')} />}
             {view === 'input-nilai' && <NilaiManagement onBack={() => setView('home')} title="Input Nilai" />}
-            {view === 'materi-tugas' && <MateriTugasView onBack={() => setView('home')} />}
+            {view === 'materi-tugas' && (
+              <MateriTugasView key={fokusTugas?.n ?? 0} fokusTugas={fokusTugas} onBack={() => setView('home')} />
+            )}
             {view === 'modul-ajar' && <ModulAjarManagement onBack={() => setView('home')} />}
             {view === 'profil-kelas' && <ProfilKelasView onBack={() => setView('home')} kelas={kelas} user={user} onNavigate={setView} />}
             {view === 'daftar-siswa' && <DaftarSiswaView onBack={() => setView('home')} kelas={kelas} />}
@@ -252,8 +282,8 @@ export default function WaliKelasDashboard() {
   )
 }
 
-function MateriTugasView({ onBack }) {
-  const [tab, setTab] = useState('materi')
+function MateriTugasView({ onBack, fokusTugas }) {
+  const [tab, setTab] = useState(fokusTugas ? 'tugas' : 'materi')
   const tabs = [
     { key: 'materi', label: 'Materi', icon: BookStackIcon },
     { key: 'tugas', label: 'Tugas', icon: TaskBadgeIcon },
@@ -306,7 +336,7 @@ function MateriTugasView({ onBack }) {
       </div>
 
       <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5">
-        {tab === 'materi' ? <MateriManagement bare /> : <TugasManagement bare />}
+        {tab === 'materi' ? <MateriManagement bare /> : <TugasManagement bare fokus={fokusTugas} />}
       </div>
     </div>
   )
@@ -410,7 +440,7 @@ function formatTanggalPendek(value) {
   return d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-function WaliKelasHome({ user, kelas, onNavigate }) {
+function WaliKelasHome({ user, kelas, onNavigate, notif, onBukaNotifikasi }) {
   const [rekap, setRekap] = useState(null)
   const [struktur, setStruktur] = useState(null)
   const [siswaList, setSiswaList] = useState(null)
@@ -511,6 +541,8 @@ function WaliKelasHome({ user, kelas, onNavigate }) {
           onClick={() => onNavigate('kehadiran')}
         />
       </div>
+
+      <NotifikasiSiswaCard notif={notif} onBuka={onBukaNotifikasi} onLihatSemua={() => onNavigate('notifikasi')} />
 
       <StrukturKelasCard
         kelas={kelas}
@@ -980,6 +1012,108 @@ function CalendarIcon(props) {
       <rect x="3" y="5" width="18" height="16" rx="2.5" />
       <path d="M8 3v4M16 3v4M3 10h18" />
     </svg>
+  )
+}
+
+const JENIS_NOTIFIKASI_WALI = ['izin_siswa', 'pelanggaran_ujian', 'tugas_dikumpulkan']
+
+function NotifikasiSiswaCard({ notif, onBuka, onLihatSemua }) {
+  const terbaru = (notif.daftar || []).slice(0, 3)
+
+  return (
+    <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5">
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <div className="flex items-center gap-2.5">
+          <span
+            className={`h-9 w-9 rounded-full flex items-center justify-center ${
+              notif.belumDibaca > 0 ? 'bg-red-500 text-white' : 'bg-violet-400 text-white'
+            }`}
+          >
+            <NotifBellIcon className="h-4.5 w-4.5" />
+          </span>
+          <h2 className="text-sm font-bold text-navy">Notifikasi Siswa</h2>
+          {notif.belumDibaca > 0 && (
+            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-red-100 text-red-600">
+              {notif.belumDibaca} belum dibaca
+            </span>
+          )}
+        </div>
+        <button onClick={onLihatSemua} className="text-xs font-semibold text-emerald-700 hover:underline shrink-0">
+          Lihat semua →
+        </button>
+      </div>
+      {notif.daftar === null && <p className="text-sm text-navy/40 py-4 text-center">Memuat...</p>}
+      {notif.daftar !== null && terbaru.length === 0 && (
+        <p className="text-sm text-navy/40 py-4 text-center">Belum ada notifikasi dari siswa.</p>
+      )}
+      <div className="space-y-1.5">
+        {terbaru.map((n) => (
+          <NotifikasiItem key={n.id} n={n} onClick={onBuka} ringkas />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function NotifikasiSiswaView({ notif, onBuka, onBack }) {
+  const [filter, setFilter] = useState('semua')
+  const daftar = (notif.daftar || []).filter((n) => {
+    if (filter === 'semua') return true
+    if (filter === 'belum') return !n.dibaca_at
+    return n.jenis === filter
+  })
+  const jumlahJenis = (jenis) => (notif.daftar || []).filter((n) => n.jenis === jenis).length
+
+  return (
+    <PageShell title="Notifikasi Siswa" onBack={onBack}>
+      <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5">
+        <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+          <div className="flex gap-2 flex-wrap">
+            {[
+              ['semua', 'Semua'],
+              ['belum', `Belum dibaca${notif.belumDibaca ? ` (${notif.belumDibaca})` : ''}`],
+              ...JENIS_NOTIFIKASI_WALI.map((key) => [
+                key,
+                `${JENIS_NOTIFIKASI[key].label}${jumlahJenis(key) ? ` (${jumlahJenis(key)})` : ''}`,
+              ]),
+            ].map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => setFilter(key)}
+                className={`text-xs font-semibold rounded-full px-3.5 py-1.5 transition-colors ${
+                  filter === key ? 'bg-navy text-white' : 'bg-navy/5 text-navy/60 hover:bg-navy/10'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {notif.belumDibaca > 0 && (
+            <button onClick={notif.tandaiSemuaDibaca} className="text-xs font-semibold text-emerald-700 hover:underline">
+              Tandai semua sudah dibaca
+            </button>
+          )}
+        </div>
+
+        {notif.daftar === null && <EmptyState text="Memuat..." />}
+        {notif.daftar !== null && daftar.length === 0 && (
+          <EmptyState
+            text={
+              filter === 'semua'
+                ? 'Belum ada notifikasi dari siswa.'
+                : filter === 'belum'
+                  ? 'Semua notifikasi sudah dibaca.'
+                  : 'Belum ada notifikasi jenis ini.'
+            }
+          />
+        )}
+        <div className="space-y-1.5">
+          {daftar.map((n) => (
+            <NotifikasiItem key={n.id} n={n} onClick={onBuka} />
+          ))}
+        </div>
+      </div>
+    </PageShell>
   )
 }
 

@@ -98,18 +98,20 @@ class StudentSelfController extends Controller
             ['kelas_id' => $siswa->kelas_id, 'status' => $data['status'], 'keterangan' => $data['keterangan']]
         );
 
-        // Beri tahu guru yang mengajar di kelas siswa pada hari tersebut.
+        // Beri tahu wali kelas siswa dan guru yang mengajar di kelasnya pada
+        // hari tersebut.
         $tanggal = Carbon::parse($data['tanggal'])->locale('id');
         $hari = [1 => 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'][$tanggal->dayOfWeekIso];
-        $guruUserIds = JadwalPelajaran::where('kelas_id', $siswa->kelas_id)
+        $penerima = JadwalPelajaran::where('kelas_id', $siswa->kelas_id)
             ->where('hari', $hari)
             ->with('guru:id,user_id')
             ->get()
             ->pluck('guru.user_id')
+            ->prepend($this->waliKelasUserId($siswa))
             ->filter()
             ->unique();
 
-        foreach ($guruUserIds as $userId) {
+        foreach ($penerima as $userId) {
             Notifikasi::kirim(
                 $userId,
                 'izin_siswa',
@@ -430,21 +432,25 @@ class StudentSelfController extends Controller
             'pindah_jendela' => 'pindah ke jendela/aplikasi lain',
         ][$jenis];
 
-        Notifikasi::kirim(
-            $ujian->guru?->user_id,
-            'pelanggaran_ujian',
-            "pelanggaran_ujian:{$ujian->id}:{$siswa->id}",
-            "{$siswa->nama} keluar dari halaman kuis",
-            $this->namaDanKelas($siswa)." {$keterangan} saat mengerjakan \"{$ujian->judul}\". Total keluar {$attempt->pelanggaran}×.",
-            [
-                'ujian_id' => $ujian->id,
-                'siswa_id' => $siswa->id,
-                'kelas_id' => $ujian->kelas_id,
-                'mata_pelajaran_id' => $ujian->mata_pelajaran_id,
-                'jenis_terakhir' => $jenis,
-            ],
-            $attempt->pelanggaran
-        );
+        // Guru pembuat kuis dan wali kelas siswa (untuk pemantauan kelasnya).
+        $penerima = collect([$ujian->guru?->user_id, $this->waliKelasUserId($siswa)])->filter()->unique();
+        foreach ($penerima as $userId) {
+            Notifikasi::kirim(
+                $userId,
+                'pelanggaran_ujian',
+                "pelanggaran_ujian:{$ujian->id}:{$siswa->id}",
+                "{$siswa->nama} keluar dari halaman kuis",
+                $this->namaDanKelas($siswa)." {$keterangan} saat mengerjakan \"{$ujian->judul}\". Total keluar {$attempt->pelanggaran}×.",
+                [
+                    'ujian_id' => $ujian->id,
+                    'siswa_id' => $siswa->id,
+                    'kelas_id' => $ujian->kelas_id,
+                    'mata_pelajaran_id' => $ujian->mata_pelajaran_id,
+                    'jenis_terakhir' => $jenis,
+                ],
+                $attempt->pelanggaran
+            );
+        }
     }
 
     /**
@@ -479,6 +485,11 @@ class StudentSelfController extends Controller
         $kelas = $siswa->kelas?->nama_kelas;
 
         return $siswa->nama.($kelas ? " ({$kelas})" : '');
+    }
+
+    private function waliKelasUserId(Siswa $siswa): ?int
+    {
+        return $siswa->kelas?->waliKelas?->user_id;
     }
 
     public function ujianJawab(Request $request, Ujian $ujian): JsonResponse
