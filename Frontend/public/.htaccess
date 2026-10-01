@@ -1,0 +1,10 @@
+# Aplikasi React satu halaman (SPA): semua URL seperti /data-master/sekolah
+# dilayani oleh index.html supaya refresh dan bookmark tidak 404 di Apache.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>

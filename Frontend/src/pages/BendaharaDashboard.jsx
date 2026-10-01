@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { useViewUrl } from '../lib/useViewUrl'
 import QRCode from 'qrcode'
 import ComingSoon from '../components/ComingSoon'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
@@ -97,7 +98,7 @@ const COMING_SOON_LABEL = {}
 
 export default function BendaharaDashboard() {
   const { user, logout } = useAuth()
-  const [view, setView] = useState('home')
+  const [view, setView] = useViewUrl()
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const [openSection, setOpenSection] = useState(null)
   const [mobileOpen, setMobileOpen] = useState(false)

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import CompleteNameForm from '../components/CompleteNameForm'
 import PasswordInput from '../components/PasswordInput'
 import { useAuth } from '../lib/AuthContext'
@@ -17,6 +17,11 @@ import {
 export default function Login() {
   const { login, verifyTwoFactor, setUser } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  // Halaman tujuan sebelum diminta login (dari ProtectedRoute); hanya path
+  // internal yang diterima supaya tidak bisa dipakai untuk redirect keluar.
+  const dari = location.state?.from
+  const tujuan = typeof dari === 'string' && dari.startsWith('/') && !dari.startsWith('//') && dari !== '/login' ? dari : '/dashboard'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(true)
@@ -44,7 +49,7 @@ export default function Login() {
       } else if (!result.name) {
         setNeedsName(true)
       } else {
-        navigate('/dashboard')
+        navigate(tujuan)
       }
     } catch (err) {
       setError(err.message)
@@ -59,7 +64,7 @@ export default function Login() {
     setError('')
     try {
       await verifyTwoFactor(twoFactorChallenge, twoFactorCode, remember)
-      navigate('/dashboard')
+      navigate(tujuan)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -69,7 +74,7 @@ export default function Login() {
 
   function handleNameCompleted(updatedUser) {
     setUser(updatedUser)
-    navigate('/dashboard')
+    navigate(tujuan)
   }
 
   return (

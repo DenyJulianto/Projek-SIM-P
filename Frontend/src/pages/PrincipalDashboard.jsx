@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import logoLambang from '../assets/logo-sim-lambang.png'
+import { useViewUrl } from '../lib/useViewUrl'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import { useAuth } from '../lib/AuthContext'
 import { api, BASE_URL } from '../lib/api'
@@ -11,6 +12,7 @@ import PemantauanView from './principal/PemantauanView'
 import PrincipalHome from './principal/PrincipalHome'
 import MyProfile from './MyProfile'
 import RekapPembinaanManagement from './RekapPembinaanManagement'
+import PersetujuanPerangkatAjar from './PersetujuanPerangkatAjar'
 
 const MENU_GROUPS = [
   { section: null, items: [{ key: 'home', label: 'Dashboard', icon: GridIcon }] },
@@ -28,6 +30,10 @@ const MENU_GROUPS = [
       { key: 'pemantauan-prestasi-pelanggaran', label: 'Prestasi & Pelanggaran', icon: AwardIcon },
       { key: 'rekap-pembinaan', label: 'Rekap Pembinaan Siswa', icon: StudentIcon },
     ],
+  },
+  {
+    section: 'Akademik',
+    items: [{ key: 'persetujuan-perangkat-ajar', label: 'Persetujuan Perangkat Ajar', icon: CheckIcon }],
   },
   {
     section: 'E-Rapor',
@@ -61,7 +67,7 @@ const MENU_GROUPS = [
 
 export default function PrincipalDashboard() {
   const { user, logout } = useAuth()
-  const [view, setView] = useState('home')
+  const [view, setView] = useViewUrl()
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const [sekolah, setSekolah] = useState(null)
   const [insights, setInsights] = useState(null)
@@ -238,6 +244,7 @@ export default function PrincipalDashboard() {
         {view === 'home' && <PrincipalHome onNavigate={setView} />}
         {view.startsWith('pemantauan-') && <PemantauanView section={view.replace('pemantauan-', '')} />}
         {view.startsWith('erapor-') && <ERaporView tab={view.replace('erapor-', '')} />}
+        {view === 'persetujuan-perangkat-ajar' && <PersetujuanPerangkatAjar onBack={() => setView('home')} />}
         {view.startsWith('anggaran-') && <AnggaranView tab={view.replace('anggaran-', '')} />}
         {view.startsWith('kepeg-') && <KepegawaianKepsekView tab={view.replace('kepeg-', '')} />}
         {view === 'rekap-pembinaan' && <RekapPembinaanManagement onBack={() => setView('home')} />}

@@ -1,6 +1,7 @@
 import logoLambang from '../assets/logo-sim-lambang.png'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useViewUrl } from '../lib/useViewUrl'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import { useAuth } from '../lib/AuthContext'
 import { api, BASE_URL } from '../lib/api'
@@ -62,7 +63,7 @@ const MENGAJAR_VIEWS = ['jadwal-mengajar', 'input-nilai', 'materi-tugas', 'modul
 
 export default function WaliKelasDashboard() {
   const { user, logout } = useAuth()
-  const [view, setView] = useState('home')
+  const [view, setView] = useViewUrl()
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const [kelasList, setKelasList] = useState(null)
   const [selectedKelasId, setSelectedKelasId] = useState(null)

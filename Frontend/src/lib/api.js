@@ -44,14 +44,19 @@ async function request(path, options = {}) {
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new Error(body.message || `Request gagal (${res.status})`)
+    const err = new Error(body.message || `Request gagal (${res.status})`)
+    err.errors = body.errors || null
+    throw err
   }
 
   return res.json()
 }
 
-async function downloadFile(path, fallbackName) {
-  const res = await fetch(`${BASE_URL}${path}`, { headers: { ...authHeaders() } })
+async function downloadFile(path, fallbackName, options = {}) {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    ...options,
+    headers: { ...(options.body ? { 'Content-Type': 'application/json', Accept: 'application/json' } : {}), ...authHeaders() },
+  })
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
@@ -82,7 +87,9 @@ async function requestForm(path, formData) {
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new Error(body.message || `Request gagal (${res.status})`)
+    const err = new Error(body.message || `Request gagal (${res.status})`)
+    err.errors = body.errors || null
+    throw err
   }
 
   return res.json()
@@ -835,7 +842,14 @@ export const api = {
   jawabMySiswaUjian: (ujianId, data) =>
     request(`/me/siswa/ujian/${ujianId}/jawab`, { method: 'POST', body: JSON.stringify(data) }),
   selesaiMySiswaUjian: (ujianId) => request(`/me/siswa/ujian/${ujianId}/selesai`, { method: 'POST' }),
+  laporPelanggaranUjian: (ujianId, jenis) =>
+    request(`/me/siswa/ujian/${ujianId}/pelanggaran`, { method: 'POST', body: JSON.stringify({ jenis }) }),
   getMySiswaUjianHasil: (ujianId) => request(`/me/siswa/ujian/${ujianId}/hasil`),
+
+  // Notifikasi aktivitas siswa (tugas dikumpulkan, pelanggaran ujian, dll) untuk guru/wali kelas
+  getNotifikasiAktivitas: () => request('/me/notifikasi-aktivitas'),
+  bacaNotifikasiAktivitas: (id) => request(`/me/notifikasi-aktivitas/${id}/baca`, { method: 'POST' }),
+  bacaSemuaNotifikasiAktivitas: () => request('/me/notifikasi-aktivitas/baca-semua', { method: 'POST' }),
 
   getMyAnak: () => request('/me/anak'),
   getAnakJadwal: (siswaId) => request(`/me/anak/${siswaId}/jadwal`),
@@ -900,6 +914,28 @@ export const api = {
   createModulAjar: (data) => request('/me/guru/modul-ajar', { method: 'POST', body: JSON.stringify(data) }),
   updateModulAjar: (id, data) => request(`/me/guru/modul-ajar/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteModulAjar: (id) => request(`/me/guru/modul-ajar/${id}`, { method: 'DELETE' }),
+  unduhModulAjar: (id, format, namaFile) => downloadFile(`/me/guru/modul-ajar/${id}/unduh/${format}`, namaFile),
+  getOpsiModulAjar: () => request('/me/guru/modul-ajar/opsi'),
+  getCapaianModulAjar: (params) => request(`/me/guru/modul-ajar/capaian?${new URLSearchParams(params)}`),
+  ajukanModulAjar: (id) => request(`/me/guru/modul-ajar/${id}/ajukan`, { method: 'POST' }),
+  tarikModulAjar: (id) => request(`/me/guru/modul-ajar/${id}/tarik`, { method: 'POST' }),
+  pratinjauModulAjar: (format, data, namaFile) =>
+    downloadFile(`/me/guru/modul-ajar/pratinjau/${format}`, namaFile, { method: 'POST', body: JSON.stringify(data) }),
+  unggahLampiranModulAjar: (id, jenis, file) => {
+    const formData = new FormData()
+    formData.append('jenis', jenis)
+    formData.append('file', file)
+    return requestForm(`/me/guru/modul-ajar/${id}/lampiran`, formData)
+  },
+  hapusLampiranModulAjar: (id, lampiranId) => request(`/me/guru/modul-ajar/${id}/lampiran/${lampiranId}`, { method: 'DELETE' }),
+  unduhLampiranModulAjar: (id, lampiran) => downloadFile(`/me/guru/modul-ajar/${id}/lampiran/${lampiran.id}`, lampiran.nama_file),
+  getTinjauanPerangkatAjar: (status) => request(`/perangkat-ajar/tinjau?status=${encodeURIComponent(status)}`),
+  setujuiPerangkatAjar: (id, catatan) =>
+    request(`/perangkat-ajar/tinjau/${id}/setujui`, { method: 'POST', body: JSON.stringify({ catatan }) }),
+  revisiPerangkatAjar: (id, catatan) =>
+    request(`/perangkat-ajar/tinjau/${id}/revisi`, { method: 'POST', body: JSON.stringify({ catatan }) }),
+  unduhTinjauanPerangkatAjar: (id, format, namaFile) => downloadFile(`/perangkat-ajar/tinjau/${id}/unduh/${format}`, namaFile),
+  unduhLampiranTinjauan: (id, lampiran) => downloadFile(`/perangkat-ajar/tinjau/${id}/lampiran/${lampiran.id}`, lampiran.nama_file),
   uploadMyGuruSertifikat: (files) => {
     const formData = new FormData()
     files.forEach((f) => formData.append('files[]', f))

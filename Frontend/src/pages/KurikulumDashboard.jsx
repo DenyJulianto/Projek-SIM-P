@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
+import { useViewUrl } from '../lib/useViewUrl'
 import ComingSoon from '../components/ComingSoon'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import { useAuth } from '../lib/AuthContext'
@@ -31,6 +32,7 @@ const KkmKktpManagement = lazy(() => import('./KkmKktpManagement'))
 const ProgramSemesterManagement = lazy(() => import('./ProgramSemesterManagement'))
 const ProgramTahunanManagement = lazy(() => import('./ProgramTahunanManagement'))
 const TujuanPembelajaranManagement = lazy(() => import('./TujuanPembelajaranManagement'))
+const PersetujuanPerangkatAjar = lazy(() => import('./PersetujuanPerangkatAjar'))
 
 const MENU_GROUPS = [
   { section: null, items: [{ key: 'home', label: 'Dashboard', icon: GridIcon }] },
@@ -44,6 +46,7 @@ const MENU_GROUPS = [
       { key: 'kkm', label: 'KKM / KKTP', icon: GaugeIcon },
       { key: 'prosem', label: 'Program Semester', icon: DocIcon },
       { key: 'protah', label: 'Program Tahunan', icon: DocIcon },
+      { key: 'persetujuan-perangkat-ajar', label: 'Persetujuan Perangkat Ajar', icon: CheckIcon },
     ],
   },
   {
@@ -93,7 +96,7 @@ export default function KurikulumDashboard() {
   const sapaan = { L: 'Bapak', P: 'Ibu' }[user?.jenis_kelamin] || 'Bapak/Ibu'
   const namaLengkap = [user?.name, user?.gelar].filter(Boolean).join(', ')
   const avatarSrc = user?.avatar_url ? `${BASE_URL}${user.avatar_url}` : null
-  const [view, setView] = useState('home')
+  const [view, setView] = useViewUrl()
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const [openSection, setOpenSection] = useState(null)
 
@@ -213,6 +216,7 @@ export default function KurikulumDashboard() {
         {view === 'kkm' && <KkmKktpManagement onBack={() => setView('home')} />}
         {view === 'prosem' && <ProgramSemesterManagement onBack={() => setView('home')} />}
         {view === 'protah' && <ProgramTahunanManagement onBack={() => setView('home')} />}
+        {view === 'persetujuan-perangkat-ajar' && <PersetujuanPerangkatAjar onBack={() => setView('home')} />}
         {view === 'mata-pelajaran' && <MataPelajaranManagement onBack={() => setView('home')} />}
         {view === 'kelas' && <KelasManagement onBack={() => setView('home')} />}
         {view === 'rombel' && <RombelManagement onBack={() => setView('home')} />}
