@@ -45,11 +45,10 @@ const MENU_GROUPS = [
     ],
   },
   {
-    section: 'Akses & Hak Sekolah',
+    section: 'Status & Modul Sekolah',
     items: [
       { key: 'manajemen-sekolah', label: 'Manajemen Sekolah', icon: SchoolIcon },
-      { key: 'admin-sekolah', label: 'Kelola Admin Sekolah', icon: UserGearIcon },
-      { key: 'hak-akses', label: 'Hak Akses & Permission', icon: ShieldIcon },
+      { key: 'pengaturan-modul', label: 'Pengaturan Modul', icon: GearIcon },
     ],
   },
   {
@@ -78,7 +77,6 @@ const MENU_GROUPS = [
   {
     section: 'Sistem & Konfigurasi',
     items: [
-      { key: 'pengaturan-modul', label: 'Pengaturan Modul', icon: GearIcon },
       { key: 'backup-restore', label: 'Backup & Restore', icon: DatabaseIcon },
       { key: 'integrasi-sistem', label: 'Integrasi Sistem', icon: PlugIcon },
     ],
@@ -106,8 +104,6 @@ const REAL_VIEWS = new Set([
   'guru',
   'siswa',
   'manajemen-sekolah',
-  'admin-sekolah',
-  'hak-akses',
   'tarik-data',
   'log-sinkronisasi',
   'konflik-data',
@@ -246,8 +242,6 @@ export default function SuperAdminDashboard() {
           {view === 'guru' && <GuruDirectoryNasional />}
           {view === 'siswa' && <SiswaDirectoryNasional />}
           {view === 'manajemen-sekolah' && <ManajemenSekolah />}
-          {view === 'admin-sekolah' && <AdminSekolahManagement />}
-          {view === 'hak-akses' && <HakAksesPermission />}
           {view === 'tarik-data' && <TarikDataApi />}
           {view === 'log-sinkronisasi' && <LogSinkronisasi />}
           {view === 'konflik-data' && <KonflikData />}
@@ -624,9 +618,9 @@ function SuperAdminHome({ onNavigate }) {
             />
             <QuickAction
               icon={UserGearIcon}
-              label="Kelola Admin Sekolah"
+              label="Kelola Pengguna"
               desc="Atur akun dan hak akses"
-              onClick={() => onNavigate('admin-sekolah')}
+              onClick={() => onNavigate('kelola-pengguna')}
             />
           </div>
         </div>
@@ -1815,195 +1809,6 @@ function SekolahPicker({ selected, onSelect }) {
   )
 }
 
-function AdminSekolahManagement() {
-  const [selected, setSelected] = useState(null)
-  const [admins, setAdmins] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [showForm, setShowForm] = useState(false)
-  const [busyId, setBusyId] = useState(null)
-  const [createdInfo, setCreatedInfo] = useState(null)
-  const [confirmTarget, setConfirmTarget] = useState(null)
-
-  function loadAdmins(sekolah) {
-    setLoading(true)
-    setError('')
-    api
-      .getSekolahAdmins(sekolah.id)
-      .then(setAdmins)
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false))
-  }
-
-  function handleSelect(sekolah) {
-    setSelected(sekolah)
-    setCreatedInfo(null)
-    if (sekolah) loadAdmins(sekolah)
-    else setAdmins([])
-  }
-
-  async function handleRemove() {
-    const admin = confirmTarget
-    setBusyId(admin.id)
-    setError('')
-    try {
-      await api.deleteSekolahAdmin(selected.id, admin.id)
-      setConfirmTarget(null)
-      loadAdmins(selected)
-    } catch (err) {
-      setError(err.message)
-      setConfirmTarget(null)
-    } finally {
-      setBusyId(null)
-    }
-  }
-
-  return (
-    <div>
-      <div className="mb-6 flex items-center gap-3">
-        <div className="h-11 w-11 rounded-full bg-navy-light/15 flex items-center justify-center shrink-0">
-          <UserGearIcon className="h-5.5 w-5.5 text-navy" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-extrabold text-navy">Kelola Admin Sekolah</h1>
-          <p className="text-sm text-navy/50">
-            Tetapkan siapa saja yang menjadi admin di sekolah tertentu. Satu sekolah bisa punya
-            lebih dari satu admin.
-          </p>
-        </div>
-      </div>
-
-      <SekolahPicker selected={selected} onSelect={handleSelect} />
-
-      {selected && (
-        <>
-          <div className="flex justify-end mb-4">
-            <button
-              onClick={() => setShowForm(true)}
-              className="bg-navy hover:bg-navy-light text-white text-sm font-semibold px-5 py-2.5 rounded-full"
-            >
-              + Tambah Admin
-            </button>
-          </div>
-
-          {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
-
-          {createdInfo && (
-            <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 mb-4">
-              <p className="text-sm text-navy">
-                Akun admin <span className="font-semibold">{createdInfo.email}</span> berhasil
-                dibuat. Password sementara:{' '}
-                <span className="font-mono font-semibold">{createdInfo.password}</span>
-              </p>
-              <p className="text-xs text-navy/50 mt-1">
-                Bagikan password ini secara aman ke pihak sekolah. Password juga tampil di kolom
-                Password Sementara sampai admin menggantinya sendiri.
-              </p>
-            </div>
-          )}
-
-          <div className="bg-white rounded-2xl border border-navy/10 overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-navy/5 text-navy/60 text-xs uppercase text-left">
-                  <th className="px-4 py-3 whitespace-nowrap">Nama</th>
-                  <th className="px-4 py-3 whitespace-nowrap">Email</th>
-                  <th className="px-4 py-3 whitespace-nowrap">Password Sementara</th>
-                  <th className="px-4 py-3 whitespace-nowrap">Status Akun</th>
-                  <th className="px-4 py-3 whitespace-nowrap">Login Terakhir</th>
-                  <th className="px-4 py-3 whitespace-nowrap">Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-6 text-center text-navy/40">
-                      Memuat...
-                    </td>
-                  </tr>
-                ) : admins.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-6 text-center text-navy/40">
-                      Belum ada admin sekolah untuk sekolah ini.
-                    </td>
-                  </tr>
-                ) : (
-                  admins.map((admin) => (
-                    <tr key={admin.id} className="border-t border-navy/5">
-                      <td className="px-4 py-3 font-medium text-navy whitespace-nowrap">
-                        {admin.name}
-                      </td>
-                      <td className="px-4 py-3 text-navy/70 whitespace-nowrap">{admin.email}</td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        {admin.temporary_password ? (
-                          <span className="font-mono font-semibold text-navy select-all">
-                            {admin.temporary_password}
-                          </span>
-                        ) : (
-                          <span className="text-navy/30" title="Sudah diganti oleh admin, atau akun dibuat sebelum fitur ini ada">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <span
-                          className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                            admin.is_active
-                              ? 'bg-emerald-100 text-emerald-700'
-                              : 'bg-navy/10 text-navy/60'
-                          }`}
-                        >
-                          {admin.is_active ? 'Aktif' : 'Nonaktif'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-navy/70 whitespace-nowrap">
-                        {admin.last_login_at
-                          ? new Date(admin.last_login_at).toLocaleDateString('id-ID')
-                          : 'Belum pernah'}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <button
-                          onClick={() => setConfirmTarget(admin)}
-                          disabled={busyId === admin.id}
-                          className="text-xs font-semibold px-3 py-1.5 rounded-full border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50"
-                        >
-                          {busyId === admin.id ? 'Memproses...' : 'Lepas Admin'}
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
-
-      {showForm && selected && (
-        <AdminSekolahFormModal
-          sekolah={selected}
-          onClose={() => setShowForm(false)}
-          onCreated={(info) => {
-            setShowForm(false)
-            setCreatedInfo(info)
-            loadAdmins(selected)
-          }}
-        />
-      )}
-
-      {confirmTarget && (
-        <ConfirmActionModal
-          title="Lepas admin sekolah ini?"
-          message={`"${confirmTarget.name}" tidak akan lagi punya akses admin di sekolah ini. Akunnya tidak dihapus, hanya perannya sebagai admin sekolah yang dicabut.`}
-          confirmLabel="Ya, Lepas"
-          tone="danger"
-          loading={busyId === confirmTarget.id}
-          onConfirm={handleRemove}
-          onClose={() => setConfirmTarget(null)}
-        />
-      )}
-    </div>
-  )
-}
-
 function AdminSekolahFormModal({ sekolah, onClose, onCreated }) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -2076,81 +1881,6 @@ function AdminSekolahFormModal({ sekolah, onClose, onCreated }) {
           </div>
         </form>
       </div>
-    </div>
-  )
-}
-
-function HakAksesPermission() {
-  const [selected, setSelected] = useState(null)
-  const [roles, setRoles] = useState([])
-  const [catalog, setCatalog] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [openRoleId, setOpenRoleId] = useState(null)
-
-  useEffect(() => {
-    api.getPermissionsCatalog().then(setCatalog).catch(() => {})
-  }, [])
-
-  function loadRoles(sekolah) {
-    setLoading(true)
-    setError('')
-    api
-      .getSekolahRoles(sekolah.id)
-      .then(setRoles)
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false))
-  }
-
-  function handleSelect(sekolah) {
-    setSelected(sekolah)
-    setOpenRoleId(null)
-    if (sekolah) loadRoles(sekolah)
-    else setRoles([])
-  }
-
-  return (
-    <div>
-      <div className="mb-6 flex items-center gap-3">
-        <div className="h-11 w-11 rounded-full bg-navy-light/15 flex items-center justify-center shrink-0">
-          <ShieldIcon className="h-5.5 w-5.5 text-navy" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-extrabold text-navy">Hak Akses &amp; Permission</h1>
-          <p className="text-sm text-navy/50">
-            Atur hak akses granular tiap role di sekolah tertentu. Data setiap sekolah tersimpan
-            di database sendiri-sendiri, jadi role di satu sekolah tidak pernah bisa melihat data
-            sekolah lain — di sini Anda mengatur permission apa saja yang dimiliki tiap role{' '}
-            <em>di dalam</em> sekolahnya sendiri.
-          </p>
-        </div>
-      </div>
-
-      <SekolahPicker selected={selected} onSelect={handleSelect} />
-
-      {selected && (
-        <>
-          {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
-
-          {loading ? (
-            <p className="text-sm text-navy/40">Memuat role...</p>
-          ) : (
-            <div className="space-y-3">
-              {roles.map((role) => (
-                <RoleAccessCard
-                  key={role.id}
-                  sekolahId={selected.id}
-                  role={role}
-                  catalog={catalog}
-                  isOpen={openRoleId === role.id}
-                  onToggle={() => setOpenRoleId((prev) => (prev === role.id ? null : role.id))}
-                  onSaved={() => loadRoles(selected)}
-                />
-              ))}
-            </div>
-          )}
-        </>
-      )}
     </div>
   )
 }
@@ -3993,9 +3723,12 @@ function KelolaPenggunaNasional() {
   const [filters, setFilters] = useState({ search: '', sekolah_id: '', status: '' })
   const [confirmReset, setConfirmReset] = useState(null)
   const [confirmToggle, setConfirmToggle] = useState(null)
+  const [confirmRemove, setConfirmRemove] = useState(null)
   const [busyId, setBusyId] = useState(null)
   const [resetResult, setResetResult] = useState(null)
   const [actionError, setActionError] = useState('')
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [createdInfo, setCreatedInfo] = useState(null)
   const { items, meta, page, setPage, loading, error, reload } = usePaginatedDirectory(
     api.getAdminSekolahNasional
   )
@@ -4046,19 +3779,43 @@ function KelolaPenggunaNasional() {
     }
   }
 
+  async function handleRemove() {
+    const admin = confirmRemove
+    setBusyId(admin.id)
+    setActionError('')
+    try {
+      await api.deleteSekolahAdmin(admin.sekolah_id, admin.id)
+      setConfirmRemove(null)
+      reload(currentFilters())
+    } catch (err) {
+      setConfirmRemove(null)
+      setActionError(err.message)
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   return (
     <div>
-      <div className="mb-6 flex items-center gap-3">
-        <div className="h-11 w-11 rounded-full bg-navy-light/15 flex items-center justify-center shrink-0">
-          <UsersIcon className="h-5.5 w-5.5 text-navy" />
+      <div className="mb-6 flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3">
+          <div className="h-11 w-11 rounded-full bg-navy-light/15 flex items-center justify-center shrink-0">
+            <UsersIcon className="h-5.5 w-5.5 text-navy" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-extrabold text-navy">Kelola Pengguna</h1>
+            <p className="text-sm text-navy/50">
+              Satu-satunya tempat mengelola akun Admin Sekolah dari seluruh sekolah se-Indonesia —
+              tambah admin baru, reset password, atau nonaktifkan akun yang bermasalah.
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-extrabold text-navy">Kelola Pengguna</h1>
-          <p className="text-sm text-navy/50">
-            Akun Admin Sekolah dari seluruh sekolah se-Indonesia — reset password bila lupa, atau
-            nonaktifkan akun yang bermasalah tanpa menghapus datanya.
-          </p>
-        </div>
+        <button
+          onClick={() => setShowAddForm(true)}
+          className="shrink-0 bg-navy hover:bg-navy-light text-white text-sm font-semibold px-5 py-2.5 rounded-full"
+        >
+          + Tambah Admin Sekolah
+        </button>
       </div>
 
       <form onSubmit={handleFilter} className="flex flex-wrap gap-3 mb-4">
@@ -4109,6 +3866,19 @@ function KelolaPenggunaNasional() {
         </div>
       )}
 
+      {createdInfo && (
+        <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 mb-4">
+          <p className="text-sm text-navy">
+            Akun admin <span className="font-semibold">{createdInfo.email}</span> berhasil dibuat.
+            Password sementara: <span className="font-mono font-semibold">{createdInfo.password}</span>
+          </p>
+          <p className="text-xs text-navy/50 mt-1">
+            Bagikan password ini secara aman ke pihak sekolah. Password juga tampil di kolom
+            Password Sementara sampai admin menggantinya sendiri.
+          </p>
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl border border-navy/10 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -4116,6 +3886,7 @@ function KelolaPenggunaNasional() {
               <th className="px-4 py-3 whitespace-nowrap">Nama</th>
               <th className="px-4 py-3 whitespace-nowrap">Email</th>
               <th className="px-4 py-3 whitespace-nowrap">Sekolah</th>
+              <th className="px-4 py-3 whitespace-nowrap">Password Sementara</th>
               <th className="px-4 py-3 whitespace-nowrap">Status Akun</th>
               <th className="px-4 py-3 whitespace-nowrap">Login Terakhir</th>
               <th className="px-4 py-3 whitespace-nowrap">Aksi</th>
@@ -4124,13 +3895,13 @@ function KelolaPenggunaNasional() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-navy/40">
+                <td colSpan={7} className="px-4 py-6 text-center text-navy/40">
                   Memuat...
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-navy/40">
+                <td colSpan={7} className="px-4 py-6 text-center text-navy/40">
                   Tidak ada admin sekolah yang cocok.
                 </td>
               </tr>
@@ -4140,6 +3911,15 @@ function KelolaPenggunaNasional() {
                   <td className="px-4 py-3 font-medium text-navy whitespace-nowrap">{admin.name}</td>
                   <td className="px-4 py-3 text-navy/70 whitespace-nowrap">{admin.email}</td>
                   <td className="px-4 py-3 text-navy/70 whitespace-nowrap">{admin.nama_sekolah}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {admin.temporary_password ? (
+                      <span className="font-mono font-semibold text-navy select-all">
+                        {admin.temporary_password}
+                      </span>
+                    ) : (
+                      <span className="text-navy/30">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span
                       className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
@@ -4174,6 +3954,13 @@ function KelolaPenggunaNasional() {
                       >
                         {admin.is_active ? 'Nonaktifkan' : 'Aktifkan'}
                       </button>
+                      <button
+                        onClick={() => setConfirmRemove(admin)}
+                        disabled={busyId === admin.id}
+                        className="text-xs font-semibold px-3 py-1.5 rounded-full border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50"
+                      >
+                        Lepas Admin
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -4183,6 +3970,29 @@ function KelolaPenggunaNasional() {
         </table>
         <Pagination meta={meta} page={page} setPage={setPage} />
       </div>
+
+      {showAddForm && (
+        <TambahAdminSekolahModal
+          onClose={() => setShowAddForm(false)}
+          onCreated={(info) => {
+            setShowAddForm(false)
+            setCreatedInfo(info)
+            reload(currentFilters())
+          }}
+        />
+      )}
+
+      {confirmRemove && (
+        <ConfirmActionModal
+          title="Lepas admin sekolah ini?"
+          message={`"${confirmRemove.name}" tidak akan lagi punya akses admin di sekolah ini. Akunnya tidak dihapus, hanya perannya sebagai admin sekolah yang dicabut.`}
+          confirmLabel="Ya, Lepas"
+          tone="danger"
+          loading={busyId === confirmRemove.id}
+          onConfirm={handleRemove}
+          onClose={() => setConfirmRemove(null)}
+        />
+      )}
 
       {confirmReset && (
         <ConfirmActionModal
@@ -4215,11 +4025,38 @@ function KelolaPenggunaNasional() {
   )
 }
 
+/** Pilih sekolah dulu, lalu isi nama/email admin barunya — dipakai dari Kelola Pengguna. */
+function TambahAdminSekolahModal({ onClose, onCreated }) {
+  const [sekolah, setSekolah] = useState(null)
+
+  if (!sekolah) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-teal-950/50 backdrop-blur-[2px] flex items-center justify-center p-4">
+        <div className="tm-panel relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white rounded-3xl max-w-md w-full shadow-2xl shadow-teal-900/20 p-6">
+          <ModalCloseButton onClose={onClose} />
+          <h2 className="text-lg font-bold text-navy mb-1">Tambah Admin Sekolah</h2>
+          <p className="text-sm text-navy/50 mb-4">Pilih sekolah tujuan admin baru ini.</p>
+          <SekolahPicker selected={null} onSelect={setSekolah} />
+        </div>
+      </div>
+    )
+  }
+
+  return <AdminSekolahFormModal sekolah={sekolah} onClose={onClose} onCreated={onCreated} />
+}
+
 function ManajemenRole() {
   const [roles, setRoles] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [openRole, setOpenRole] = useState(null)
+
+  const [selected, setSelected] = useState(null)
+  const [catalog, setCatalog] = useState([])
+  const [sekolahRoles, setSekolahRoles] = useState([])
+  const [loadingSekolah, setLoadingSekolah] = useState(false)
+  const [errorSekolah, setErrorSekolah] = useState('')
+  const [openRoleId, setOpenRoleId] = useState(null)
 
   useEffect(() => {
     api
@@ -4227,7 +4064,25 @@ function ManajemenRole() {
       .then(setRoles)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
+    api.getPermissionsCatalog().then(setCatalog).catch(() => {})
   }, [])
+
+  function loadSekolahRoles(sekolah) {
+    setLoadingSekolah(true)
+    setErrorSekolah('')
+    api
+      .getSekolahRoles(sekolah.id)
+      .then(setSekolahRoles)
+      .catch((err) => setErrorSekolah(err.message))
+      .finally(() => setLoadingSekolah(false))
+  }
+
+  function handleSelect(sekolah) {
+    setSelected(sekolah)
+    setOpenRoleId(null)
+    if (sekolah) loadSekolahRoles(sekolah)
+    else setSekolahRoles([])
+  }
 
   return (
     <div>
@@ -4238,57 +4093,85 @@ function ManajemenRole() {
         <div>
           <h1 className="text-2xl font-extrabold text-navy">Manajemen Role</h1>
           <p className="text-sm text-navy/50">
-            Katalog role standar (dari Admin Sekolah sampai level di bawahnya seperti Wali Kelas
-            dan Siswa) beserta jumlah pengguna yang memegangnya di seluruh sekolah. Untuk mengubah
-            hak akses satu sekolah tertentu, pakai menu{' '}
-            <span className="font-semibold text-navy/70">Hak Akses &amp; Permission</span>.
+            Katalog role standar secara nasional, atau pilih satu sekolah di bawah untuk mengatur
+            hak akses granular tiap role <em>di dalam</em> sekolah itu — data setiap sekolah
+            tersimpan terpisah, jadi role di satu sekolah tidak pernah bisa melihat data sekolah
+            lain.
           </p>
         </div>
       </div>
 
-      {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
+      <SekolahPicker selected={selected} onSelect={handleSelect} />
 
-      {loading ? (
-        <p className="text-sm text-navy/40">Memuat...</p>
-      ) : (
-        <div className="space-y-3">
-          {roles.map((role) => (
-            <div key={role.role} className="bg-white rounded-2xl border border-navy/10 overflow-hidden">
-              <button
-                onClick={() => setOpenRole((prev) => (prev === role.role ? null : role.role))}
-                className="w-full flex items-center justify-between gap-3 px-5 py-4 text-left"
-              >
-                <div>
-                  <p className="text-sm font-bold text-navy">{role.role}</p>
-                  <p className="text-xs text-navy/50">
-                    {role.jumlah_permission} permission · {formatNumber(role.jumlah_pengguna)}{' '}
-                    pengguna secara nasional
-                  </p>
-                </div>
-                <ChevronDownIcon
-                  className={`h-4 w-4 text-navy/40 shrink-0 transition-transform ${
-                    openRole === role.role ? 'rotate-180' : ''
-                  }`}
+      {selected ? (
+        <>
+          {errorSekolah && <p className="text-red-600 text-sm mb-3">{errorSekolah}</p>}
+
+          {loadingSekolah ? (
+            <p className="text-sm text-navy/40">Memuat role...</p>
+          ) : (
+            <div className="space-y-3">
+              {sekolahRoles.map((role) => (
+                <RoleAccessCard
+                  key={role.id}
+                  sekolahId={selected.id}
+                  role={role}
+                  catalog={catalog}
+                  isOpen={openRoleId === role.id}
+                  onToggle={() => setOpenRoleId((prev) => (prev === role.id ? null : role.id))}
+                  onSaved={() => loadSekolahRoles(selected)}
                 />
-              </button>
-
-              {openRole === role.role && (
-                <div className="border-t border-navy/10 px-5 py-4">
-                  <div className="flex flex-wrap gap-1.5">
-                    {role.permissions.map((p) => (
-                      <span
-                        key={p}
-                        className="text-xs px-2 py-1 rounded-full bg-navy/5 text-navy/60 font-mono"
-                      >
-                        {p}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+              ))}
             </div>
-          ))}
-        </div>
+          )}
+        </>
+      ) : (
+        <>
+          {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
+
+          {loading ? (
+            <p className="text-sm text-navy/40">Memuat...</p>
+          ) : (
+            <div className="space-y-3">
+              {roles.map((role) => (
+                <div key={role.role} className="bg-white rounded-2xl border border-navy/10 overflow-hidden">
+                  <button
+                    onClick={() => setOpenRole((prev) => (prev === role.role ? null : role.role))}
+                    className="w-full flex items-center justify-between gap-3 px-5 py-4 text-left"
+                  >
+                    <div>
+                      <p className="text-sm font-bold text-navy">{role.role}</p>
+                      <p className="text-xs text-navy/50">
+                        {role.jumlah_permission} permission · {formatNumber(role.jumlah_pengguna)}{' '}
+                        pengguna secara nasional
+                      </p>
+                    </div>
+                    <ChevronDownIcon
+                      className={`h-4 w-4 text-navy/40 shrink-0 transition-transform ${
+                        openRole === role.role ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+
+                  {openRole === role.role && (
+                    <div className="border-t border-navy/10 px-5 py-4">
+                      <div className="flex flex-wrap gap-1.5">
+                        {role.permissions.map((p) => (
+                          <span
+                            key={p}
+                            className="text-xs px-2 py-1 rounded-full bg-navy/5 text-navy/60 font-mono"
+                          >
+                            {p}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   )
@@ -4868,15 +4751,6 @@ function UserGearIcon(props) {
       <path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" />
       <circle cx="19" cy="16" r="3" />
       <path d="M19 12.5v1M19 18.5v1M22 16h-1M16.5 16h-1M20.9 14.1l-.7.7M17.8 17.2l-.7.7M20.9 17.9l-.7-.7M17.8 14.8l-.7-.7" />
-    </svg>
-  )
-}
-
-function ShieldIcon(props) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
-      <path d="m9 12 2 2 4-4" />
     </svg>
   )
 }

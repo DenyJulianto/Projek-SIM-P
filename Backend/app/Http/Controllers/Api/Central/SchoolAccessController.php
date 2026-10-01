@@ -185,7 +185,8 @@ class SchoolAccessController extends Controller
             $admins = $sekolah->run(function () {
                 return User::role(self::ADMIN_ROLE)
                     ->orderBy('name')
-                    ->get(['id', 'name', 'email', 'is_active', 'last_login_at', 'created_at'])
+                    ->get(['id', 'name', 'email', 'is_active', 'last_login_at', 'created_at', 'temporary_password'])
+                    ->each->makeVisible('temporary_password')
                     ->toArray();
             });
 
