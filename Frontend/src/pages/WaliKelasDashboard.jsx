@@ -29,7 +29,7 @@ const MENU_GROUPS = [
       { key: 'jadwal-mengajar', label: 'Jadwal Mengajar', icon: CalendarIcon },
       { key: 'input-nilai', label: 'Input Nilai', icon: PencilIcon },
       { key: 'materi-tugas', label: 'Materi / Tugas', icon: FolderIcon },
-      { key: 'modul-ajar', label: 'Manajemen RPP / Modul Ajar', icon: DocIcon },
+      { key: 'modul-ajar', label: 'Perangkat Ajar', icon: DocIcon },
       { key: 'notifikasi', label: 'Notifikasi Siswa', icon: NotifBellIcon },
     ],
   },

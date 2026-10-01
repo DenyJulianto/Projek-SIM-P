@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\GuruController;
 use App\Http\Controllers\Api\GuruSelfController;
 use App\Http\Controllers\Api\ModulAjarController;
+use App\Http\Controllers\Api\ReviewPerangkatAjarController;
 use App\Http\Controllers\Api\IntegrationController;
 use App\Http\Controllers\Api\InventarisController;
 use App\Http\Controllers\Api\JadwalPelajaranController;
@@ -164,9 +165,26 @@ Route::middleware([
 
         Route::get('/me/guru', [GuruSelfController::class, 'profil']);
         Route::get('/me/guru/modul-ajar', [ModulAjarController::class, 'index']);
+        Route::get('/me/guru/modul-ajar/opsi', [ModulAjarController::class, 'opsi']);
+        Route::get('/me/guru/modul-ajar/capaian', [ModulAjarController::class, 'capaian']);
+        Route::post('/me/guru/modul-ajar/pratinjau/{format}', [ModulAjarController::class, 'pratinjau'])->whereIn('format', ['pdf', 'docx']);
         Route::post('/me/guru/modul-ajar', [ModulAjarController::class, 'store']);
         Route::put('/me/guru/modul-ajar/{modul}', [ModulAjarController::class, 'update']);
         Route::delete('/me/guru/modul-ajar/{modul}', [ModulAjarController::class, 'destroy']);
+        Route::post('/me/guru/modul-ajar/{modul}/ajukan', [ModulAjarController::class, 'ajukan']);
+        Route::post('/me/guru/modul-ajar/{modul}/tarik', [ModulAjarController::class, 'tarik']);
+        Route::get('/me/guru/modul-ajar/{modul}/unduh/{format}', [ModulAjarController::class, 'unduh'])->whereIn('format', ['pdf', 'docx']);
+        Route::post('/me/guru/modul-ajar/{modul}/lampiran', [ModulAjarController::class, 'unggahLampiran']);
+        Route::get('/me/guru/modul-ajar/{modul}/lampiran/{lampiran}', [ModulAjarController::class, 'unduhLampiran']);
+        Route::delete('/me/guru/modul-ajar/{modul}/lampiran/{lampiran}', [ModulAjarController::class, 'hapusLampiran']);
+
+        // Peninjauan perangkat ajar oleh Kepala Sekolah / Waka Kurikulum
+        // (pemeriksaan peran ada di controller).
+        Route::get('/perangkat-ajar/tinjau', [ReviewPerangkatAjarController::class, 'index']);
+        Route::post('/perangkat-ajar/tinjau/{modul}/setujui', [ReviewPerangkatAjarController::class, 'setujui']);
+        Route::post('/perangkat-ajar/tinjau/{modul}/revisi', [ReviewPerangkatAjarController::class, 'revisi']);
+        Route::get('/perangkat-ajar/tinjau/{modul}/unduh/{format}', [ReviewPerangkatAjarController::class, 'unduh'])->whereIn('format', ['pdf', 'docx']);
+        Route::get('/perangkat-ajar/tinjau/{modul}/lampiran/{lampiran}', [ReviewPerangkatAjarController::class, 'unduhLampiran']);
         Route::post('/me/guru/sertifikat', [GuruSelfController::class, 'storeSertifikat']);
         Route::delete('/me/guru/sertifikat/{sertifikat}', [GuruSelfController::class, 'destroySertifikat']);
         Route::put('/me/guru/profil-profesional', [GuruSelfController::class, 'updateProfilProfesional']);
