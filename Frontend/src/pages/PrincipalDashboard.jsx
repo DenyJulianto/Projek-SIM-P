@@ -10,6 +10,7 @@ import LaporanKepsek from './principal/LaporanKepsek'
 import PemantauanView from './principal/PemantauanView'
 import PrincipalHome from './principal/PrincipalHome'
 import MyProfile from './MyProfile'
+import PersetujuanPerangkatAjar from './PersetujuanPerangkatAjar'
 import LogoHorizontal from '../components/LogoHorizontal'
 
 const MENU_GROUPS = [
@@ -27,6 +28,10 @@ const MENU_GROUPS = [
       { key: 'pemantauan-surat', label: 'Persuratan', icon: MailIcon },
       { key: 'pemantauan-prestasi-pelanggaran', label: 'Prestasi & Pelanggaran', icon: AwardIcon },
     ],
+  },
+  {
+    section: 'Akademik',
+    items: [{ key: 'persetujuan-perangkat-ajar', label: 'Persetujuan Perangkat Ajar', icon: CheckIcon }],
   },
   {
     section: 'E-Rapor',
@@ -273,6 +278,7 @@ export default function PrincipalDashboard() {
             {view === 'home' && <PrincipalHome onNavigate={setView} />}
             {view.startsWith('pemantauan-') && <PemantauanView section={view.replace('pemantauan-', '')} />}
             {view.startsWith('erapor-') && <ERaporView tab={view.replace('erapor-', '')} />}
+            {view === 'persetujuan-perangkat-ajar' && <PersetujuanPerangkatAjar onBack={() => setView('home')} />}
             {view.startsWith('anggaran-') && <AnggaranView tab={view.replace('anggaran-', '')} />}
             {view.startsWith('kepeg-') && <KepegawaianKepsekView tab={view.replace('kepeg-', '')} />}
             {view === 'laporan' && <LaporanKepsek />}

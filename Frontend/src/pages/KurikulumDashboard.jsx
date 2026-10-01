@@ -16,6 +16,7 @@ import StrukturKurikulumManagement from './StrukturKurikulumManagement'
 import KkmKktpManagement from './KkmKktpManagement'
 import ProgramSemesterManagement from './ProgramSemesterManagement'
 import ProgramTahunanManagement from './ProgramTahunanManagement'
+import PersetujuanPerangkatAjar from './PersetujuanPerangkatAjar'
 import TujuanPembelajaranManagement from './TujuanPembelajaranManagement'
 import LogoHorizontal from '../components/LogoHorizontal'
 
@@ -31,6 +32,7 @@ const MENU_GROUPS = [
       { key: 'kkm', label: 'KKM / KKTP', icon: GaugeIcon },
       { key: 'prosem', label: 'Program Semester', icon: DocIcon },
       { key: 'protah', label: 'Program Tahunan', icon: DocIcon },
+      { key: 'persetujuan-perangkat-ajar', label: 'Persetujuan Perangkat Ajar', icon: CheckIcon },
     ],
   },
   {
@@ -186,6 +188,7 @@ export default function KurikulumDashboard() {
         {view === 'kkm' && <KkmKktpManagement onBack={() => setView('home')} />}
         {view === 'prosem' && <ProgramSemesterManagement onBack={() => setView('home')} />}
         {view === 'protah' && <ProgramTahunanManagement onBack={() => setView('home')} />}
+        {view === 'persetujuan-perangkat-ajar' && <PersetujuanPerangkatAjar onBack={() => setView('home')} />}
         {view === 'mata-pelajaran' && <MataPelajaranManagement onBack={() => setView('home')} />}
         {view === 'kelas' && <KelasManagement onBack={() => setView('home')} />}
         {view === 'rombel' && <RombelManagement onBack={() => setView('home')} />}

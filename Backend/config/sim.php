@@ -55,6 +55,9 @@ return [
         'persuratan' => 'Surat & Kearsipan',
         'bk' => 'Bimbingan Konseling',
         'kepegawaian' => 'Pengajuan Kepegawaian',
+        // Kurikulum 2013 dalam masa penghapusan bertahap: sekolah yang sudah
+        // penuh Kurikulum Merdeka bisa menonaktifkan pembuatan RPP K13.
+        'rpp_k13' => 'RPP Kurikulum 2013 (perangkat ajar)',
     ],
 
 ];
