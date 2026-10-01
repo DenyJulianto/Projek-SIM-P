@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useViewUrl } from '../lib/useViewUrl'
 import QRCode from 'qrcode'
 import { useAuth } from '../lib/AuthContext'
 import { api, BASE_URL } from '../lib/api'
@@ -50,7 +51,7 @@ const HARI_ORDER = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Mingg
 
 export default function OrangTuaDashboard() {
   const { user, logout } = useAuth()
-  const [view, setView] = useState('home')
+  const [view, setView] = useViewUrl()
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const [anakList, setAnakList] = useState(null)
   const [selectedAnakId, setSelectedAnakId] = useState(null)

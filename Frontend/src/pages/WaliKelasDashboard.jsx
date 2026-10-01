@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useViewUrl } from '../lib/useViewUrl'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import { useAuth } from '../lib/AuthContext'
 import { api } from '../lib/api'
@@ -58,7 +59,7 @@ const MENU_GROUPS = [
 
 export default function WaliKelasDashboard() {
   const { user, logout } = useAuth()
-  const [view, setView] = useState('home')
+  const [view, setView] = useViewUrl()
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const [kelasList, setKelasList] = useState(null)
   const [selectedKelasId, setSelectedKelasId] = useState(null)

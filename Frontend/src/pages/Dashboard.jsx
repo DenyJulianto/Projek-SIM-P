@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { Navigate, useLocation } from 'react-router-dom'
+import { useViewUrl } from '../lib/useViewUrl'
 import EditProfilModal from '../components/EditProfilModal'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import MiniCalendar from '../components/MiniCalendar'
@@ -70,7 +72,8 @@ const MENU_GROUPS = [
 
 export default function Dashboard() {
   const { user, logout, hasPermission, isSuperAdmin } = useAuth()
-  const [view, setView] = useState('home')
+  const location = useLocation()
+  const [view, setView] = useViewUrl()
   const [profil, setProfil] = useState(null)
   const [editingProfil, setEditingProfil] = useState(false)
   const [stats, setStats] = useState({ siswa: null, guru: null, kelas: null })
@@ -146,6 +149,13 @@ export default function Dashboard() {
       return
     }
     setView(item.key)
+  }
+
+  // Pemeriksaan hak akses per rute: URL bertingkat (mis. /data-master/sekolah)
+  // hanya milik Super Admin. Peran lain memakai URL satu tingkat
+  // (mis. /kelas-saya) dan dikembalikan ke dasbornya bila membuka URL lain.
+  if (!isSuperAdmin() && location.pathname.split('/').filter(Boolean).length > 1) {
+    return <Navigate to="/dashboard" replace />
   }
 
   if (isSuperAdmin()) {

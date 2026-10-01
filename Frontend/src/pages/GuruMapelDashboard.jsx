@@ -1,5 +1,6 @@
 import logoLambang from '../assets/logo-sim-lambang.png'
 import { useEffect, useState } from 'react'
+import { useViewUrl } from '../lib/useViewUrl'
 import ComingSoon from '../components/ComingSoon'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import { BellIcon as NotifBellIcon, JENIS_NOTIFIKASI, NotifikasiItem, useNotifikasi } from '../components/Notifikasi'
@@ -60,7 +61,7 @@ const COMING_SOON_LABEL = {}
 
 export default function GuruMapelDashboard() {
   const { user, logout } = useAuth()
-  const [view, setView] = useState('home')
+  const [view, setView] = useViewUrl()
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const [openSection, setOpenSection] = useState(null)
   // Item yang dibuka dari notifikasi (n = pemicu remount)

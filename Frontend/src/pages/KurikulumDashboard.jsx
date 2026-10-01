@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useViewUrl } from '../lib/useViewUrl'
 import CapaianPembelajaranManagement from './CapaianPembelajaranManagement'
 import ComingSoon from '../components/ComingSoon'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
@@ -78,7 +79,7 @@ const COMING_SOON_LABEL = {
 
 export default function KurikulumDashboard() {
   const { logout } = useAuth()
-  const [view, setView] = useState('home')
+  const [view, setView] = useViewUrl()
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const [openSection, setOpenSection] = useState(null)
 
