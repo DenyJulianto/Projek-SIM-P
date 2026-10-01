@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\Central\GuruDirectoryController;
 use App\Http\Controllers\Api\Central\IntegrationTokenController;
 use App\Http\Controllers\Api\Central\ModuleController;
 use App\Http\Controllers\Api\Central\NationalBackupController;
+use App\Http\Controllers\Api\Central\ProfilSuperAdminController;
 use App\Http\Controllers\Api\Central\RoleCatalogController;
 use App\Http\Controllers\Api\Central\SchoolAccessController;
 use App\Http\Controllers\Api\Central\SchoolSyncController;
@@ -109,8 +110,20 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/2fa/confirm', [TwoFactorController::class, 'confirm']);
         Route::post('/2fa/disable', [TwoFactorController::class, 'disable']);
         Route::post('/2fa/recovery-codes/regenerate', [TwoFactorController::class, 'regenerateRecoveryCodes']);
+
+        Route::get('/profil-super-admin', [ProfilSuperAdminController::class, 'show']);
+        Route::put('/profil-super-admin', [ProfilSuperAdminController::class, 'update']);
+        Route::put('/profil-super-admin/password', [ProfilSuperAdminController::class, 'updatePassword'])
+            ->middleware('throttle:6,1');
+        Route::post('/profil-super-admin/foto', [ProfilSuperAdminController::class, 'uploadFoto']);
+        Route::delete('/profil-super-admin/foto', [ProfilSuperAdminController::class, 'hapusFoto']);
+        Route::get('/profil-super-admin/aktivitas', [ProfilSuperAdminController::class, 'aktivitas']);
     });
 });
+
+// Foto profil Super Admin dipakai di <img> (tanpa header token); nama file acak.
+Route::get('/profil-super-admin/foto/{file}', [ProfilSuperAdminController::class, 'showFoto'])
+    ->where('file', '[A-Za-z0-9._-]+');
 
 /*
 |--------------------------------------------------------------------------

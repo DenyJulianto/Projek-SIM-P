@@ -1,5 +1,6 @@
 import logoLambang from '../assets/logo-sim-lambang.png'
 import { useEffect, useRef, useState } from 'react'
+import { useViewUrl } from '../lib/useViewUrl'
 import ComingSoon from '../components/ComingSoon'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import NotifBell from '../components/NotifBell'
@@ -76,7 +77,7 @@ function getSubjectEmoji(name = '') {
 
 export default function SiswaDashboard() {
   const { user, logout } = useAuth()
-  const [view, setView] = useState('home')
+  const [view, setView] = useViewUrl()
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const [siswa, setSiswa] = useState(null)
   const [openDropdown, setOpenDropdown] = useState(null)

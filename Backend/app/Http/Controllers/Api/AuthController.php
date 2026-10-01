@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AktivitasAkun;
 use App\Models\Guru;
+use App\Models\ProfilSuperAdmin;
 use App\Models\Siswa;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -216,6 +218,8 @@ class AuthController extends Controller
         $user = User::where('email', $credentials['email'])->first();
 
         if (! $user || ! Auth::guard('web')->validate($credentials)) {
+            AktivitasAkun::catat($user, 'login_gagal', 'Password salah', $request);
+
             throw ValidationException::withMessages([
                 'email' => ['Email atau password salah.'],
             ]);
@@ -258,6 +262,8 @@ class AuthController extends Controller
         if (Schema::hasColumn('users', 'last_login_at')) {
             $user->forceFill(['last_login_at' => now()])->save();
         }
+
+        AktivitasAkun::catat($user, 'login', 'Login dengan password', $request);
 
         $token = $user->createToken('api-token')->plainTextToken;
 
@@ -303,6 +309,8 @@ class AuthController extends Controller
         }
 
         if (! $this->verifyTwoFactorCode($user, $data['code'])) {
+            AktivitasAkun::catat($user, 'login_gagal', 'Kode 2FA salah', $request);
+
             throw ValidationException::withMessages([
                 'code' => ['Kode verifikasi salah.'],
             ]);
@@ -311,6 +319,8 @@ class AuthController extends Controller
         if (Schema::hasColumn('users', 'last_login_at')) {
             $user->forceFill(['last_login_at' => now()])->save();
         }
+
+        AktivitasAkun::catat($user, 'login', 'Login dengan password + 2FA', $request);
 
         $token = $user->createToken('api-token')->plainTextToken;
 
@@ -402,6 +412,8 @@ class AuthController extends Controller
 
     public function logout(Request $request): JsonResponse
     {
+        AktivitasAkun::catat($request->user(), 'logout', null, $request);
+
         $request->user()->currentAccessToken()->delete();
 
         return response()->json(['message' => 'Berhasil logout.']);
@@ -508,6 +520,12 @@ class AuthController extends Controller
 
         if (Schema::hasColumn('users', 'avatar')) {
             $user->setAttribute('avatar_url', $user->avatar ? "/avatar/{$user->avatar}" : null);
+        }
+
+        // Foto profil Super Admin disimpan di tabel profil_super_admin (central).
+        if (! tenant() && $user->is_super_admin && Schema::hasTable('profil_super_admin')) {
+            $foto = ProfilSuperAdmin::where('user_id', $user->id)->value('foto');
+            $user->setAttribute('foto_url', $foto ? '/api/profil-super-admin/foto/'.basename($foto) : null);
         }
 
         // tenant() null di domain central (Super Admin) — modul opsional

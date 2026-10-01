@@ -1,5 +1,6 @@
 import ModalCloseButton from '../components/ModalCloseButton'
 import { useEffect, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
@@ -13,6 +14,7 @@ import LogoHorizontal from '../components/LogoHorizontal'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import NonaktifkanSekolahModal from '../components/NonaktifkanSekolahModal'
 import Pagination from '../components/Pagination'
+import ProfilSuperAdmin from '../components/ProfilSuperAdmin'
 import GuruDetailPage from './GuruDetailPage'
 import SekolahDetailPage from './SekolahDetailPage'
 import SekolahGuruListPage from './SekolahGuruListPage'
@@ -22,7 +24,8 @@ import SekolahFormModal from '../components/SekolahFormModal'
 import SekolahImportModal from '../components/SekolahImportModal'
 import { useAuth } from '../lib/AuthContext'
 import { usePaginatedDirectory } from '../lib/usePaginatedDirectory'
-import { api } from '../lib/api'
+import { pathSuperAdmin, viewDariPath } from '../lib/superAdminRoutes'
+import { api, BASE_URL } from '../lib/api'
 
 // Vite tidak meresolusi path relatif bawaan Leaflet untuk ikon marker
 // (marker-icon.png dkk.) — tanpa ini pin di peta tampil sebagai kotak
@@ -102,6 +105,7 @@ const MENU_TITLES = Object.fromEntries(
 
 const REAL_VIEWS = new Set([
   'beranda',
+  'profil',
   'sekolah',
   'guru',
   'siswa',
@@ -125,8 +129,12 @@ const REAL_VIEWS = new Set([
 ])
 
 export default function SuperAdminDashboard() {
-  const { user, logout } = useAuth()
-  const [view, setView] = useState('beranda')
+  const { user, logout, setUser } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
+  // Halaman aktif ditentukan oleh URL (mis. /data-master/sekolah), bukan
+  // state — supaya refresh, tombol Back, dan bookmark berfungsi.
+  const view = viewDariPath(location.pathname) ?? 'tidak-ditemukan'
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const [openSection, setOpenSection] = useState(null)
 
@@ -142,8 +150,14 @@ export default function SuperAdminDashboard() {
   }
 
   function handleNavigate(key) {
-    setView(key)
+    const tujuan = pathSuperAdmin(key)
+    if (tujuan !== location.pathname) navigate(tujuan)
   }
+
+  useEffect(() => {
+    const judul = view === 'profil' ? 'Profil Saya' : view === 'tidak-ditemukan' ? 'Halaman tidak ditemukan' : MENU_TITLES[view]
+    document.title = judul ? `${judul} · SIM Pendidikan` : 'SIM Pendidikan'
+  }, [view])
 
   return (
     <div className="h-screen bg-[#f4f8f6] flex overflow-hidden">
@@ -242,6 +256,12 @@ export default function SuperAdminDashboard() {
 
         <main className="flex-1 p-6 sm:p-8 overflow-y-auto">
           {view === 'beranda' && <SuperAdminHome onNavigate={handleNavigate} />}
+          {view === 'profil' && (
+            <ProfilSuperAdmin
+              onNavigate={handleNavigate}
+              onUserChange={(u) => setUser((prev) => (prev ? { ...prev, name: u.name, email: u.email, foto_url: u.foto_url } : prev))}
+            />
+          )}
           {view === 'sekolah' && <SekolahNasional />}
           {view === 'guru' && <GuruDirectoryNasional />}
           {view === 'siswa' && <SiswaDirectoryNasional />}
@@ -262,7 +282,8 @@ export default function SuperAdminDashboard() {
           {view === 'kelola-pengguna' && <KelolaPenggunaNasional />}
           {view === 'manajemen-role' && <ManajemenRole />}
           {view === 'pengaturan-keamanan' && <PengaturanKeamanan />}
-          {!REAL_VIEWS.has(view) && (
+          {view === 'tidak-ditemukan' && <HalamanTidakDitemukan onKembali={() => handleNavigate('beranda')} />}
+          {!REAL_VIEWS.has(view) && view !== 'tidak-ditemukan' && (
             <ComingSoon
               title={MENU_TITLES[view] || 'Segera Hadir'}
               description="Modul ini sedang dalam pengembangan dan akan segera hadir untuk platform SIM Pendidikan."
@@ -417,8 +438,12 @@ function TopBar({ user, onNavigate, onLogout }) {
           onClick={() => setShowProfile((v) => !v)}
           className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full hover:bg-navy/5 transition-colors"
         >
-          <div className="h-9 w-9 rounded-full bg-gradient-to-br from-navy to-navy-light text-white flex items-center justify-center font-bold text-xs shrink-0">
-            {user?.name?.[0]?.toUpperCase() || '?'}
+          <div className="h-9 w-9 rounded-full bg-gradient-to-br from-navy to-navy-light text-white flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden">
+            {user?.foto_url ? (
+              <img src={`${BASE_URL}${user.foto_url}`} alt={user.name} className="h-full w-full object-cover" />
+            ) : (
+              user?.name?.[0]?.toUpperCase() || '?'
+            )}
           </div>
           <div className="text-left hidden sm:block">
             <p className="text-xs font-bold text-navy leading-tight">{user?.name}</p>
@@ -428,7 +453,32 @@ function TopBar({ user, onNavigate, onLogout }) {
         </button>
 
         {showProfile && (
-          <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl border border-navy/10 shadow-lg z-20 py-1.5">
+          <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl border border-navy/10 shadow-lg z-20 py-1.5">
+            <div className="px-4 py-2 border-b border-navy/5 mb-1">
+              <p className="text-xs font-bold text-navy truncate">{user?.name}</p>
+              <p className="text-[11px] text-navy/40 truncate">{user?.email}</p>
+            </div>
+            <button
+              onClick={() => {
+                setShowProfile(false)
+                onNavigate('profil')
+              }}
+              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-navy/80 hover:bg-navy/5 transition-colors"
+            >
+              <UserIcon className="h-4 w-4" />
+              Profil Saya
+            </button>
+            <button
+              onClick={() => {
+                setShowProfile(false)
+                onNavigate('pengaturan-keamanan')
+              }}
+              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-navy/80 hover:bg-navy/5 transition-colors"
+            >
+              <LockIcon className="h-4 w-4" />
+              Keamanan & 2FA
+            </button>
+            <div className="border-t border-navy/5 my-1" />
             <button
               onClick={onLogout}
               className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
@@ -4998,6 +5048,28 @@ function KeyIcon(props) {
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <circle cx="8" cy="15" r="4" />
       <path d="m10.5 12.5 8-8M16 5l2 2M19 2l2 2" />
+    </svg>
+  )
+}
+
+function HalamanTidakDitemukan({ onKembali }) {
+  return (
+    <div className="max-w-md mx-auto text-center py-20">
+      <p className="text-6xl font-extrabold text-navy/15">404</p>
+      <h1 className="text-xl font-extrabold text-navy mt-2">Halaman tidak ditemukan</h1>
+      <p className="text-sm text-navy/50 mt-1.5">Alamat yang Anda buka tidak ada atau sudah dipindahkan.</p>
+      <button onClick={onKembali} className="mt-6 px-5 py-2.5 rounded-full bg-navy text-white text-sm font-semibold hover:bg-navy-light">
+        Kembali ke Beranda
+      </button>
+    </div>
+  )
+}
+
+function UserIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21a8 8 0 0 1 16 0" />
     </svg>
   )
 }

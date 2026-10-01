@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useViewUrl } from '../lib/useViewUrl'
 import logoLambang from '../assets/logo-sim-lambang.png'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import { useAuth } from '../lib/AuthContext'
@@ -61,7 +62,7 @@ const MENU_GROUPS = [
 
 export default function PrincipalDashboard() {
   const { user, logout } = useAuth()
-  const [view, setView] = useState('home')
+  const [view, setView] = useViewUrl()
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const [sekolah, setSekolah] = useState(null)
   const [insights, setInsights] = useState(null)

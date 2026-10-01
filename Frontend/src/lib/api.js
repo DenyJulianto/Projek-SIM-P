@@ -44,7 +44,9 @@ async function request(path, options = {}) {
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new Error(body.message || `Request gagal (${res.status})`)
+    const err = new Error(body.message || `Request gagal (${res.status})`)
+    err.errors = body.errors || null
+    throw err
   }
 
   return res.json()
@@ -460,6 +462,22 @@ export const api = {
     request('/api/2fa/disable', { method: 'POST', body: JSON.stringify({ password }) }),
   regenerateRecoveryCodes: (password) =>
     request('/api/2fa/recovery-codes/regenerate', { method: 'POST', body: JSON.stringify({ password }) }),
+
+  // Profil Super Admin
+  getProfilSuperAdmin: () => request('/api/profil-super-admin'),
+  updateProfilSuperAdmin: (data) => request('/api/profil-super-admin', { method: 'PUT', body: JSON.stringify(data) }),
+  updatePasswordSuperAdmin: (data) =>
+    request('/api/profil-super-admin/password', { method: 'PUT', body: JSON.stringify(data) }),
+  uploadFotoSuperAdmin: (file) => {
+    const formData = new FormData()
+    formData.append('foto', file)
+    return requestForm('/api/profil-super-admin/foto', formData)
+  },
+  hapusFotoSuperAdmin: () => request('/api/profil-super-admin/foto', { method: 'DELETE' }),
+  getAktivitasSuperAdmin: (params = {}) => {
+    const query = new URLSearchParams(Object.entries(params).filter(([, v]) => v !== '' && v != null)).toString()
+    return request(`/api/profil-super-admin/aktivitas${query ? `?${query}` : ''}`)
+  },
 
   // Tahun Ajaran & Semester
   listTahunAjaran: () => request('/tahun-ajaran'),

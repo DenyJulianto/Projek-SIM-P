@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
+import { useViewUrl } from '../lib/useViewUrl'
 import ComingSoon from '../components/ComingSoon'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import { useAuth } from '../lib/AuthContext'
@@ -93,7 +94,7 @@ export default function KurikulumDashboard() {
   const sapaan = { L: 'Bapak', P: 'Ibu' }[user?.jenis_kelamin] || 'Bapak/Ibu'
   const namaLengkap = [user?.name, user?.gelar].filter(Boolean).join(', ')
   const avatarSrc = user?.avatar_url ? `${BASE_URL}${user.avatar_url}` : null
-  const [view, setView] = useState('home')
+  const [view, setView] = useViewUrl()
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const [openSection, setOpenSection] = useState(null)
 
