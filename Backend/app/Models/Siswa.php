@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Concerns\SinkronUsernameLogin;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -12,6 +13,10 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Siswa extends Model
 {
+    use SinkronUsernameLogin;
+
+    public const KOLOM_USERNAME = 'nisn';
+
     protected $table = 'siswa';
 
     protected $fillable = [

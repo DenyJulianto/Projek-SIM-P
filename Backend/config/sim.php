@@ -55,6 +55,25 @@ return [
         'persuratan' => 'Surat & Kearsipan',
         'bk' => 'Bimbingan Konseling',
         'kepegawaian' => 'Pengajuan Kepegawaian',
+        // Kurikulum 2013 dalam masa penghapusan bertahap: sekolah yang sudah
+        // penuh Kurikulum Merdeka bisa menonaktifkan pembuatan RPP K13.
+        'rpp_k13' => 'RPP Kurikulum 2013 (perangkat ajar)',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Keamanan login akun sekolah
+    |--------------------------------------------------------------------------
+    |
+    | wajib_2fa_admin: Admin Sekolah tidak bisa memakai aplikasi sebelum
+    | mengaktifkan 2FA. Matikan hanya untuk lingkungan pengembangan.
+    | login_maks_gagal / login_kunci_menit: setelah N password salah untuk
+    | akun yang sama dari IP yang sama, login dikunci selama M menit.
+    */
+    'keamanan' => [
+        'wajib_2fa_admin' => (bool) env('WAJIB_2FA_ADMIN', true),
+        'login_maks_gagal' => (int) env('LOGIN_MAKS_GAGAL', 5),
+        'login_kunci_menit' => (int) env('LOGIN_KUNCI_MENIT', 15),
     ],
 
 ];

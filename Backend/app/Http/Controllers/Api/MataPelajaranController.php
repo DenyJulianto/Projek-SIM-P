@@ -35,6 +35,20 @@ class MataPelajaranController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        // Penambahan cepat (mis. dari form jadwal) cukup mengirim nama;
+        // kode, jenis, dan status diisi otomatis bila tidak dikirim.
+        $request->validate(
+            ['nama_mapel' => ['required', 'string', 'max:255']],
+            ['nama_mapel.required' => 'Nama mata pelajaran wajib diisi.'],
+        );
+        $request->merge([
+            'kode_mapel' => $request->filled('kode_mapel')
+                ? $request->input('kode_mapel')
+                : $this->kodeOtomatis((string) $request->input('nama_mapel', '')),
+            'jenis' => $request->input('jenis') ?: 'wajib',
+            'status' => $request->input('status') ?: 'aktif',
+        ]);
+
         $data = $request->validate($this->rules());
 
         $mapel = MataPelajaran::create($data);
@@ -278,6 +292,32 @@ class MataPelajaranController extends Controller
             'gagal' => count($errors),
             'errors' => $errors,
         ]);
+    }
+
+    /**
+     * Kode mapel dari nama: inisial tiap kata ("Bahasa Indonesia" → BI) atau
+     * tiga huruf pertama untuk satu kata ("Matematika" → MAT), ditambah
+     * nomor urut bila kode itu sudah dipakai.
+     */
+    private function kodeOtomatis(string $nama): ?string
+    {
+        $kata = preg_split('/\s+/', trim(preg_replace('/[^\pL\pN\s]/u', ' ', $nama))) ?: [];
+        $kata = array_values(array_filter($kata, fn ($k) => $k !== ''));
+        if ($kata === []) {
+            return null;
+        }
+
+        $dasar = mb_strtoupper(count($kata) > 1
+            ? implode('', array_map(fn ($k) => mb_substr($k, 0, 1), $kata))
+            : mb_substr($kata[0], 0, 3));
+        $dasar = mb_substr($dasar, 0, 16);
+
+        $kode = $dasar;
+        for ($i = 2; MataPelajaran::where('kode_mapel', $kode)->exists(); $i++) {
+            $kode = $dasar.$i;
+        }
+
+        return $kode;
     }
 
     private function rules(?MataPelajaran $mapel = null): array

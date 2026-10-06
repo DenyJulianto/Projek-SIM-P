@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Api\AbsensiController;
 use App\Http\Controllers\Api\AbsensiGuruController;
+use App\Http\Controllers\Api\AkunSiswaController;
 use App\Http\Controllers\Api\AnggaranPosController;
 use App\Http\Controllers\Api\ArsipDokumenController;
 use App\Http\Controllers\Api\AuditLogController;
@@ -72,6 +73,7 @@ use App\Http\Controllers\Api\PembagianMapelController;
 use App\Http\Controllers\Api\RombelController;
 use App\Http\Controllers\Api\KkmKktpController;
 use App\Http\Controllers\Api\KompetensiIndikatorController;
+use App\Http\Controllers\Api\ReviewPerangkatAjarController;
 use App\Http\Controllers\Api\KonfirmasiPembayaranController;
 use App\Http\Controllers\Api\KonselingController;
 use App\Http\Controllers\Api\KurikulumDashboardController;
@@ -81,6 +83,7 @@ use App\Http\Controllers\Api\MataPelajaranController;
 use App\Http\Controllers\Api\MateriController;
 use App\Http\Controllers\Api\NilaiController;
 use App\Http\Controllers\Api\NilaiSikapController;
+use App\Http\Controllers\Api\NotifikasiController;
 use App\Http\Controllers\Api\PelanggaranController;
 use App\Http\Controllers\Api\PembayaranController;
 use App\Http\Controllers\Api\PemanggilanController;
@@ -112,6 +115,11 @@ use App\Http\Controllers\Api\TahunAjaranController;
 use App\Http\Controllers\Api\TujuanPembelajaranController;
 use App\Http\Controllers\Api\TugasController;
 use App\Http\Controllers\Api\UjianController;
+use App\Http\Controllers\Api\ImportStafController;
+use App\Http\Controllers\Api\PendaftaranPegawaiController;
+use App\Http\Controllers\Api\PendaftaranSiswaController;
+use App\Http\Controllers\Api\UndanganController;
+use App\Http\Controllers\Api\Central\TwoFactorController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\WaliKelasSelfController;
 use Illuminate\Support\Facades\Route;
@@ -135,12 +143,14 @@ Route::middleware([
     InitializeTenancyByDomain::class,
     PreventAccessFromCentralDomains::class,
 ])->group(function () {
-    Route::post('/login', [AuthController::class, 'login']);
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/verify-email', [AuthController::class, 'verifyEmail']);
-    Route::post('/resend-verification-code', [AuthController::class, 'resendVerificationCode']);
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
+    Route::post('/2fa/verify', [AuthController::class, 'verifyTwoFactor'])->middleware('throttle:login');
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:forgot-password');
     Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:reset-password');
+    Route::get('/undangan/{user}', [UndanganController::class, 'show'])->whereNumber('user')
+        ->middleware('throttle:reset-password')->name('undangan.terima');
+    Route::post('/undangan/{user}', [UndanganController::class, 'terima'])->whereNumber('user')
+        ->middleware('throttle:reset-password');
 
     Route::get('avatar/{path}', [AvatarController::class, 'show'])->where('path', '.*');
     Route::get('landing-gambar/{file}', [ProfilPublikController::class, 'showGambar']);
@@ -161,11 +171,25 @@ Route::middleware([
         Route::get('/kegiatan', [ProfilPublikController::class, 'kegiatan']);
         Route::get('/prestasi', [ProfilPublikController::class, 'prestasi']);
         Route::get('/ppdb', [ProfilPublikController::class, 'ppdb']);
+        Route::get('/pendaftaran-pegawai/opsi', [PendaftaranPegawaiController::class, 'opsi']);
     });
 
-    Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/pendaftaran-pegawai', [PendaftaranPegawaiController::class, 'store'])->middleware('throttle:login');
+    Route::post('/pendaftaran-siswa', [PendaftaranSiswaController::class, 'store'])->middleware('throttle:login');
+
+    Route::middleware(['auth:sanctum', 'account.active', 'role.active', 'password.changed', 'twofactor.required'])->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/me', [AuthController::class, 'me']);
+        Route::put('/me/password', [AuthController::class, 'changePassword'])->middleware('throttle:akun-sensitif');
+        Route::put('/me/peran-aktif', [AuthController::class, 'setActiveRole']);
+
+        Route::prefix('me/2fa')->middleware('throttle:akun-sensitif')->group(function () {
+            Route::get('/', [TwoFactorController::class, 'status']);
+            Route::post('setup', [TwoFactorController::class, 'setup']);
+            Route::post('confirm', [TwoFactorController::class, 'confirm']);
+            Route::post('disable', [TwoFactorController::class, 'disable']);
+            Route::post('recovery-codes', [TwoFactorController::class, 'regenerateRecoveryCodes']);
+        });
         Route::put('/me', [AuthController::class, 'updateMe']);
         Route::post('/me/avatar', [AuthController::class, 'updateAvatar']);
 
@@ -192,6 +216,7 @@ Route::middleware([
         Route::get('/me/siswa/ujian', [StudentSelfController::class, 'ujianList']);
         Route::post('/me/siswa/ujian/{ujian}/mulai', [StudentSelfController::class, 'ujianMulai']);
         Route::post('/me/siswa/ujian/{ujian}/jawab', [StudentSelfController::class, 'ujianJawab']);
+        Route::post('/me/siswa/ujian/{ujian}/pelanggaran', [StudentSelfController::class, 'ujianPelanggaran']);
         Route::post('/me/siswa/ujian/{ujian}/selesai', [StudentSelfController::class, 'ujianSelesai']);
         Route::get('/me/siswa/ujian/{ujian}/hasil', [StudentSelfController::class, 'ujianHasil']);
 
@@ -219,11 +244,36 @@ Route::middleware([
         Route::post('/me/notifikasi/baca-semua', [NotifikasiSelfController::class, 'bacaSemua']);
         Route::post('/me/notifikasi/{id}/baca', [NotifikasiSelfController::class, 'baca']);
 
+        // Feed notifikasi aktivitas siswa (tugas dikumpulkan, pelanggaran ujian,
+        // ujian selesai, izin) untuk guru/wali kelas — sumber data terpisah dari
+        // /me/notifikasi (notifikasi dalam-aplikasi umum seperti guru pengganti,
+        // perubahan jadwal, pengingat kalender).
+        Route::get('/me/notifikasi-aktivitas', [NotifikasiController::class, 'index']);
+        Route::post('/me/notifikasi-aktivitas/baca-semua', [NotifikasiController::class, 'bacaSemua']);
+        Route::post('/me/notifikasi-aktivitas/{notifikasi}/baca', [NotifikasiController::class, 'baca']);
+
         Route::get('/me/guru', [GuruSelfController::class, 'profil']);
         Route::get('/me/guru/modul-ajar', [ModulAjarController::class, 'index']);
+        Route::get('/me/guru/modul-ajar/opsi', [ModulAjarController::class, 'opsi']);
+        Route::get('/me/guru/modul-ajar/capaian', [ModulAjarController::class, 'capaian']);
+        Route::post('/me/guru/modul-ajar/pratinjau/{format}', [ModulAjarController::class, 'pratinjau'])->whereIn('format', ['pdf', 'docx']);
         Route::post('/me/guru/modul-ajar', [ModulAjarController::class, 'store']);
         Route::put('/me/guru/modul-ajar/{modul}', [ModulAjarController::class, 'update']);
         Route::delete('/me/guru/modul-ajar/{modul}', [ModulAjarController::class, 'destroy']);
+        Route::post('/me/guru/modul-ajar/{modul}/ajukan', [ModulAjarController::class, 'ajukan']);
+        Route::post('/me/guru/modul-ajar/{modul}/tarik', [ModulAjarController::class, 'tarik']);
+        Route::get('/me/guru/modul-ajar/{modul}/unduh/{format}', [ModulAjarController::class, 'unduh'])->whereIn('format', ['pdf', 'docx']);
+        Route::post('/me/guru/modul-ajar/{modul}/lampiran', [ModulAjarController::class, 'unggahLampiran']);
+        Route::get('/me/guru/modul-ajar/{modul}/lampiran/{lampiran}', [ModulAjarController::class, 'unduhLampiran']);
+        Route::delete('/me/guru/modul-ajar/{modul}/lampiran/{lampiran}', [ModulAjarController::class, 'hapusLampiran']);
+
+        // Peninjauan perangkat ajar oleh Kepala Sekolah / Waka Kurikulum
+        // (pemeriksaan peran ada di controller).
+        Route::get('/perangkat-ajar/tinjau', [ReviewPerangkatAjarController::class, 'index']);
+        Route::post('/perangkat-ajar/tinjau/{modul}/setujui', [ReviewPerangkatAjarController::class, 'setujui']);
+        Route::post('/perangkat-ajar/tinjau/{modul}/revisi', [ReviewPerangkatAjarController::class, 'revisi']);
+        Route::get('/perangkat-ajar/tinjau/{modul}/unduh/{format}', [ReviewPerangkatAjarController::class, 'unduh'])->whereIn('format', ['pdf', 'docx']);
+        Route::get('/perangkat-ajar/tinjau/{modul}/lampiran/{lampiran}', [ReviewPerangkatAjarController::class, 'unduhLampiran']);
         Route::post('/me/guru/sertifikat', [GuruSelfController::class, 'storeSertifikat']);
         Route::delete('/me/guru/sertifikat/{sertifikat}', [GuruSelfController::class, 'destroySertifikat']);
         Route::put('/me/guru/profil-profesional', [GuruSelfController::class, 'updateProfilProfesional']);
@@ -231,6 +281,7 @@ Route::middleware([
         Route::get('/me/guru/jadwal', [GuruSelfController::class, 'jadwal']);
         Route::get('/me/guru/kelas', [GuruSelfController::class, 'kelas']);
         Route::get('/me/guru/mata-pelajaran', [GuruSelfController::class, 'mataPelajaran']);
+        Route::get('/me/guru/pengampuan', [GuruSelfController::class, 'pengampuan']);
         Route::get('/me/guru/rekap-nilai', [GuruSelfController::class, 'rekapNilai']);
 
         Route::get('/me/wali-kelas', [WaliKelasSelfController::class, 'kelasBinaan']);
@@ -760,14 +811,23 @@ Route::middleware([
         Route::get('guru/export', [GuruController::class, 'export'])
             ->middleware('permission:pegawai.manage');
 
-        // Daftar & detail guru juga dibaca pemantau kehadiran guru (mis. Wakil Kepala Sekolah); perubahan tetap khusus pegawai.manage.
+        // Daftar & detail guru juga dibaca pemantau kehadiran guru (mis. Wakil Kepala Sekolah)
+        // dan Kurikulum (memilih guru di jadwal, pembagian mapel, wali kelas); perubahan tetap khusus pegawai.manage.
         Route::apiResource('guru', GuruController::class)
             ->only(['index', 'show'])
-            ->middleware('permission:pegawai.manage|monitoring-guru.absensi-guru');
+            ->middleware('permission:pegawai.manage|monitoring-guru.absensi-guru|kurikulum.manage|jadwal.manage');
 
         Route::apiResource('guru', GuruController::class)
             ->except(['index', 'show'])
             ->middleware('permission:pegawai.manage');
+
+        Route::middleware('permission:siswa.manage')->prefix('akun-siswa')->group(function () {
+            Route::get('/', [AkunSiswaController::class, 'index']);
+            Route::post('/', [AkunSiswaController::class, 'store']);
+            Route::get('{batch}', [AkunSiswaController::class, 'show'])->whereNumber('batch');
+            Route::get('{batch}/kredensial', [AkunSiswaController::class, 'unduh'])->whereNumber('batch');
+            Route::delete('{batch}/kredensial', [AkunSiswaController::class, 'hapusKredensial'])->whereNumber('batch');
+        });
 
         Route::apiResource('siswa', SiswaController::class)
             ->only(['index', 'show'])
@@ -859,6 +919,18 @@ Route::middleware([
         Route::post('users/{user}/reset-password', [UserController::class, 'resetPassword'])
             ->middleware('permission:pengguna.manage');
 
+        Route::middleware('permission:pengguna.manage')->group(function () {
+            Route::get('staf/import-template', [ImportStafController::class, 'template']);
+            Route::post('staf/import', [ImportStafController::class, 'import']);
+            Route::post('users/{user}/undangan', [UndanganController::class, 'kirimUlang']);
+            Route::get('pendaftaran-pegawai', [PendaftaranPegawaiController::class, 'index']);
+            Route::post('pendaftaran-pegawai/{pendaftaran}/setujui', [PendaftaranPegawaiController::class, 'setujui'])->whereNumber('pendaftaran');
+            Route::post('pendaftaran-pegawai/{pendaftaran}/tolak', [PendaftaranPegawaiController::class, 'tolak'])->whereNumber('pendaftaran');
+            Route::get('pendaftaran-siswa', [PendaftaranSiswaController::class, 'index']);
+            Route::post('pendaftaran-siswa/{pendaftaran}/setujui', [PendaftaranSiswaController::class, 'setujui'])->whereNumber('pendaftaran');
+            Route::post('pendaftaran-siswa/{pendaftaran}/tolak', [PendaftaranSiswaController::class, 'tolak'])->whereNumber('pendaftaran');
+        });
+
         Route::get('users/{user}/sessions', [UserController::class, 'sessions'])
             ->middleware('permission:pengguna.manage');
 
@@ -927,13 +999,16 @@ Route::middleware([
             Route::post('ujian-jawaban/{jawaban}/nilai', [UjianController::class, 'nilaiEssay']);
         });
 
-        Route::middleware('permission:pengguna.manage')->group(function () {
+        // Tahun ajaran & semester dikelola Admin dan Wakasek Kurikulum.
+        Route::middleware('permission:pengguna.manage|kurikulum.manage')->group(function () {
             Route::apiResource('tahun-ajaran', TahunAjaranController::class)
                 ->only(['index', 'store', 'update', 'destroy']);
 
             Route::apiResource('semester', SemesterController::class)
                 ->only(['index', 'store', 'update', 'destroy']);
+        });
 
+        Route::middleware('permission:pengguna.manage')->group(function () {
             Route::get('rapor-template', [SystemSettingsController::class, 'raporTemplate']);
             Route::put('rapor-template', [SystemSettingsController::class, 'updateRaporTemplate']);
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import ActiveSessionsModal from '../components/ActiveSessionsModal'
 import ConfirmStatusModal from '../components/ConfirmStatusModal'
+import ImportStafModal from '../components/ImportStafModal'
 import UserDetailModal from '../components/UserDetailModal'
 import UserFormModal from '../components/UserFormModal'
 import { useAuth } from '../lib/AuthContext'
@@ -25,6 +26,8 @@ export default function UserManagement({ onBack }) {
   const [detailUser, setDetailUser] = useState(null)
   const [statusUser, setStatusUser] = useState(null)
   const [sessionsUser, setSessionsUser] = useState(null)
+  const [showImport, setShowImport] = useState(false)
+  const [info, setInfo] = useState('')
 
   function loadUsers() {
     setLoading(true)
@@ -73,6 +76,17 @@ export default function UserManagement({ onBack }) {
     loadUsers()
   }
 
+  async function kirimUlang(u) {
+    setError('')
+    setInfo('')
+    try {
+      const res = await api.kirimUlangUndangan(u.id)
+      setInfo(res.message)
+    } catch (err) {
+      setError(err.errors ? Object.values(err.errors).flat()[0] : err.message)
+    }
+  }
+
   function refreshDetail(updated) {
     setUsers((list) => list.map((u) => (u.id === updated.id ? { ...u, ...updated } : u)))
     setDetailUser((d) => (d ? { ...d, ...updated } : d))
@@ -102,13 +116,21 @@ export default function UserManagement({ onBack }) {
             </div>
           </div>
         </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-1.5 bg-navy-light hover:bg-emerald-700 text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-colors shrink-0"
-        >
-          <PlusIcon className="h-4 w-4" />
-          Tambah Pengguna
-        </button>
+        <div className="flex gap-2 shrink-0">
+          <button
+            onClick={() => setShowImport(true)}
+            className="border border-navy/20 hover:bg-navy/5 text-navy text-sm font-semibold px-5 py-2.5 rounded-full transition-colors"
+          >
+            Import Staf (Excel)
+          </button>
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-1.5 bg-navy-light hover:bg-emerald-700 text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-colors"
+          >
+            <PlusIcon className="h-4 w-4" />
+            Tambah Pengguna
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-3 mb-4">
@@ -156,6 +178,7 @@ export default function UserManagement({ onBack }) {
       </div>
 
       {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
+      {info && <p className="text-emerald-700 text-sm mb-3">{info}</p>}
 
       <div className="bg-white rounded-2xl border border-navy/10 overflow-hidden">
         <div className="overflow-x-auto">
@@ -231,21 +254,35 @@ export default function UserManagement({ onBack }) {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                          u.is_active
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : 'bg-red-100 text-red-600'
-                        }`}
-                      >
-                        {u.is_active ? 'Aktif' : 'Nonaktif'}
-                      </span>
+                      {!u.email_verified_at ? (
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 whitespace-nowrap">
+                          Menunggu aktivasi
+                        </span>
+                      ) : (
+                        <span
+                          className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                            u.is_active
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : 'bg-red-100 text-red-600'
+                          }`}
+                        >
+                          {u.is_active ? 'Aktif' : 'Nonaktif'}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-navy/60 text-xs whitespace-nowrap">
                       {u.last_login_at ? formatDateTime(u.last_login_at) : '-'}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1.5">
+                        {!u.email_verified_at && (
+                          <button
+                            onClick={() => kirimUlang(u)}
+                            className="text-xs font-semibold text-emerald-700 hover:underline whitespace-nowrap mr-1"
+                          >
+                            Kirim ulang undangan
+                          </button>
+                        )}
                         <IconButton title="Detail" onClick={() => setDetailUser(u)}>
                           <EyeIcon className="h-4 w-4" />
                         </IconButton>
@@ -336,6 +373,13 @@ export default function UserManagement({ onBack }) {
 
       {sessionsUser && (
         <ActiveSessionsModal user={sessionsUser} onClose={() => setSessionsUser(null)} />
+      )}
+
+      {showImport && (
+        <ImportStafModal
+          onClose={() => setShowImport(false)}
+          onImported={loadUsers}
+        />
       )}
     </div>
   )

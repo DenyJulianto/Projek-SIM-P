@@ -7,15 +7,17 @@ namespace App\Http\Controllers\Api\Central;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Support\AuditAuth;
+use App\Support\SelisihJamTotp;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use PragmaRX\Google2FA\Google2FA;
 
 /**
- * Two-factor authentication (TOTP) khusus akun Super Admin — diminta
- * karena aksesnya paling luas & kritikal di seluruh platform. Sengaja
- * tidak dipasang untuk akun sekolah (di luar cakupan permintaan ini).
+ * Two-factor authentication (TOTP) untuk Super Admin (domain central) dan
+ * akun sekolah (wajib untuk Admin Sekolah, lihat EnsureTwoFactorEnabled).
  * Alur verifikasi saat login ada di AuthController::login()/verifyTwoFactor().
  */
 class TwoFactorController extends Controller
@@ -80,9 +82,16 @@ class TwoFactorController extends Controller
 
         $google2fa = new Google2FA();
 
-        if (! $google2fa->verifyKey($user->two_factor_secret, $data['code'])) {
+        $kode = preg_replace('/\s+/', '', $data['code']);
+
+        if (! $google2fa->verifyKey($user->two_factor_secret, $kode)) {
+            $selisih = SelisihJamTotp::cari($user->two_factor_secret, $kode);
+            Log::warning('Konfirmasi 2FA gagal.', ['user_id' => $user->id, 'selisih_jam_detik' => $selisih]);
+
             throw ValidationException::withMessages([
-                'code' => ['Kode verifikasi salah. Pastikan waktu perangkat Anda akurat.'],
+                'code' => [$selisih !== null
+                    ? SelisihJamTotp::pesan($selisih)
+                    : 'Kode verifikasi salah. Pastikan Anda memakai entri terbaru di aplikasi authenticator (hapus entri lama dengan nama yang sama).'],
             ]);
         }
 
@@ -92,6 +101,8 @@ class TwoFactorController extends Controller
             'two_factor_recovery_codes' => $recoveryCodes,
             'two_factor_confirmed_at' => now(),
         ])->save();
+
+        AuditAuth::catat('2FA diaktifkan.', $user);
 
         return response()->json([
             'message' => '2FA berhasil diaktifkan.',
@@ -112,7 +123,7 @@ class TwoFactorController extends Controller
 
         $user = $request->user();
 
-        if (! Auth::guard('web')->validate(['email' => $user->email, 'password' => $data['password']])) {
+        if (! Hash::check($data['password'], $user->password)) {
             throw ValidationException::withMessages([
                 'password' => ['Password salah.'],
             ]);
@@ -123,6 +134,8 @@ class TwoFactorController extends Controller
             'two_factor_recovery_codes' => null,
             'two_factor_confirmed_at' => null,
         ])->save();
+
+        AuditAuth::catat('2FA dimatikan.', $user);
 
         return response()->json(['message' => '2FA berhasil dimatikan.']);
     }
@@ -141,7 +154,7 @@ class TwoFactorController extends Controller
             ]);
         }
 
-        if (! Auth::guard('web')->validate(['email' => $user->email, 'password' => $data['password']])) {
+        if (! Hash::check($data['password'], $user->password)) {
             throw ValidationException::withMessages([
                 'password' => ['Password salah.'],
             ]);
@@ -149,6 +162,7 @@ class TwoFactorController extends Controller
 
         $recoveryCodes = $this->generateRecoveryCodes();
         $user->forceFill(['two_factor_recovery_codes' => $recoveryCodes])->save();
+        AuditAuth::catat('Kode pemulihan 2FA dibuat ulang.', $user);
 
         return response()->json(['recovery_codes' => $recoveryCodes]);
     }

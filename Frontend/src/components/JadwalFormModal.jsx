@@ -25,6 +25,14 @@ export default function JadwalFormModal({ jadwal, kelasList, guruList, mapelList
 
   async function handleAddMapel() {
     if (!newMapel.trim()) return
+    // Nama yang sudah ada cukup dipilih, tidak dibuat dobel.
+    const sudahAda = mapelList.find((m) => m.nama_mapel.trim().toLowerCase() === newMapel.trim().toLowerCase())
+    if (sudahAda) {
+      update('mata_pelajaran_id', sudahAda.id)
+      setNewMapel('')
+      setError('')
+      return
+    }
     setAddingMapel(true)
     setError('')
     try {

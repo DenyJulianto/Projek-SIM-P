@@ -100,7 +100,11 @@ class SchoolAccessController extends Controller
                 'password' => $password,
             ]);
 
-            $user->forceFill(['email_verified_at' => now(), 'temporary_password' => $password])->save();
+            $user->forceFill([
+                'email_verified_at' => now(),
+                'temporary_password' => $password,
+                'must_change_password' => true,
+            ])->save();
             $user->assignRole(self::ADMIN_ROLE);
 
             return ['user' => $user->toArray(), 'password' => $password];
@@ -215,6 +219,13 @@ class SchoolAccessController extends Controller
             $password = Str::password(10, symbols: false);
             $user->password = $password;
             $user->temporary_password = $password;
+            $user->must_change_password = true;
+            // Jalur pemulihan bila Admin Sekolah kehilangan perangkat 2FA.
+            $user->forceFill([
+                'two_factor_secret' => null,
+                'two_factor_recovery_codes' => null,
+                'two_factor_confirmed_at' => null,
+            ]);
             $user->tokens()->delete();
             $user->save();
 

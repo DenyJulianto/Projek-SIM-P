@@ -65,7 +65,9 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    // Sekolah memakai jam lokal (WIB): waktu ujian, tenggat tugas, absensi
+    // "hari ini", dsb. diisi dan dibandingkan dalam zona waktu ini.
+    'timezone' => env('APP_TIMEZONE', 'Asia/Jakarta'),
 
     /*
     |--------------------------------------------------------------------------

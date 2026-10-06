@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import CompleteNameForm from '../components/CompleteNameForm'
 import PasswordInput from '../components/PasswordInput'
 import { useAuth } from '../lib/AuthContext'
@@ -17,10 +17,30 @@ import {
 export default function Login() {
   const { login, verifyTwoFactor, setUser } = useAuth()
   const navigate = useNavigate()
-  const [email, setEmail] = useState('')
+  const location = useLocation()
+  // Halaman tujuan sebelum diminta login (dari ProtectedRoute); hanya path
+  // internal yang diterima supaya tidak bisa dipakai untuk redirect keluar.
+  const dari = location.state?.from
+  const tujuan = typeof dari === 'string' && dari.startsWith('/') && !dari.startsWith('//') && dari !== '/login' ? dari : '/dashboard'
+  const [identitas, setIdentitas] = useState('')
+  const [akun, setAkun] = useState(null)
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(true)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(() => {
+    try {
+      return sessionStorage.getItem('pesan_login') || ''
+    } catch {
+      return ''
+    }
+  })
+
+  useEffect(() => {
+    try {
+      sessionStorage.removeItem('pesan_login')
+    } catch {
+      // abaikan
+    }
+  }, [])
   const [loading, setLoading] = useState(false)
   const [background, setBackground] = useState('')
   const [needsName, setNeedsName] = useState(false)
@@ -38,13 +58,14 @@ export default function Login() {
     setLoading(true)
     setError('')
     try {
-      const result = await login(email, password, remember)
+      const result = await login(identitas, password, remember)
       if (result.requiresTwoFactor) {
         setTwoFactorChallenge(result.challenge)
-      } else if (!result.name) {
+      } else if (!result.name && !result.must_change_password) {
+        setAkun(result)
         setNeedsName(true)
       } else {
-        navigate('/dashboard')
+        navigate(tujuan)
       }
     } catch (err) {
       setError(err.message)
@@ -59,7 +80,7 @@ export default function Login() {
     setError('')
     try {
       await verifyTwoFactor(twoFactorChallenge, twoFactorCode, remember)
-      navigate('/dashboard')
+      navigate(tujuan)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -69,7 +90,7 @@ export default function Login() {
 
   function handleNameCompleted(updatedUser) {
     setUser(updatedUser)
-    navigate('/dashboard')
+    navigate(tujuan)
   }
 
   return (
@@ -144,7 +165,7 @@ export default function Login() {
               </button>
             </>
           ) : needsName ? (
-            <CompleteNameForm user={{ email }} onDone={handleNameCompleted} />
+            <CompleteNameForm user={akun} onDone={handleNameCompleted} />
           ) : (
             <>
               <AuthTagline />
@@ -169,11 +190,12 @@ export default function Login() {
                     <MailIcon className="h-4.5 w-4.5" />
                   </span>
                   <input
-                    type="email"
+                    type="text"
                     required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Email"
+                    autoComplete="username"
+                    value={identitas}
+                    onChange={(e) => setIdentitas(e.target.value)}
+                    placeholder={IS_CENTRAL_DOMAIN ? 'Email' : 'Email / NIP / NISN'}
                     className="w-full bg-emerald-50 rounded-full pl-11 pr-5 py-3 text-sm text-navy placeholder-navy/40 focus:outline-none focus:ring-2 focus:ring-navy-light/50"
                   />
                 </div>
@@ -214,11 +236,20 @@ export default function Login() {
 
               <hr className="border-navy/10 mt-6" />
 
-              <p className="text-center text-sm text-navy/50 mt-4">
-                Belum punya akun?{' '}
-                <Link to="/register" className="text-navy-light font-semibold hover:underline uppercase">
-                  Daftar
-                </Link>
+              {!IS_CENTRAL_DOMAIN && (
+                <p className="text-center text-sm text-navy/50 mt-4">
+                  Calon siswa?{' '}
+                  <Link to="/daftar-siswa" className="text-navy-light font-semibold hover:underline">
+                    Daftar siswa
+                  </Link>
+                  {' · '}Pendidik/tendik?{' '}
+                  <Link to="/register" className="text-navy-light font-semibold hover:underline">
+                    Daftar pegawai
+                  </Link>
+                </p>
+              )}
+              <p className="text-center text-xs text-navy/40 mt-2">
+                Siswa dan orang tua mendapatkan akun dari sekolah — hubungi admin atau Tata Usaha.
               </p>
 
               <a href="/" className="block text-center text-xs text-navy/40 hover:text-navy mt-3">

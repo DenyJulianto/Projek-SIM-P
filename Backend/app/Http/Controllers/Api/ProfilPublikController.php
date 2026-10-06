@@ -30,6 +30,7 @@ class ProfilPublikController extends Controller
             'nama_sekolah' => $sekolah->nama_sekolah,
             'npsn' => $sekolah->npsn,
             'jenjang' => $sekolah->jenjang,
+            'tahun_berdiri' => $sekolah->tahun_berdiri,
             'alamat' => $sekolah->alamat,
             'kecamatan' => $sekolah->kecamatan,
             'kelurahan' => $sekolah->kelurahan,

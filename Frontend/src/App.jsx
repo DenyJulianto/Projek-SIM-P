@@ -1,13 +1,14 @@
 import { Route, BrowserRouter as Router, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
 import { AuthProvider } from './lib/AuthContext'
+import AktivasiAkun from './pages/AktivasiAkun'
 import Dashboard from './pages/Dashboard'
+import DaftarPegawai from './pages/DaftarPegawai'
+import DaftarSiswa from './pages/DaftarSiswa'
 import ForgotPassword from './pages/ForgotPassword'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
-import Register from './pages/Register'
 import ResetPasswordLink from './pages/ResetPasswordLink'
-import VerifyEmailLink from './pages/VerifyEmailLink'
 
 export default function App() {
   return (
@@ -16,12 +17,16 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/verify" element={<VerifyEmailLink />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPasswordLink />} />
+          <Route path="/aktivasi" element={<AktivasiAkun />} />
+          <Route path="/register" element={<DaftarPegawai />} />
+          <Route path="/daftar-siswa" element={<DaftarSiswa />} />
+          {/* /dashboard dan semua halaman dasbor lain (mis. /kelas-saya).
+              Halaman mana yang tampil & siapa yang boleh membukanya ditentukan
+              di Dashboard.jsx sesuai peran user. */}
           <Route
-            path="/dashboard"
+            path="/*"
             element={
               <ProtectedRoute>
                 <Dashboard />
