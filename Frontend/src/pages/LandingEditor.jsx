@@ -1,14 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import About from '../components/About'
 import Footer from '../components/Footer'
-import Header from '../components/Header'
 import Hero from '../components/Hero'
 import Kegiatan from '../components/Kegiatan'
 import Kontak from '../components/Kontak'
 import Pengumuman from '../components/Pengumuman'
 import PpdbInfo from '../components/PpdbInfo'
 import Prestasi from '../components/Prestasi'
-import TopBar from '../components/TopBar'
 import { EditableImage, LandingEditProvider } from '../components/landing/LandingEdit'
 import { api } from '../lib/api'
 
@@ -177,9 +175,7 @@ export default function LandingEditor({ onBack }) {
 
       <LandingEditProvider draft={draft} onChange={update}>
         <div className="rounded-2xl border border-navy/10 overflow-hidden bg-white shadow-sm">
-          <TopBar profil={preview} />
-          <Header profil={preview} ppdb={ppdb} />
-          <Hero profil={preview} />
+          <Hero profil={preview} ppdb={ppdb} />
           <OtomatisSection note="Diambil dari menu PPDB (periode yang sedang berjalan)">
             {ppdb?.nama ? (
               <PpdbInfo ppdb={ppdb} profil={preview} />

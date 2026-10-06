@@ -8,7 +8,7 @@ import { useAuth } from '../lib/AuthContext'
 import { api, BASE_URL } from '../lib/api'
 import MyProfile from './MyProfile'
 import NilaiManagement from './NilaiManagement'
-import { JadwalMengajarView, MateriManagement, TugasManagement } from './GuruMapelDashboard'
+import { JadwalMengajarView, MateriManagement, TugasManagement, UjianManagement } from './GuruMapelDashboard'
 import PelanggaranManagement from './PelanggaranManagement'
 import PrestasiManagement from './PrestasiManagement'
 import RekapPembinaanManagement from './RekapPembinaanManagement'
@@ -30,7 +30,7 @@ const MENU_GROUPS = [
     items: [
       { key: 'jadwal-mengajar', label: 'Jadwal Mengajar', icon: CalendarIcon },
       { key: 'input-nilai', label: 'Input Nilai', icon: PencilIcon },
-      { key: 'materi-tugas', label: 'Materi / Tugas', icon: FolderIcon },
+      { key: 'materi-tugas', label: 'Materi / Tugas / Ujian', icon: FolderIcon },
       { key: 'modul-ajar', label: 'Perangkat Ajar', icon: DocIcon },
       { key: 'notifikasi', label: 'Notifikasi Siswa', icon: NotifBellIcon },
     ],
@@ -73,11 +73,19 @@ export default function WaliKelasDashboard() {
   const notif = useNotifikasi()
   // Tugas yang dibuka dari notifikasi (n = pemicu remount)
   const [fokusTugas, setFokusTugas] = useState(null)
+  // Ujian yang dibuka dari notifikasi pelanggaran / ujian selesai
+  const [fokusUjian, setFokusUjian] = useState(null)
 
   function bukaNotifikasi(n) {
     notif.tandaiDibaca(n)
-    if (n.jenis === 'tugas_dikumpulkan' && n.data?.tugas_id) {
-      setFokusTugas({ tugasId: n.data.tugas_id, n: Date.now() })
+    const d = n.data || {}
+    if (n.jenis === 'tugas_dikumpulkan' && d.tugas_id) {
+      setFokusUjian(null)
+      setFokusTugas({ tugasId: d.tugas_id, n: Date.now() })
+      setView('materi-tugas')
+    } else if ((n.jenis === 'pelanggaran_ujian' || n.jenis === 'ujian_selesai') && d.ujian_id) {
+      setFokusTugas(null)
+      setFokusUjian({ ujianId: d.ujian_id, siswaId: d.siswa_id, kelasId: d.kelas_id, mapelId: d.mata_pelajaran_id, n: Date.now() })
       setView('materi-tugas')
     } else if (n.jenis === 'izin_siswa') {
       setView('kehadiran')
@@ -252,7 +260,12 @@ export default function WaliKelasDashboard() {
             {view === 'jadwal-mengajar' && <JadwalMengajarView onBack={() => setView('home')} />}
             {view === 'input-nilai' && <NilaiManagement onBack={() => setView('home')} title="Input Nilai" />}
             {view === 'materi-tugas' && (
-              <MateriTugasView key={fokusTugas?.n ?? 0} fokusTugas={fokusTugas} onBack={() => setView('home')} />
+              <MateriTugasView
+                key={fokusTugas?.n ?? fokusUjian?.n ?? 0}
+                fokusTugas={fokusTugas}
+                fokusUjian={fokusUjian}
+                onBack={() => setView('home')}
+              />
             )}
             {view === 'modul-ajar' && <ModulAjarManagement onBack={() => setView('home')} />}
             {view === 'profil-kelas' && <ProfilKelasView onBack={() => setView('home')} kelas={kelas} user={user} onNavigate={setView} />}
@@ -282,11 +295,12 @@ export default function WaliKelasDashboard() {
   )
 }
 
-function MateriTugasView({ onBack, fokusTugas }) {
-  const [tab, setTab] = useState(fokusTugas ? 'tugas' : 'materi')
+function MateriTugasView({ onBack, fokusTugas, fokusUjian }) {
+  const [tab, setTab] = useState(fokusUjian ? 'ujian' : fokusTugas ? 'tugas' : 'materi')
   const tabs = [
     { key: 'materi', label: 'Materi', icon: BookStackIcon },
     { key: 'tugas', label: 'Tugas', icon: TaskBadgeIcon },
+    { key: 'ujian', label: 'Ujian', icon: ExamIcon },
   ]
 
   return (
@@ -297,7 +311,7 @@ function MateriTugasView({ onBack, fokusTugas }) {
           Dashboard
         </button>
         <span>/</span>
-        <span className="text-navy/60 font-medium">Materi / Tugas</span>
+        <span className="text-navy/60 font-medium">Materi / Tugas / Ujian</span>
       </div>
 
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-50 via-white to-emerald-50 border border-emerald-100 p-6 mb-5">
@@ -306,8 +320,8 @@ function MateriTugasView({ onBack, fokusTugas }) {
             <BookStackIcon className="h-7 w-7" />
           </span>
           <div>
-            <h1 className="text-xl font-extrabold text-navy">Materi &amp; Tugas</h1>
-            <p className="text-sm text-navy/50 mt-0.5">Kelola materi pembelajaran dan tugas siswa dengan mudah.</p>
+            <h1 className="text-xl font-extrabold text-navy">Materi, Tugas &amp; Ujian</h1>
+            <p className="text-sm text-navy/50 mt-0.5">Kelola materi pembelajaran, tugas, dan ujian siswa dengan mudah.</p>
           </div>
         </div>
         <p className="hidden lg:block absolute right-32 top-5 text-emerald-700/70 italic font-semibold text-sm text-center leading-snug -rotate-6">
@@ -336,7 +350,9 @@ function MateriTugasView({ onBack, fokusTugas }) {
       </div>
 
       <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5">
-        {tab === 'materi' ? <MateriManagement bare /> : <TugasManagement bare fokus={fokusTugas} />}
+        {tab === 'materi' && <MateriManagement bare />}
+        {tab === 'tugas' && <TugasManagement bare fokus={fokusTugas} />}
+        {tab === 'ujian' && <UjianManagement bare fokus={fokusUjian} />}
       </div>
     </div>
   )
@@ -347,6 +363,16 @@ function BookStackIcon(props) {
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
       <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" />
+    </svg>
+  )
+}
+
+function ExamIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="5" y="3" width="14" height="18" rx="2" />
+      <path d="M9 8h6M9 12h6M9 16h3" />
+      <path d="m15 16 1 1 2-2" />
     </svg>
   )
 }

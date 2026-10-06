@@ -44,12 +44,31 @@ async function request(path, options = {}) {
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
+    akhiriSesiBila401(res.status, body)
     const err = new Error(body.message || `Request gagal (${res.status})`)
     err.errors = body.errors || null
+    err.code = body.code || null
     throw err
   }
 
   return res.json()
+}
+
+// Token ditolak di tengah sesi (akun dinonaktifkan, sesi dicabut, dll):
+// hapus sesi lokal dan kembalikan ke halaman login dengan alasannya.
+function akhiriSesiBila401(status, body) {
+  if (status !== 401 || !authHeaders().Authorization) return
+  localStorage.removeItem('token')
+  sessionStorage.removeItem('token')
+  try {
+    sessionStorage.setItem(
+      'pesan_login',
+      body.message && body.message !== 'Unauthenticated.' ? body.message : 'Sesi Anda telah berakhir. Silakan masuk kembali.',
+    )
+  } catch {
+    // penyimpanan tidak tersedia, cukup keluarkan sesi
+  }
+  window.dispatchEvent(new Event('sesi-berakhir'))
 }
 
 async function downloadFile(path, fallbackName, options = {}) {
@@ -102,34 +121,22 @@ export const api = {
   getPrestasiPublik: () => request('/public/prestasi'),
   getPpdbPublik: () => request('/public/ppdb'),
 
-  login: (email, password) =>
+  login: (identitas, password) =>
     request(IS_CENTRAL_DOMAIN ? '/api/login' : '/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ login: identitas, password }),
     }),
 
-  register: (name, email, password, passwordConfirmation, recaptchaToken) =>
-    request('/register', {
-      method: 'POST',
+  setPeranAktif: (role) => request('/me/peran-aktif', { method: 'PUT', body: JSON.stringify({ role }) }),
+
+  changePassword: (currentPassword, password, passwordConfirmation) =>
+    request('/me/password', {
+      method: 'PUT',
       body: JSON.stringify({
-        name,
-        email,
+        current_password: currentPassword,
         password,
         password_confirmation: passwordConfirmation,
-        recaptcha_token: recaptchaToken || undefined,
       }),
-    }),
-
-  verifyEmailLink: (email, token) =>
-    request('/verify-email', {
-      method: 'POST',
-      body: JSON.stringify({ email, token }),
-    }),
-
-  resendVerificationCode: (email) =>
-    request('/resend-verification-code', {
-      method: 'POST',
-      body: JSON.stringify({ email }),
     }),
 
   forgotPassword: (email, recaptchaToken) =>
@@ -466,15 +473,20 @@ export const api = {
   getRetentionPreview: () => request('/api/security/retention/preview'),
   purgeRetention: () => request('/api/security/retention/purge', { method: 'POST' }),
 
+  // 2FA: Super Admin memakai /api/2fa di domain central, akun sekolah memakai /me/2fa.
   verifyTwoFactor: (challenge, code) =>
-    request('/api/2fa/verify', { method: 'POST', body: JSON.stringify({ challenge, code }) }),
-  getTwoFactorStatus: () => request('/api/2fa/status'),
-  setupTwoFactor: () => request('/api/2fa/setup', { method: 'POST' }),
-  confirmTwoFactor: (code) => request('/api/2fa/confirm', { method: 'POST', body: JSON.stringify({ code }) }),
+    request(IS_CENTRAL_DOMAIN ? '/api/2fa/verify' : '/2fa/verify', { method: 'POST', body: JSON.stringify({ challenge, code }) }),
+  getTwoFactorStatus: () => request(IS_CENTRAL_DOMAIN ? '/api/2fa/status' : '/me/2fa'),
+  setupTwoFactor: () => request(IS_CENTRAL_DOMAIN ? '/api/2fa/setup' : '/me/2fa/setup', { method: 'POST' }),
+  confirmTwoFactor: (code) =>
+    request(IS_CENTRAL_DOMAIN ? '/api/2fa/confirm' : '/me/2fa/confirm', { method: 'POST', body: JSON.stringify({ code }) }),
   disableTwoFactor: (password) =>
-    request('/api/2fa/disable', { method: 'POST', body: JSON.stringify({ password }) }),
+    request(IS_CENTRAL_DOMAIN ? '/api/2fa/disable' : '/me/2fa/disable', { method: 'POST', body: JSON.stringify({ password }) }),
   regenerateRecoveryCodes: (password) =>
-    request('/api/2fa/recovery-codes/regenerate', { method: 'POST', body: JSON.stringify({ password }) }),
+    request(IS_CENTRAL_DOMAIN ? '/api/2fa/recovery-codes/regenerate' : '/me/2fa/recovery-codes', {
+      method: 'POST',
+      body: JSON.stringify({ password }),
+    }),
 
   // Tahun Ajaran & Semester
   listTahunAjaran: () => request('/tahun-ajaran'),
@@ -554,6 +566,12 @@ export const api = {
     }),
 
   listKelasAll: () => request('/kelas?per_page=100'),
+
+  getAkunSiswa: () => request('/akun-siswa'),
+  getAkunSiswaBatch: (id) => request(`/akun-siswa/${id}`),
+  mulaiAkunSiswa: (data) => request('/akun-siswa', { method: 'POST', body: JSON.stringify(data) }),
+  unduhKredensialAkunSiswa: (id) => downloadFile(`/akun-siswa/${id}/kredensial`, `kredensial-akun-siswa-${id}.csv`),
+  hapusKredensialAkunSiswa: (id) => request(`/akun-siswa/${id}/kredensial`, { method: 'DELETE' }),
   listGuruAll: () => request('/guru?per_page=100'),
   listSiswaByKelas: (kelasId) => {
     const query = new URLSearchParams({ 'filter[kelas_id]': kelasId, per_page: 100 }).toString()
@@ -618,6 +636,34 @@ export const api = {
   exportMataPelajaran: () => downloadFile('/mata-pelajaran/export', 'mata-pelajaran.xlsx'),
   downloadMataPelajaranTemplate: () =>
     downloadFile('/mata-pelajaran/import-template', 'template-import-mata-pelajaran.xlsx'),
+  getOpsiPendaftaranPegawai: () => request('/public/pendaftaran-pegawai/opsi'),
+  daftarPegawai: (data) => request('/pendaftaran-pegawai', { method: 'POST', body: JSON.stringify(data) }),
+  listPendaftaranPegawai: (status = 'menunggu') => request(`/pendaftaran-pegawai?status=${status}`),
+  setujuiPendaftaranPegawai: (id, data) =>
+    request(`/pendaftaran-pegawai/${id}/setujui`, { method: 'POST', body: JSON.stringify(data) }),
+  daftarSiswa: (data) => request('/pendaftaran-siswa', { method: 'POST', body: JSON.stringify(data) }),
+  listPendaftaranSiswa: (status = 'menunggu') => request(`/pendaftaran-siswa?status=${status}`),
+  setujuiPendaftaranSiswa: (id, data) =>
+    request(`/pendaftaran-siswa/${id}/setujui`, { method: 'POST', body: JSON.stringify(data) }),
+  tolakPendaftaranSiswa: (id, alasan) =>
+    request(`/pendaftaran-siswa/${id}/tolak`, { method: 'POST', body: JSON.stringify({ alasan }) }),
+  tolakPendaftaranPegawai: (id, alasan) =>
+    request(`/pendaftaran-pegawai/${id}/tolak`, { method: 'POST', body: JSON.stringify({ alasan }) }),
+
+  unduhTemplateImportStaf: () => downloadFile('/staf/import-template', 'template-import-staf.xlsx'),
+  importStaf: (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return requestForm('/staf/import', formData)
+  },
+  kirimUlangUndangan: (userId) => request(`/users/${userId}/undangan`, { method: 'POST' }),
+  cekUndangan: (userId, query) => request(`/undangan/${userId}?${query}`),
+  terimaUndangan: (userId, query, password, passwordConfirmation) =>
+    request(`/undangan/${userId}?${query}`, {
+      method: 'POST',
+      body: JSON.stringify({ password, password_confirmation: passwordConfirmation }),
+    }),
+
   importMataPelajaran: (file) => {
     const formData = new FormData()
     formData.append('file', file)
@@ -946,6 +992,7 @@ export const api = {
   updateMyGuruTugasTambahan: (tugasTambahan) =>
     request('/me/guru/tugas-tambahan', { method: 'PUT', body: JSON.stringify({ tugas_tambahan: tugasTambahan }) }),
   getMyGuruJadwal: () => request('/me/guru/jadwal'),
+  getMyGuruPengampuan: () => request('/me/guru/pengampuan'),
   getMyGuruKelas: () => request('/me/guru/kelas'),
   getMyGuruMataPelajaran: () => request('/me/guru/mata-pelajaran'),
   getMyGuruRekapNilai: () => request('/me/guru/rekap-nilai'),

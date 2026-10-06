@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import AkunSiswaModal from '../components/AkunSiswaModal'
 import SiswaFormModal from '../components/SiswaFormModal'
 import { api } from '../lib/api'
 
@@ -10,6 +11,7 @@ export default function SiswaManagement({ onBack }) {
   const [error, setError] = useState('')
   const [editingItem, setEditingItem] = useState(null)
   const [showForm, setShowForm] = useState(false)
+  const [showAkun, setShowAkun] = useState(false)
 
   function loadItems(params = {}) {
     setLoading(true)
@@ -64,13 +66,22 @@ export default function SiswaManagement({ onBack }) {
           </button>
           <h1 className="text-2xl font-extrabold text-navy">Data Siswa</h1>
         </div>
-        <button
-          onClick={openCreate}
-          className="bg-navy hover:bg-navy-light text-white text-sm font-semibold px-5 py-2.5 rounded-full"
-        >
-          + Tambah Siswa
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowAkun(true)}
+            className="border border-navy/20 hover:bg-navy/5 text-navy text-sm font-semibold px-5 py-2.5 rounded-full"
+          >
+            Akun Siswa &amp; Ortu
+          </button>
+          <button
+            onClick={openCreate}
+            className="bg-navy hover:bg-navy-light text-white text-sm font-semibold px-5 py-2.5 rounded-full"
+          >
+            + Tambah Siswa
+          </button>
+        </div>
       </div>
+      {showAkun && <AkunSiswaModal kelasList={kelasList} onClose={() => setShowAkun(false)} />}
 
       <form onSubmit={handleSearch} className="mb-4 flex gap-2">
         <input

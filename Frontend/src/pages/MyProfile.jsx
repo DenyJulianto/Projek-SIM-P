@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import Setup2FA from '../components/Setup2FA'
 import { useAuth } from '../lib/AuthContext'
 import { api, BASE_URL } from '../lib/api'
 
@@ -213,12 +214,14 @@ const PENDIDIKAN_OPTIONS = ['SMA/SMK', 'S1', 'S2', 'S3']
 
 function ProfilProfesionalForm({ user, guru, kelas, client, staff, roleLabel, onSaved, onUserSaved }) {
   const [form, setForm] = useState(null)
+  const [alamat, setAlamat] = useState(() => alamatDariUser(user))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
   useEffect(() => {
     if (!guru) return
+    setAlamat(alamatDariUser(user))
     setForm({
       nama: guru.nama || '',
       jabatan: guru.jabatan || (staff ? user?.roles?.[0]?.name || '' : roleLabel || (kelas ? `Wali Kelas ${kelas.nama_kelas}` : 'Wali Kelas')),
@@ -226,7 +229,6 @@ function ProfilProfesionalForm({ user, guru, kelas, client, staff, roleLabel, on
       email: user?.email || '',
       phone: user?.phone || '',
       jenis_kelamin: user?.jenis_kelamin || '',
-      alamat: user?.alamat || '',
       gelar: guru.gelar || '',
       ...(staff ? {} : { kutipan: guru.kutipan || '', bio: guru.bio || '' }),
       media_sosial: guru.media_sosial || '',
@@ -248,14 +250,14 @@ function ProfilProfesionalForm({ user, guru, kelas, client, staff, roleLabel, on
     setError('')
     setSuccess('')
     try {
-      const { email, phone, jenis_kelamin, alamat, ...guruFields } = form
+      const { email, phone, jenis_kelamin, ...guruFields } = form
       const payload = Object.fromEntries(Object.entries(guruFields).map(([k, v]) => [k, v.trim() || null]))
       const updated = await client.update(payload)
       const me = await api.updateMe({
         name: payload.nama,
         email: email.trim(),
         phone: phone.trim() || null,
-        alamat: alamat.trim() || null,
+        ...alamatUntukDisimpan(alamat),
         jenis_kelamin: jenis_kelamin || null,
       })
       onUserSaved(me)
@@ -343,7 +345,7 @@ function ProfilProfesionalForm({ user, guru, kelas, client, staff, roleLabel, on
           </ProfSection>
         )}
 
-        <ProfSection title="Kontak & Alamat">
+        <ProfSection title="Kontak">
           <div className="grid sm:grid-cols-2 gap-4">
             <Field label="Email Resmi Sekolah" icon={MailIcon}>
               <input type="email" required value={form.email} onChange={set('email')} className="input bg-white" maxLength={255} />
@@ -362,19 +364,18 @@ function ProfilProfesionalForm({ user, guru, kelas, client, staff, roleLabel, on
               />
             </Field>
           </div>
-          <Field label="Alamat" icon={MapPinIcon}>
-            <textarea
-              value={form.alamat}
-              onChange={set('alamat')}
-              rows={2}
-              className="input bg-white resize-none"
-              placeholder="Alamat lengkap"
-            />
-          </Field>
           <p className="text-[11px] text-navy/40">
             Isi media sosial hanya jika dipakai untuk keperluan edukasi dan profesional.
           </p>
         </ProfSection>
+
+        <AlamatLengkapFields
+          value={alamat}
+          onChange={(v) => {
+            setAlamat(v)
+            setSuccess('')
+          }}
+        />
 
         <button
           type="submit"
@@ -671,6 +672,48 @@ function SertifikatUploader({ client, list, onChange }) {
   )
 }
 
+const ALAMAT_FIELDS = [
+  { key: 'alamat', label: 'Alamat', placeholder: 'Nama jalan, nomor rumah', maxLength: 1000 },
+  { key: 'rt_rw', label: 'RT/RW', placeholder: '006/009', maxLength: 20 },
+  { key: 'kelurahan', label: 'Kelurahan', placeholder: 'Kelurahan / desa', maxLength: 255 },
+  { key: 'kecamatan', label: 'Kecamatan', placeholder: 'Kecamatan', maxLength: 255 },
+  { key: 'kota', label: 'Kota', placeholder: 'Kota / kabupaten', maxLength: 255 },
+  { key: 'kode_pos', label: 'Kode Pos', placeholder: '40141', maxLength: 5, inputMode: 'numeric', pattern: '[0-9]{5}' },
+]
+
+function alamatDariUser(user) {
+  return Object.fromEntries(ALAMAT_FIELDS.map(({ key }) => [key, user?.[key] || '']))
+}
+
+function alamatUntukDisimpan(alamat) {
+  return Object.fromEntries(ALAMAT_FIELDS.map(({ key }) => [key, (alamat[key] ?? '').trim() || null]))
+}
+
+function AlamatLengkapFields({ value, onChange }) {
+  return (
+    <section className="bg-white border border-navy/10 rounded-2xl px-5 py-4">
+      <h2 className="text-sm font-bold text-navy mb-1">Alamat Lengkap</h2>
+      <div className="divide-y divide-navy/5">
+        {ALAMAT_FIELDS.map(({ key, label, placeholder, maxLength, inputMode, pattern }) => (
+          <label key={key} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 py-3">
+            <span className="text-sm text-navy/50 sm:w-32 shrink-0">{label}</span>
+            <input
+              value={value[key]}
+              onChange={(e) => onChange({ ...value, [key]: e.target.value })}
+              placeholder={placeholder}
+              maxLength={maxLength}
+              inputMode={inputMode}
+              pattern={pattern}
+              title={key === 'kode_pos' ? 'Kode pos 5 digit angka' : undefined}
+              className="flex-1 min-w-0 bg-transparent text-sm text-navy placeholder:text-navy/25 outline-none focus:ring-0 border-0 px-0"
+            />
+          </label>
+        ))}
+      </div>
+    </section>
+  )
+}
+
 function ProfSection({ title, children }) {
   return (
     <section className="space-y-3">
@@ -696,7 +739,7 @@ function PersonalInformationForm({ user, onSaved }) {
   const [lastName, setLastName] = useState(initialLast)
   const [phone, setPhone] = useState(user?.phone || '')
   const [email, setEmail] = useState(user?.email || '')
-  const [alamat, setAlamat] = useState(user?.alamat || '')
+  const [alamat, setAlamat] = useState(() => alamatDariUser(user))
   const [jenisKelamin, setJenisKelamin] = useState(user?.jenis_kelamin || '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -707,7 +750,7 @@ function PersonalInformationForm({ user, onSaved }) {
     setLastName(initialLast)
     setPhone(user?.phone || '')
     setEmail(user?.email || '')
-    setAlamat(user?.alamat || '')
+    setAlamat(alamatDariUser(user))
     setJenisKelamin(user?.jenis_kelamin || '')
     setError('')
     setSuccess('')
@@ -723,7 +766,7 @@ function PersonalInformationForm({ user, onSaved }) {
         name: [firstName, lastName].filter(Boolean).join(' '),
         email,
         phone,
-        alamat,
+        ...alamatUntukDisimpan(alamat),
         jenis_kelamin: jenisKelamin || null,
       })
       onSaved(updated)
@@ -802,15 +845,7 @@ function PersonalInformationForm({ user, onSaved }) {
           </Field>
         </div>
 
-        <Field label="Alamat" icon={MapPinIcon}>
-          <textarea
-            value={alamat}
-            onChange={(e) => setAlamat(e.target.value)}
-            rows={3}
-            placeholder="Alamat lengkap"
-            className="input resize-none"
-          />
-        </Field>
+        <AlamatLengkapFields value={alamat} onChange={setAlamat} />
 
         <div className="flex gap-3 pt-2">
           <button
@@ -903,6 +938,123 @@ function LoginPasswordForm({ user, onSaved }) {
           </button>
         </div>
       </form>
+
+      <KeamananDuaLangkah />
+    </div>
+  )
+}
+
+/** Status & pengelolaan 2FA milik sendiri (aktifkan, buat ulang kode pemulihan, matikan). */
+function KeamananDuaLangkah() {
+  const { user, setUser } = useAuth()
+  const [status, setStatus] = useState(null)
+  const [mode, setMode] = useState(null)
+  const [password, setPassword] = useState('')
+  const [kodeBaru, setKodeBaru] = useState(null)
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  function muat() {
+    api.getTwoFactorStatus().then(setStatus).catch(() => setStatus({ enabled: false }))
+  }
+
+  useEffect(() => {
+    muat()
+  }, [])
+
+  async function konfirmasiPassword(e) {
+    e.preventDefault()
+    setBusy(true)
+    setError('')
+    try {
+      if (mode === 'matikan') {
+        await api.disableTwoFactor(password)
+        setMode(null)
+        muat()
+        setUser(await api.me())
+      } else {
+        const res = await api.regenerateRecoveryCodes(password)
+        setKodeBaru(res.recovery_codes)
+        setMode(null)
+      }
+      setPassword('')
+    } catch (err) {
+      setError(err.errors ? Object.values(err.errors).flat()[0] : err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const adminWajib = user?.available_roles?.includes('Admin Sekolah')
+
+  return (
+    <div className="mt-10 pt-8 border-t border-navy/10">
+      <h2 className="text-base font-bold text-navy mb-1">Verifikasi Dua Langkah (2FA)</h2>
+      <p className="text-sm text-navy/50 mb-4">
+        Selain password, login meminta kode dari aplikasi authenticator di ponsel Anda.
+        {adminWajib && ' Wajib untuk akun admin sekolah.'}
+      </p>
+
+      {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
+
+      {mode === 'aktifkan' ? (
+        <Setup2FA
+          onBatal={() => setMode(null)}
+          onSelesai={() => {
+            setMode(null)
+            muat()
+          }}
+        />
+      ) : status === null ? (
+        <p className="text-sm text-navy/40">Memuat…</p>
+      ) : !status.enabled ? (
+        <button onClick={() => setMode('aktifkan')} className="bg-navy hover:bg-navy-light text-white text-sm font-semibold px-5 py-2.5 rounded-md">
+          Aktifkan 2FA
+        </button>
+      ) : (
+        <div className="space-y-4">
+          <p className="text-sm font-semibold text-emerald-700">2FA aktif</p>
+          {kodeBaru && (
+            <div className="bg-navy/5 rounded-xl p-4">
+              <p className="text-xs text-navy/60 mb-2">Kode pemulihan baru (kode lama tidak berlaku lagi). Simpan sekarang:</p>
+              <div className="grid grid-cols-2 gap-2 font-mono text-sm text-navy">
+                {kodeBaru.map((c) => (
+                  <span key={c}>{c}</span>
+                ))}
+              </div>
+            </div>
+          )}
+          {mode ? (
+            <form onSubmit={konfirmasiPassword} className="flex flex-wrap gap-3 items-center">
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Password saat ini"
+                className="border border-navy/15 rounded-md px-3 py-2 text-sm"
+              />
+              <button type="submit" disabled={busy || !password} className="bg-navy text-white text-sm font-semibold px-4 py-2 rounded-md disabled:opacity-50">
+                {mode === 'matikan' ? 'Matikan 2FA' : 'Buat kode baru'}
+              </button>
+              <button type="button" onClick={() => setMode(null)} className="text-sm text-navy/50">
+                Batal
+              </button>
+              {mode === 'matikan' && adminWajib && (
+                <p className="w-full text-xs text-amber-700">Akun admin harus mengaktifkan 2FA lagi sebelum bisa melanjutkan.</p>
+              )}
+            </form>
+          ) : (
+            <div className="flex gap-4">
+              <button onClick={() => setMode('kode')} className="text-sm font-semibold text-emerald-700 hover:underline">
+                Buat ulang kode pemulihan
+              </button>
+              <button onClick={() => setMode('matikan')} className="text-sm font-semibold text-red-600 hover:underline">
+                Matikan 2FA
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -948,14 +1100,6 @@ function GenderIcon(props) {
   )
 }
 
-function MapPinIcon(props) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-      <circle cx="12" cy="10" r="2.5" />
-    </svg>
-  )
-}
 
 function CameraIcon(props) {
   return (

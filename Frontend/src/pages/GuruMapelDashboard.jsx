@@ -670,8 +670,22 @@ export function KelasSayaView({ onBack, title = 'Kelas Saya' }) {
       <div className="grid sm:grid-cols-3 gap-4">
         {(kelas || []).map((k) => (
           <div key={k.id} className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5">
-            <p className="font-bold text-navy text-lg">{k.nama_kelas}</p>
-            <p className="text-xs text-navy/50 mt-1">{k.tahun_ajaran}</p>
+            <div className="flex items-start justify-between gap-2">
+              <p className="font-bold text-navy text-lg">{k.nama_kelas}</p>
+              <div className="flex flex-wrap justify-end gap-1">
+                {(k.peran || []).map((p) => (
+                  <span
+                    key={p}
+                    className={`text-[10px] font-semibold rounded-full px-2 py-0.5 ${
+                      p === 'Wali Kelas' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-700'
+                    }`}
+                  >
+                    {p}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <p className="text-xs text-navy/50 mt-1">{k.tahun_ajaran || '-'}</p>
             <p className="text-sm text-navy/60 mt-3">{k.jumlah_siswa} siswa</p>
           </div>
         ))}
@@ -926,22 +940,11 @@ function useGuruContext() {
 
   useEffect(() => {
     api.getMyGuruProfil().then(setGuru).catch(() => {})
-    api.getMyGuruJadwal().then((jadwal) => {
-      const map = new Map()
-      ;(jadwal || []).forEach((j) => {
-        if (!j.kelas || !j.mata_pelajaran) return
-        const key = `${j.kelas.id}-${j.mata_pelajaran.id}`
-        if (!map.has(key)) {
-          map.set(key, {
-            kelas_id: j.kelas.id,
-            nama_kelas: j.kelas.nama_kelas,
-            mata_pelajaran_id: j.mata_pelajaran.id,
-            nama_mapel: j.mata_pelajaran.nama_mapel,
-          })
-        }
-      })
-      setPilihan(Array.from(map.values()))
-    }).catch(() => setPilihan([]))
+    // Kelas & mapel dari jadwal maupun pembagian mata pelajaran Kurikulum.
+    api
+      .getMyGuruPengampuan()
+      .then((r) => setPilihan(r || []))
+      .catch(() => setPilihan([]))
   }, [])
 
   return { guru, pilihan }
@@ -2107,7 +2110,7 @@ function TugasJawabanRow({ jawaban, onGraded }) {
   )
 }
 
-function UjianManagement({ onBack, bare, scope, fokus }) {
+export function UjianManagement({ onBack, bare, scope, fokus }) {
   const [askConfirm, confirmModal] = useThemedConfirm()
   const { guru, pilihan } = useGuruContext()
   const [items, setItems] = useState(null)

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import About from '../components/About'
 import Footer from '../components/Footer'
-import Header from '../components/Header'
 import Hero from '../components/Hero'
 import Kegiatan from '../components/Kegiatan'
 import Kontak from '../components/Kontak'
@@ -10,7 +9,6 @@ import Pengumuman from '../components/Pengumuman'
 import PpdbInfo from '../components/PpdbInfo'
 import Prestasi from '../components/Prestasi'
 import SuperAdminHeroIllustration from '../components/SuperAdminHeroIllustration'
-import TopBar from '../components/TopBar'
 import { api, IS_CENTRAL_DOMAIN } from '../lib/api'
 import Logo from '../components/Logo'
 import LogoHorizontal from '../components/LogoHorizontal'
@@ -496,9 +494,7 @@ function SekolahLanding() {
 
   return (
     <div>
-      <TopBar profil={profil} />
-      <Header profil={profil} ppdb={ppdb} />
-      <Hero profil={profil} />
+      <Hero profil={profil} ppdb={ppdb} />
       <PpdbInfo ppdb={ppdb} profil={profil} />
       <About profil={profil} onProfilUpdated={loadProfil} />
       <Kegiatan kegiatan={kegiatan} />

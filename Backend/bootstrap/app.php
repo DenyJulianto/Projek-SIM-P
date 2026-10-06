@@ -15,6 +15,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'super_admin' => \App\Http\Middleware\EnsureUserIsSuperAdmin::class,
+            'password.changed' => \App\Http\Middleware\EnsurePasswordChanged::class,
+            'role.active' => \App\Http\Middleware\ApplyActiveRole::class,
+            'account.active' => \App\Http\Middleware\EnsureAccountActive::class,
+            'twofactor.required' => \App\Http\Middleware\EnsureTwoFactorEnabled::class,
             'module.enabled' => \App\Http\Middleware\EnsureModuleEnabled::class,
             'integration.token' => \App\Http\Middleware\AuthenticateIntegrationToken::class,
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,

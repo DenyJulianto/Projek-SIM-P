@@ -18,7 +18,7 @@ function loadScript() {
 }
 
 /**
- * Ambil token reCAPTCHA v3 untuk sebuah aksi (mis. "register"). Balik
+ * Ambil token reCAPTCHA v3 untuk sebuah aksi (mis. "forgot_password"). Balik
  * `null` kalau site key belum dikonfigurasi — backend juga melewati
  * verifikasi captcha dalam kondisi ini, jadi form tetap bisa dipakai saat
  * dev/test tanpa akun Google reCAPTCHA.

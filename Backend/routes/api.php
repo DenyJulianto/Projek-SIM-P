@@ -31,8 +31,8 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/2fa/verify', [AuthController::class, 'verifyTwoFactor']);
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
+Route::post('/2fa/verify', [AuthController::class, 'verifyTwoFactor'])->middleware('throttle:login');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);

@@ -7,15 +7,21 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Mail\PasswordChangedMail;
 use App\Mail\ResetPasswordMail;
-use App\Mail\VerifyEmailMail;
 use App\Models\Guru;
 use App\Models\Siswa;
 use App\Models\User;
+use App\Http\Middleware\EnsureTwoFactorEnabled;
+use App\Support\AuditAuth;
+use App\Support\KirimEmail;
+use App\Support\PeranAktif;
+use App\Support\Recaptcha;
+use App\Support\SelisihJamTotp;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -25,148 +31,11 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    /**
-     * Registrasi akun mandiri (mis. siswa/orang tua/pengunjung). Akun baru
-     * tidak diberi role/permission apa pun — akses ke fitur internal baru
-     * diberikan setelah staf sekolah menetapkan role yang sesuai.
-     *
-     * Akun dibuat berstatus belum terverifikasi dan TIDAK langsung diberi
-     * token (tidak auto-login). Link verifikasi (bukan kode) dikirim lewat
-     * queue supaya permintaan ini tidak menunggu SMTP; token disimpan
-     * sebagai hash, kedaluwarsa 24 jam, sekali pakai.
-     */
-    public function register(Request $request): JsonResponse
-    {
-        $ip = (string) $request->ip();
-        $emailMentah = mb_strtolower(trim((string) $request->input('email', '')));
+    /** Hash bcrypt acak, dipakai menyamakan waktu respons login untuk akun yang tidak ada. */
+    private const HASH_PALSU = '$2y$12$7topMPKzN2f/B2ZjxgOdQ./hl9TuTkGz.AWCYgzyP/MoKQjqmlbku';
 
-        $ipKey = $this->registerAttemptKey('ip', $ip);
-        $emailKey = $this->registerAttemptKey('email', $emailMentah);
-
-        if (RateLimiter::tooManyAttempts($ipKey, 5) || ($emailMentah !== '' && RateLimiter::tooManyAttempts($emailKey, 5))) {
-            $this->logRegistrasi($ip, $emailMentah, 'diblokir', 'Melebihi batas percobaan registrasi.');
-
-            abort(429, 'Terlalu banyak percobaan registrasi. Silakan coba lagi dalam 1 jam.');
-        }
-
-        RateLimiter::hit($ipKey, 3600);
-        if ($emailMentah !== '') {
-            RateLimiter::hit($emailKey, 3600);
-        }
-
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'confirmed', Password::min(8)->mixedCase()->numbers()->uncompromised()],
-            'recaptcha_token' => ['nullable', 'string'],
-        ]);
-
-        if (! $this->verifyRecaptcha($request->string('recaptcha_token')->toString())) {
-            $this->logRegistrasi($ip, $emailMentah, 'gagal', 'Verifikasi captcha gagal.');
-
-            throw ValidationException::withMessages([
-                'recaptcha_token' => ['Verifikasi keamanan gagal. Silakan muat ulang halaman dan coba lagi.'],
-            ]);
-        }
-
-        $user = User::create([
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'password' => $data['password'],
-        ]);
-
-        $user->forceFill(['ip_address' => $ip])->save();
-
-        $this->issueAndSendVerificationLink($user);
-
-        $this->logRegistrasi($ip, $user->email, 'berhasil', null);
-
-        return response()->json([
-            'message' => 'Registrasi berhasil. Silakan cek email Anda untuk link verifikasi (berlaku 24 jam).',
-            'email' => $user->email,
-        ], 201);
-    }
-
-    /**
-     * Konfirmasi link verifikasi yang dikirim saat registrasi. Token dari
-     * URL di-hash lalu dicocokkan dengan hash di database (token asli
-     * tidak pernah disimpan). Kalau cocok dan belum kedaluwarsa, akun
-     * ditandai terverifikasi dan tokennya dihapus (sekali pakai) — TIDAK
-     * ada auto-login, pengguna diarahkan ke halaman login secara terpisah.
-     */
-    public function verifyEmail(Request $request): JsonResponse
-    {
-        $data = $request->validate([
-            'email' => ['required', 'email'],
-            'token' => ['required', 'string'],
-        ]);
-
-        $user = User::where('email', $data['email'])->first();
-        $hashToken = hash('sha256', $data['token']);
-
-        if (! $user || ! $user->email_verification_token || ! hash_equals($user->email_verification_token, $hashToken)) {
-            throw ValidationException::withMessages([
-                'token' => ['Link verifikasi tidak valid.'],
-            ]);
-        }
-
-        if (! $user->email_verification_expires_at || $user->email_verification_expires_at->isPast()) {
-            throw ValidationException::withMessages([
-                'token' => ['Link verifikasi sudah kedaluwarsa. Silakan minta link baru.'],
-            ]);
-        }
-
-        $user->forceFill([
-            'email_verified_at' => now(),
-            'email_verification_token' => null,
-            'email_verification_expires_at' => null,
-        ])->save();
-
-        return response()->json([
-            'message' => 'Email berhasil diverifikasi. Silakan masuk dengan akun Anda.',
-        ]);
-    }
-
-    /**
-     * Kirim ulang link verifikasi. Selalu balas dengan pesan generik (tidak
-     * membocorkan apakah email terdaftar), dan dibatasi 60 detik antar
-     * permintaan serta maksimal 5x per jam per email.
-     */
-    public function resendVerificationCode(Request $request): JsonResponse
-    {
-        $data = $request->validate([
-            'email' => ['required', 'email'],
-        ]);
-
-        $email = mb_strtolower(trim($data['email']));
-        $cooldownKey = 'resend-verifikasi-cooldown:'.tenant('id').':'.$email;
-        $hourlyKey = 'resend-verifikasi-jam:'.tenant('id').':'.$email;
-
-        if (RateLimiter::tooManyAttempts($cooldownKey, 1)) {
-            throw ValidationException::withMessages([
-                'email' => ['Mohon tunggu sebentar sebelum meminta link baru.'],
-            ]);
-        }
-
-        if (RateLimiter::tooManyAttempts($hourlyKey, 5)) {
-            throw ValidationException::withMessages([
-                'email' => ['Terlalu banyak permintaan. Silakan coba lagi dalam 1 jam.'],
-            ]);
-        }
-
-        RateLimiter::hit($cooldownKey, 60);
-        RateLimiter::hit($hourlyKey, 3600);
-
-        $user = User::where('email', $data['email'])->first();
-
-        if ($user && ! $user->email_verified_at) {
-            $this->issueAndSendVerificationLink($user);
-        }
-
-        return response()->json([
-            'message' => 'Jika email terdaftar dan belum diverifikasi, link baru telah dikirim.',
-        ]);
-    }
+    /** Rincian alamat profil; kolom yang sama ada di users, guru, dan siswa. */
+    private const KOLOM_ALAMAT = ['alamat', 'rt_rw', 'kelurahan', 'kecamatan', 'kota', 'kode_pos'];
 
     /**
      * Minta link reset password. Selalu balas dengan pesan generik (tidak
@@ -188,7 +57,7 @@ class AuthController extends Controller
 
         $email = mb_strtolower(trim($data['email']));
 
-        if (! $this->verifyRecaptcha($request->string('recaptcha_token')->toString())) {
+        if (! Recaptcha::lolos($request->string('recaptcha_token')->toString())) {
             throw ValidationException::withMessages([
                 'recaptcha_token' => ['Verifikasi keamanan gagal. Silakan muat ulang halaman dan coba lagi.'],
             ]);
@@ -258,6 +127,7 @@ class AuthController extends Controller
         $user->tokens()->delete();
 
         $this->sendPasswordChangedNotice($user, (string) $request->ip());
+        AuditAuth::catat('Password direset lewat link lupa password.', $user);
 
         return response()->json([
             'message' => 'Password berhasil diubah. Silakan masuk dengan password baru Anda.',
@@ -266,18 +136,49 @@ class AuthController extends Controller
 
     public function login(Request $request): JsonResponse
     {
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
+        $data = $request->validate([
+            'login' => ['required_without:email', 'nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'string', 'max:255'],
             'password' => ['required', 'string'],
         ]);
 
-        $user = User::where('email', $credentials['email'])->first();
+        // Satu kolom untuk email, NIP, atau NISN: ada "@" = email, selain itu
+        // username. Domain central (Super Admin) tidak punya kolom username.
+        $identitas = trim((string) ($data['login'] ?? $data['email']));
+        $pakaiEmail = str_contains($identitas, '@') || ! Schema::hasColumn('users', 'username');
 
-        if (! $user || ! Auth::guard('web')->validate($credentials)) {
+        $kunciGagal = 'login-gagal:'.(tenant('id') ?? 'central').':'.mb_strtolower($identitas).'|'.$request->ip();
+        $maksGagal = config('sim.keamanan.login_maks_gagal');
+
+        if (RateLimiter::tooManyAttempts($kunciGagal, $maksGagal)) {
+            $menit = (int) ceil(RateLimiter::availableIn($kunciGagal) / 60);
             throw ValidationException::withMessages([
-                'email' => ['Email atau password salah.'],
+                'login' => ["Terlalu banyak percobaan login yang gagal. Coba lagi dalam {$menit} menit."],
+            ])->status(429);
+        }
+
+        $user = User::where($pakaiEmail ? 'email' : 'username', $identitas)->first();
+
+        // Hash tetap dicek walau akun tidak ada, supaya waktu respons tidak
+        // membocorkan apakah sebuah email/NIP/NISN terdaftar.
+        $passwordBenar = Hash::check($data['password'], $user?->password ?? self::HASH_PALSU);
+
+        if (! $user || ! $passwordBenar) {
+            RateLimiter::hit($kunciGagal, config('sim.keamanan.login_kunci_menit') * 60);
+            $terkunci = RateLimiter::tooManyAttempts($kunciGagal, $maksGagal);
+
+            AuditAuth::catat(
+                $terkunci ? 'Login dikunci karena terlalu banyak percobaan gagal.' : 'Login gagal: password salah atau akun tidak ditemukan.',
+                $user,
+                ['identitas' => $identitas],
+            );
+
+            throw ValidationException::withMessages([
+                'login' => ['Email/NIP/NISN atau password salah.'],
             ]);
         }
+
+        RateLimiter::clear($kunciGagal);
 
         // tenant() bernilai null di domain central (Super Admin) — cek ini
         // hanya relevan untuk login lewat domain sekolah, ditolak sebelum
@@ -290,22 +191,26 @@ class AuthController extends Controller
 
         if (Schema::hasColumn('users', 'email_verified_at') && ! $user->email_verified_at) {
             throw ValidationException::withMessages([
-                'email' => ['Akun belum diverifikasi. Silakan cek email Anda untuk link verifikasi.'],
+                'email' => ['Akun belum diaktifkan. Buka link undangan di email Anda, atau hubungi admin sekolah.'],
             ]);
         }
 
         if (Schema::hasColumn('users', 'is_active') && ! $user->is_active) {
+            AuditAuth::catat('Login ditolak: akun nonaktif.', $user);
             throw ValidationException::withMessages([
                 'email' => ['Akun ini telah dinonaktifkan.'],
             ]);
         }
 
-        // 2FA cuma pernah bisa aktif untuk akun Super Admin (kolomnya cuma
-        // ada di database central) — kalau aktif, belum langsung dapat
-        // token; harus lewat verifyTwoFactor() dulu dengan kode TOTP/
-        // pemulihan yang valid.
+        // Akun dengan 2FA aktif belum langsung dapat token; harus lewat
+        // verifyTwoFactor() dengan kode TOTP/pemulihan. Challenge diikat ke
+        // sekolah supaya tidak bisa dipakai ulang di domain sekolah lain.
         if (Schema::hasColumn('users', 'two_factor_confirmed_at') && $user->two_factor_confirmed_at) {
-            $challenge = encrypt(['user_id' => $user->id, 'expires' => now()->addMinutes(5)->timestamp]);
+            $challenge = encrypt([
+                'user_id' => $user->id,
+                'tenant' => tenant('id'),
+                'expires' => now()->addMinutes(5)->timestamp,
+            ]);
 
             return response()->json([
                 'requires_2fa' => true,
@@ -318,6 +223,12 @@ class AuthController extends Controller
         }
 
         $token = $user->createToken('api-token')->plainTextToken;
+
+        if (tenant()) {
+            PeranAktif::terapkan($user, null);
+        }
+
+        AuditAuth::catat('Login berhasil.', $user);
 
         return response()->json([
             'user' => $this->presentUser($user),
@@ -352,6 +263,12 @@ class AuthController extends Controller
             ]);
         }
 
+        if (($payload['tenant'] ?? null) !== tenant('id')) {
+            throw ValidationException::withMessages([
+                'code' => ['Sesi verifikasi tidak valid. Silakan login ulang.'],
+            ]);
+        }
+
         $user = User::find($payload['user_id']);
 
         if (! $user || ! $user->two_factor_confirmed_at) {
@@ -360,17 +277,36 @@ class AuthController extends Controller
             ]);
         }
 
-        if (! $this->verifyTwoFactorCode($user, $data['code'])) {
+        // Kode TOTP cuma 6 digit: batasi tebakan per akun.
+        $kunci2fa = '2fa-gagal:'.(tenant('id') ?? 'central').':'.$user->id;
+        if (RateLimiter::tooManyAttempts($kunci2fa, 5)) {
             throw ValidationException::withMessages([
-                'code' => ['Kode verifikasi salah.'],
+                'code' => ['Terlalu banyak kode yang salah. Silakan login ulang beberapa menit lagi.'],
+            ])->status(429);
+        }
+
+        if (! $this->verifyTwoFactorCode($user, $data['code'])) {
+            RateLimiter::hit($kunci2fa, 15 * 60);
+            $selisih = SelisihJamTotp::cari($user->two_factor_secret, $data['code']);
+            AuditAuth::catat('Verifikasi 2FA gagal: kode salah.', $user, ['selisih_jam_detik' => $selisih]);
+            throw ValidationException::withMessages([
+                'code' => [$selisih !== null ? SelisihJamTotp::pesan($selisih) : 'Kode verifikasi salah.'],
             ]);
         }
+
+        RateLimiter::clear($kunci2fa);
 
         if (Schema::hasColumn('users', 'last_login_at')) {
             $user->forceFill(['last_login_at' => now()])->save();
         }
 
         $token = $user->createToken('api-token')->plainTextToken;
+
+        if (tenant()) {
+            PeranAktif::terapkan($user, null);
+        }
+
+        AuditAuth::catat('Login berhasil.', $user);
 
         return response()->json([
             'user' => $this->presentUser($user),
@@ -405,107 +341,6 @@ class AuthController extends Controller
         return true;
     }
 
-    /**
-     * Generate token acak 64 karakter, simpan HASH-nya saja (bukan token
-     * asli) dengan kedaluwarsa 24 jam, lalu kirim link berisi token asli
-     * lewat queue (dikonfigurasi lewat mailer default aplikasi di .env,
-     * bukan integrasi SMTP per-sekolah, supaya verifikasi akun selalu bisa
-     * mengirim email tanpa syarat admin mengisi form Integrasi dulu).
-     */
-    private function issueAndSendVerificationLink(User $user): void
-    {
-        $token = bin2hex(random_bytes(32));
-
-        $user->forceFill([
-            'email_verification_token' => hash('sha256', $token),
-            'email_verification_expires_at' => now()->addHours(24),
-        ])->save();
-
-        $url = $this->buildVerificationUrl($user->email, $token);
-        $namaSekolah = tenant() ? (tenant('nama_sekolah') ?: 'SIM Pendidikan') : 'SIM Pendidikan';
-
-        try {
-            Mail::to($user->email)->queue(new VerifyEmailMail($namaSekolah, $url));
-        } catch (\Throwable $e) {
-            report($e);
-        }
-    }
-
-    /**
-     * Link verifikasi menunjuk ke FRONTEND (bukan langsung ke API) supaya
-     * token tidak "termakan" oleh pemindai/antivirus email yang membuka
-     * link secara otomatis — halaman frontend baru mengonfirmasi token
-     * lewat POST ke verifyEmail() saat pengguna benar-benar membukanya.
-     */
-    private function buildVerificationUrl(string $email, string $token): string
-    {
-        $scheme = request()->getScheme();
-        $host = request()->getHost();
-        $port = env('FRONTEND_PORT');
-        $base = $scheme.'://'.$host.($port ? ":{$port}" : '');
-
-        return $base.'/verify?'.http_build_query(['token' => $token, 'email' => $email]);
-    }
-
-    /**
-     * Verifikasi reCAPTCHA v3. Kalau secret belum dikonfigurasi (dev/test),
-     * verifikasi dilewati otomatis. Kalau sudah dikonfigurasi tapi token
-     * tidak dikirim atau score di bawah 0.5, dianggap gagal.
-     */
-    private function verifyRecaptcha(?string $token): bool
-    {
-        $secret = config('services.recaptcha.secret');
-
-        if (! $secret) {
-            return true;
-        }
-
-        if (! $token) {
-            return false;
-        }
-
-        try {
-            $response = Http::asForm()->timeout(5)->post('https://www.google.com/recaptcha/api/siteverify', [
-                'secret' => $secret,
-                'response' => $token,
-                'remoteip' => request()->ip(),
-            ]);
-        } catch (\Throwable $e) {
-            report($e);
-
-            return false;
-        }
-
-        $result = $response->json() ?? [];
-
-        return ($result['success'] ?? false) === true && (float) ($result['score'] ?? 0) >= 0.5;
-    }
-
-    private function registerAttemptKey(string $type, string $value): string
-    {
-        return 'register-'.$type.':'.tenant('id').':'.$value;
-    }
-
-    /**
-     * Catat setiap percobaan registrasi (berhasil, gagal, atau diblokir
-     * rate limit) ke activity log untuk audit — tanpa causer karena
-     * pengguna belum login saat ini terjadi.
-     */
-    private function logRegistrasi(string $ip, string $email, string $hasil, ?string $alasan): void
-    {
-        try {
-            activity('registrasi')
-                ->withProperties(array_filter([
-                    'ip' => $ip,
-                    'email' => $email ?: null,
-                    'hasil' => $hasil,
-                    'alasan' => $alasan,
-                ]))
-                ->log("Percobaan registrasi: {$hasil}");
-        } catch (\Throwable $e) {
-            report($e);
-        }
-    }
 
     /**
      * Generate token acak 64 karakter, simpan HASH-nya saja dengan
@@ -526,35 +361,27 @@ class AuthController extends Controller
         $url = $this->buildPasswordResetUrl($user->email, $token);
         $namaSekolah = tenant() ? (tenant('nama_sekolah') ?: 'SIM Pendidikan') : 'SIM Pendidikan';
 
-        try {
-            Mail::to($user->email)->queue(new ResetPasswordMail(
-                $namaSekolah,
-                $url,
-                (string) request()->ip(),
-                now()->translatedFormat('d F Y H:i').' WIB',
-            ));
-        } catch (\Throwable $e) {
-            report($e);
-        }
+        KirimEmail::segera($user->email, new ResetPasswordMail(
+            $namaSekolah,
+            $url,
+            (string) request()->ip(),
+            now()->translatedFormat('d F Y H:i').' WIB',
+        ));
     }
 
     private function sendPasswordChangedNotice(User $user, string $ip): void
     {
         $namaSekolah = tenant() ? (tenant('nama_sekolah') ?: 'SIM Pendidikan') : 'SIM Pendidikan';
 
-        try {
-            Mail::to($user->email)->queue(new PasswordChangedMail(
-                $namaSekolah,
-                now()->translatedFormat('d F Y H:i').' WIB',
-                $ip,
-            ));
-        } catch (\Throwable $e) {
-            report($e);
-        }
+        KirimEmail::segera($user->email, new PasswordChangedMail(
+            $namaSekolah,
+            now()->translatedFormat('d F Y H:i').' WIB',
+            $ip,
+        ));
     }
 
     /**
-     * Sama seperti buildVerificationUrl(): link menunjuk ke FRONTEND, bukan
+     * Link menunjuk ke FRONTEND, bukan
      * langsung ke API, supaya token tidak "termakan" pemindai email.
      */
     private function buildPasswordResetUrl(string $email, string $token): string
@@ -572,9 +399,34 @@ class AuthController extends Controller
         return 'forgot-password-email:'.tenant('id').':'.$email;
     }
 
+    /**
+     * Ganti peran aktif untuk sesi login ini. Hanya peran yang benar-benar
+     * dimiliki akun yang bisa dipilih.
+     */
+    public function setActiveRole(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $data = $request->validate([
+            'role' => ['required', 'string', Rule::in($user->peranTersedia ?? [])],
+        ], [
+            'role.in' => 'Anda tidak memiliki peran tersebut.',
+        ]);
+
+        $user->currentAccessToken()->forceFill(['active_role' => $data['role']])->save();
+        PeranAktif::terapkan($user, $data['role']);
+
+        activity()->causedBy($user)->performedOn($user)->useLog('pengguna')
+            ->withProperties(['peran' => $data['role']])
+            ->log("Beralih ke peran \"{$data['role']}\".");
+
+        return response()->json(['user' => $this->presentUser($user)]);
+    }
+
     public function logout(Request $request): JsonResponse
     {
         $request->user()->currentAccessToken()->delete();
+        AuditAuth::catat('Logout.', $request->user());
 
         return response()->json(['message' => 'Berhasil logout.']);
     }
@@ -598,13 +450,26 @@ class AuthController extends Controller
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
             'phone' => ['nullable', 'string', 'max:30'],
             'alamat' => ['nullable', 'string', 'max:1000'],
+            'rt_rw' => ['nullable', 'string', 'max:20'],
+            'kelurahan' => ['nullable', 'string', 'max:255'],
+            'kecamatan' => ['nullable', 'string', 'max:255'],
+            'kota' => ['nullable', 'string', 'max:255'],
+            'kode_pos' => ['nullable', 'regex:/^[0-9]{5}$/'],
             'jenis_kelamin' => ['nullable', 'in:L,P'],
             'current_password' => ['required_with:password', 'string'],
-            'password' => ['nullable', 'string', 'min:8'],
+            'password' => [
+                'nullable', 'string', 'different:current_password',
+                Password::min(8)->mixedCase()->numbers()->uncompromised(),
+            ],
+        ], [
+            'kode_pos.regex' => 'Kode pos harus 5 digit angka.',
         ]);
 
-        if (! empty($data['password'])) {
-            if (! Auth::guard('web')->validate(['email' => $user->email, 'password' => $data['current_password']])) {
+        $gantiPassword = ! empty($data['password']);
+
+        if ($gantiPassword) {
+            if (! Hash::check($data['current_password'], $user->password)) {
+                AuditAuth::catat('Ganti password gagal: password saat ini salah.', $user);
                 throw ValidationException::withMessages([
                     'current_password' => ['Password saat ini salah.'],
                 ]);
@@ -619,27 +484,85 @@ class AuthController extends Controller
 
         // Alamat & jenis kelamin hanya diubah kalau memang dikirim — form ganti
         // password tidak menyertakannya dan tidak boleh mengosongkannya.
-        if (array_key_exists('alamat', $data)) {
-            $user->alamat = $data['alamat'];
+        foreach (self::KOLOM_ALAMAT as $field) {
+            if (array_key_exists($field, $data)) {
+                $user->{$field} = $data[$field];
+            }
         }
         if (array_key_exists('jenis_kelamin', $data)) {
             $user->jenis_kelamin = $data['jenis_kelamin'];
         }
         $user->save();
 
+        if ($gantiPassword) {
+            $this->setelahGantiPasswordSendiri($request, $user);
+        }
+
         // Siswa/Guru punya kolom nama/alamat/jenis_kelamin sendiri yang terpisah
         // dari users; sinkronkan supaya nama di dashboard ikut berubah. Sama
         // seperti di atas, alamat/jenis_kelamin hanya ikut disinkron kalau dikirim.
+        // jenis_kelamin di tabel guru/siswa wajib terisi, jadi nilai kosong
+        // tidak disinkron (data di sana tetap seperti semula).
         $profileSync = ['nama' => $data['name']];
-        foreach (['alamat', 'jenis_kelamin'] as $field) {
+        foreach (self::KOLOM_ALAMAT as $field) {
             if (array_key_exists($field, $data)) {
                 $profileSync[$field] = $data[$field];
             }
+        }
+        if (! empty($data['jenis_kelamin'])) {
+            $profileSync['jenis_kelamin'] = $data['jenis_kelamin'];
         }
         Siswa::where('user_id', $user->id)->update($profileSync);
         Guru::where('user_id', $user->id)->update($profileSync);
 
         return response()->json($this->presentUser($user));
+    }
+
+    /**
+     * Ganti password sendiri — satu-satunya aksi (selain lihat profil &
+     * logout) yang boleh dilakukan akun yang wajib ganti password. Sesi di
+     * perangkat lain dikeluarkan; sesi yang sedang dipakai tetap aktif.
+     */
+    public function changePassword(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $data = $request->validate([
+            'current_password' => ['required', 'string'],
+            'password' => [
+                'required', 'string', 'confirmed', 'different:current_password',
+                Password::min(8)->mixedCase()->numbers()->uncompromised(),
+            ],
+        ]);
+
+        if (! Hash::check($data['current_password'], $user->password)) {
+            AuditAuth::catat('Ganti password gagal: password saat ini salah.', $user);
+            throw ValidationException::withMessages([
+                'current_password' => ['Password saat ini salah.'],
+            ]);
+        }
+
+        $user->password = $data['password'];
+        $user->save();
+
+        $this->setelahGantiPasswordSendiri($request, $user);
+
+        return response()->json([
+            'message' => 'Password berhasil diganti.',
+            'user' => $this->presentUser($user),
+        ]);
+    }
+
+    /**
+     * Setelah pemilik akun mengganti passwordnya sendiri: sesi di perangkat
+     * lain dikeluarkan (sesi saat ini tetap), dicatat di audit, dan pemilik
+     * akun diberi tahu lewat email.
+     */
+    private function setelahGantiPasswordSendiri(Request $request, User $user): void
+    {
+        $user->tokens()->whereKeyNot($user->currentAccessToken()->id)->delete();
+        AuditAuth::catat('Password diganti oleh pemilik akun.', $user);
+        $this->sendPasswordChangedNotice($user, (string) $request->ip());
     }
 
     /**
@@ -674,8 +597,18 @@ class AuthController extends Controller
     private function presentUser(User $user): User
     {
         if (Schema::hasTable('roles')) {
-            $user->load('roles');
+            // Relasi roles mungkin sudah dibatasi ke peran aktif oleh
+            // PeranAktif — jangan dimuat ulang dari database.
+            $user->loadMissing('roles');
             $user->setAttribute('all_permissions', $user->getAllPermissions()->pluck('name')->values());
+            $user->setAttribute('available_roles', $user->peranTersedia ?? $user->roles->pluck('name')->values()->all());
+            $user->setAttribute('active_role', $user->peranDipilih);
+        }
+
+        if (tenant() && Schema::hasColumn('users', 'two_factor_confirmed_at')) {
+            $wajib = config('sim.keamanan.wajib_2fa_admin')
+                && array_intersect(EnsureTwoFactorEnabled::PERAN_WAJIB, $user->peranTersedia ?? $user->getRoleNames()->all());
+            $user->setAttribute('two_factor_required', (bool) $wajib && ! $user->two_factor_confirmed_at);
         }
 
         if (Schema::hasColumn('users', 'avatar')) {

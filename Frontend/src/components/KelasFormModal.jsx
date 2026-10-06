@@ -89,6 +89,12 @@ export default function KelasFormModal({ kelas, opsi, onClose, onSaved }) {
                   </option>
                 ))}
               </select>
+              {opsi.tahun_ajaran.length === 0 && (
+                <p className="text-xs text-amber-700 mt-1.5">
+                  Belum ada tahun ajaran. Tambahkan dulu lewat menu &quot;Tahun Ajaran &amp; Semester&quot; (Kurikulum) atau
+                  Konfigurasi Sistem (Admin).
+                </p>
+              )}
             </Field>
             <Field label="Jenjang">
               <input

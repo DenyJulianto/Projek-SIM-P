@@ -67,7 +67,7 @@ class UserController extends Controller
 
         // Akun dibuat langsung oleh admin sudah tepercaya — tidak perlu
         // alur verifikasi email seperti registrasi mandiri.
-        $user->forceFill(['email_verified_at' => now()])->save();
+        $user->forceFill(['email_verified_at' => now(), 'must_change_password' => true])->save();
 
         $user->syncRoles($data['roles'] ?? []);
 
@@ -111,10 +111,16 @@ class UserController extends Controller
 
         if (! empty($data['password'])) {
             $user->password = $data['password'];
+            $user->must_change_password = $user->id !== $request->user()->id;
         }
 
         $user->save();
         $user->syncRoles($data['roles'] ?? []);
+
+        // Akun yang dinonaktifkan langsung keluar dari semua perangkat.
+        if ($statusChanged && ! $user->is_active) {
+            $user->tokens()->delete();
+        }
 
         if (array_key_exists('nip_nis', $data)) {
             $this->updateNipNis($user, $data['nip_nis']);
@@ -213,6 +219,13 @@ class UserController extends Controller
     {
         $newPassword = Str::password(10, symbols: false);
         $user->password = $newPassword;
+        $user->must_change_password = true;
+        // Reset oleh admin juga jalur pemulihan bila perangkat 2FA hilang.
+        $user->forceFill([
+            'two_factor_secret' => null,
+            'two_factor_recovery_codes' => null,
+            'two_factor_confirmed_at' => null,
+        ]);
         $user->save();
 
         // Keluarkan semua sesi lama, sama seperti reset lewat Super Admin.

@@ -82,10 +82,26 @@ export default function SiswaDashboard() {
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const [siswa, setSiswa] = useState(null)
   const [openDropdown, setOpenDropdown] = useState(null)
+  // Ujian yang sedang dikerjakan tapi belum diselesaikan. Selama ada, seluruh
+  // dasbor terkunci ke halaman ujian itu — juga setelah halaman dimuat ulang,
+  // dibuka di tab baru, atau alamatnya diganti. undefined = sedang dicek.
+  const [ujianTerkunci, setUjianTerkunci] = useState(undefined)
 
   useEffect(() => {
     api.getMySiswaProfil().then(setSiswa).catch(() => {})
+    api
+      .getMySiswaUjianList()
+      .then((list) => setUjianTerkunci(cariUjianBerlangsung(list)))
+      .catch(() => setUjianTerkunci(null))
   }, [])
+
+  if (ujianTerkunci === undefined) {
+    return <div className="h-screen w-screen flex items-center justify-center text-sm text-navy/40">Memuat...</div>
+  }
+
+  if (ujianTerkunci) {
+    return <UjianSayaView kunci={ujianTerkunci} onKunciSelesai={() => setUjianTerkunci(null)} />
+  }
 
   function toggleDropdown(section) {
     setOpenDropdown((prev) => (prev === section ? null : section))
@@ -2324,7 +2340,62 @@ const UJIAN_STATUS_LABEL = {
   berakhir: 'Waktu Berakhir',
 }
 
-function UjianSayaView({ onBack }) {
+/**
+ * Layar pengunci saat siswa membuka aplikasi di tengah ujian yang belum
+ * diselesaikan. Tidak ada menu atau tombol kembali; satu-satunya jalan
+ * adalah melanjutkan ujian (klik ini juga membuka layar penuh & alarm).
+ */
+function UjianTerkunciGate({ ujian, busy, error, onLanjut }) {
+  return (
+    <div className="fixed inset-0 z-[300] bg-navy flex items-center justify-center p-6 text-center select-none">
+      <div className="max-w-md">
+        <div className="mx-auto mb-5 h-16 w-16 rounded-2xl bg-white/10 flex items-center justify-center">
+          <LockIcon className="h-8 w-8 text-gold-light" />
+        </div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-gold-light mb-2">Ujian sedang berlangsung</p>
+        <h1 className="text-2xl font-extrabold text-white mb-1">{ujian.judul}</h1>
+        {ujian.mata_pelajaran?.nama_mapel && <p className="text-white/60 text-sm">{ujian.mata_pelajaran.nama_mapel}</p>}
+        <p className="text-white/70 text-sm mt-5 leading-relaxed">
+          Anda meninggalkan halaman ujian sebelum menyelesaikannya. Halaman ini terkunci sampai ujian diselesaikan
+          {ujian.waktu_selesai &&
+            ` atau waktunya berakhir (${new Date(ujian.waktu_selesai).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })})`}
+          . Kejadian ini dicatat dan dilaporkan ke guru.
+        </p>
+        <button
+          onClick={onLanjut}
+          disabled={busy}
+          className="mt-7 bg-gold hover:bg-gold-light text-navy font-bold text-sm rounded-full px-8 py-3 disabled:opacity-60"
+        >
+          {busy ? 'Membuka ujian...' : 'Lanjutkan Ujian'}
+        </button>
+        {error && <p className="text-sm text-red-300 mt-4">{error}</p>}
+      </div>
+    </div>
+  )
+}
+
+function LockIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <rect x="4.5" y="10.5" width="15" height="10" rx="2" />
+      <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
+      <path d="M12 14.5v2.5" />
+    </svg>
+  )
+}
+
+/** Ujian yang sudah dimulai siswa, belum diselesaikan, dan waktunya belum habis. */
+function cariUjianBerlangsung(list) {
+  const sekarang = new Date()
+  return (list || []).find((u) => u.status === 'berlangsung' && new Date(u.waktu_selesai) > sekarang) ?? null
+}
+
+/**
+ * Daftar & pengerjaan ujian siswa. Dengan `kunci` (ujian yang sedang
+ * berlangsung), halaman ini mengambil alih seluruh dasbor: hanya ada tombol
+ * "Lanjutkan Ujian" sampai ujian itu diselesaikan (lalu `onKunciSelesai`).
+ */
+function UjianSayaView({ onBack, kunci, onKunciSelesai }) {
   const [ujianList, setUjianList] = useState(null)
   const [session, setSession] = useState(null) // { ujian, attempt, soal, jawaban: {soalId: pilihan} }
   const [hasil, setHasil] = useState(null)
@@ -2339,12 +2410,15 @@ function UjianSayaView({ onBack }) {
 
   useEffect(load, [])
 
-  async function handleMulai(ujian) {
+  async function handleMulai(ujian, { laporKeluar = false } = {}) {
     // Harus dipanggil sebelum await: layar penuh & audio butuh aksi klik langsung.
     siapkanModeUjian()
     setError('')
     setBusy(true)
     try {
+      // Kembali setelah meninggalkan halaman ujian (muat ulang, tab baru, dsb.):
+      // dicatat lebih dulu supaya hitungan pelanggaran di layar ikut benar.
+      if (laporKeluar) await api.laporPelanggaranUjian(ujian.id, 'keluar_halaman').catch(() => {})
       const res = await api.mulaiMySiswaUjian(ujian.id)
       const jawaban = {}
       res.soal.forEach((s) => {
@@ -2355,6 +2429,8 @@ function UjianSayaView({ onBack }) {
     } catch (err) {
       keluarLayarPenuh()
       setError(err.message)
+      // Mis. waktu ujian sudah habis: tidak ada lagi yang perlu dikunci.
+      if (kunci) onKunciSelesai?.()
     } finally {
       setBusy(false)
     }
@@ -2394,6 +2470,10 @@ function UjianSayaView({ onBack }) {
       )
       await api.selesaiMySiswaUjian(session.ujian.id)
       setSession(null)
+      if (kunci) {
+        onKunciSelesai?.()
+        return true
+      }
       load()
       return true
     } catch (err) {
@@ -2479,6 +2559,17 @@ function UjianSayaView({ onBack }) {
 
         {error && <p className="text-sm text-red-500 mt-3">{error}</p>}
       </ModeUjianAman>
+    )
+  }
+
+  if (kunci) {
+    return (
+      <UjianTerkunciGate
+        ujian={kunci}
+        busy={busy}
+        error={error}
+        onLanjut={() => handleMulai(kunci, { laporKeluar: true })}
+      />
     )
   }
 
@@ -2616,7 +2707,8 @@ function UjianSayaView({ onBack }) {
                 <span>{u.soal_count} soal · {u.durasi_menit} menit</span>
                 <span className="inline-flex items-center gap-1">
                   <CalendarIcon className="h-3 w-3" />
-                  {new Date(u.waktu_mulai).toLocaleDateString('id-ID')} — {new Date(u.waktu_selesai).toLocaleDateString('id-ID')}
+                  {new Date(u.waktu_mulai).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })} —{' '}
+                  {new Date(u.waktu_selesai).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
                 </span>
               </p>
               {u.deskripsi && <p className="text-xs text-navy/40 mt-1.5">{u.deskripsi}</p>}

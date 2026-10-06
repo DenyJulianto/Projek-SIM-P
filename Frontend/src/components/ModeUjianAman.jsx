@@ -10,10 +10,16 @@ import { api } from '../lib/api'
  *   status menjadi "Bermasalah", dan pelanggaran dicatat ke server
  *   (terlihat oleh guru).
  *
- * Browser tidak mengizinkan halaman benar-benar mengunci siswa di dalam
- * tab, jadi yang dilakukan di sini adalah mendeteksi, membunyikan alarm,
- * dan menandai. Alarm tetap terdengar dari tab di latar belakang karena
- * AudioContext sudah diaktifkan saat siswa klik "Kerjakan Ujian".
+ * - siswa dicegah meninggalkan halaman: tombol Back/Forward browser
+ *   dikunci, pintasan keyboard (muat ulang, tutup/buka tab, pindah tab,
+ *   devtools) dinonaktifkan, dan di Chrome/Edge tombol sistem seperti
+ *   Alt+Tab, tombol Windows, dan Esc ikut ditangkap (Keyboard Lock API).
+ *
+ * Browser tidak mengizinkan halaman mengunci siswa sepenuhnya (mis.
+ * Ctrl+Alt+Del, tombol Home di HP, atau browser tanpa Keyboard Lock), jadi
+ * sisanya dideteksi, dibunyikan alarm, dan ditandai. Alarm tetap terdengar
+ * dari tab di latar belakang karena AudioContext sudah diaktifkan saat siswa
+ * klik "Kerjakan Ujian".
  */
 
 let audioCtx = null
@@ -39,14 +45,42 @@ export function siapkanModeUjian() {
 function masukLayarPenuh() {
   const el = document.documentElement
   if (!document.fullscreenElement && el.requestFullscreen) {
-    el.requestFullscreen({ navigationUI: 'hide' }).catch(() => {})
+    el.requestFullscreen({ navigationUI: 'hide' })
+      .then(kunciKeyboard)
+      .catch(() => {})
+  } else if (document.fullscreenElement) {
+    kunciKeyboard()
   }
 }
 
+/**
+ * Keyboard Lock API (Chrome/Edge, hanya berlaku saat layar penuh): tombol
+ * sistem seperti Alt+Tab, tombol Windows, dan Esc dikirim ke halaman ujian
+ * alih-alih ke sistem/browser. Keluar layar penuh harus dengan menahan Esc.
+ */
+function kunciKeyboard() {
+  navigator.keyboard?.lock?.().catch(() => {})
+}
+
 export function keluarLayarPenuh() {
+  navigator.keyboard?.unlock?.()
   if (document.fullscreenElement && document.exitFullscreen) {
     document.exitFullscreen().catch(() => {})
   }
+}
+
+/**
+ * Pintasan keyboard yang dipakai untuk meninggalkan / memuat ulang halaman,
+ * berpindah tab, atau membuka devtools. Mengetik jawaban tetap normal.
+ */
+function pintasanTerlarang(e) {
+  const k = e.key?.toLowerCase() ?? ''
+  const mod = e.ctrlKey || e.metaKey
+  if (['f5', 'f11', 'f12', 'escape', 'meta', 'os', 'browserback', 'browserforward', 'browserrefresh'].includes(k)) return true
+  if (e.altKey && ['arrowleft', 'arrowright', 'tab', 'home', 'f4'].includes(k)) return true
+  if (mod && ['r', 'w', 't', 'n', 'l', 'p', 's', 'u', 'o', 'h', 'j', 'tab', 'pageup', 'pagedown', 'f4'].includes(k)) return true
+  if (mod && e.shiftKey && ['i', 'j', 'c', 'n', 't', 'tab'].includes(k)) return true
+  return false
 }
 
 // Pola lonceng lembut: arpeggio E5-G5-B5-E6 lalu jeda, diulang terus.
@@ -128,7 +162,11 @@ const LABEL_JENIS = {
   keluar_layar_penuh: 'keluar dari layar penuh',
   pindah_tab: 'pindah tab',
   pindah_jendela: 'pindah ke jendela/aplikasi lain',
+  keluar_halaman: 'mencoba meninggalkan halaman ujian',
 }
+
+// Penanda entri riwayat browser milik halaman ujian (lihat penguncian tombol Back).
+const KUNCI_RIWAYAT = 'simUjianKunci'
 
 export default function ModeUjianAman({ ujianId, awalPelanggaran = 0, judul, subjudul, children, onSelesai, busy }) {
   const [pelanggaran, setPelanggaran] = useState(awalPelanggaran)
@@ -136,6 +174,8 @@ export default function ModeUjianAman({ ujianId, awalPelanggaran = 0, judul, sub
   const [layarPenuh, setLayarPenuh] = useState(!!document.fullscreenElement)
   const [alarmNyala, setAlarmNyala] = useState(false)
   const [konfirmasiSelesai, setKonfirmasiSelesai] = useState(false)
+  const [peringatan, setPeringatan] = useState('')
+  const peringatanTimerRef = useRef(null)
   const selesaiRef = useRef(false)
   const siapRef = useRef(false)
   const terakhirLaporRef = useRef(0)
@@ -157,6 +197,12 @@ export default function ModeUjianAman({ ujianId, awalPelanggaran = 0, judul, sub
     },
     [ujianId]
   )
+
+  const beriPeringatan = useCallback((teks) => {
+    setPeringatan(teks)
+    clearTimeout(peringatanTimerRef.current)
+    peringatanTimerRef.current = setTimeout(() => setPeringatan(''), 3500)
+  }, [])
 
   useEffect(() => {
     // Beri jeda singkat sebelum mulai memantau, supaya transisi masuk
@@ -199,8 +245,25 @@ export default function ModeUjianAman({ ujianId, awalPelanggaran = 0, judul, sub
       e.preventDefault()
       e.returnValue = ''
     }
+    // Pintasan untuk muat ulang, tutup/pindah tab, Back, devtools: diblokir.
+    const onKeyDown = (e) => {
+      if (selesaiRef.current || !pintasanTerlarang(e)) return
+      e.preventDefault()
+      e.stopPropagation()
+      beriPeringatan('Pintasan keyboard ini dinonaktifkan selama ujian berlangsung.')
+    }
+    // Tombol Back/Forward browser (termasuk gestur geser): kembalikan ke
+    // halaman ujian dan catat sebagai upaya meninggalkan ujian.
+    const onPopState = () => {
+      if (selesaiRef.current) return
+      window.history.pushState({ ...window.history.state, [KUNCI_RIWAYAT]: true }, '', window.location.href)
+      beriPeringatan('Halaman ujian tidak bisa ditinggalkan sebelum ujian diselesaikan.')
+      catat('keluar_halaman')
+    }
 
     document.addEventListener('fullscreenchange', onFullscreen)
+    window.addEventListener('keydown', onKeyDown, { capture: true })
+    window.addEventListener('popstate', onPopState)
     document.addEventListener('visibilitychange', onVisibility)
     window.addEventListener('blur', onBlur)
     window.addEventListener('focus', onFocus)
@@ -213,6 +276,8 @@ export default function ModeUjianAman({ ujianId, awalPelanggaran = 0, judul, sub
     return () => {
       clearTimeout(t)
       document.removeEventListener('fullscreenchange', onFullscreen)
+      window.removeEventListener('keydown', onKeyDown, { capture: true })
+      window.removeEventListener('popstate', onPopState)
       document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('blur', onBlur)
       window.removeEventListener('focus', onFocus)
@@ -222,19 +287,27 @@ export default function ModeUjianAman({ ujianId, awalPelanggaran = 0, judul, sub
       document.removeEventListener('cut', cegah)
       document.removeEventListener('paste', cegah)
     }
-  }, [catat, didukung])
+  }, [catat, didukung, beriPeringatan])
 
   // Keluar layar penuh hanya saat halaman kuis benar-benar ditutup. Efek di
   // atas bisa dibongkar-pasang ulang (mis. StrictMode) tanpa kuis ditutup,
   // jadi cek ulang setelah satu tick apakah komponen memang sudah hilang.
   useEffect(() => {
     terpasangRef.current = true
+    // Entri riwayat tambahan dengan URL yang sama: tombol Back hanya
+    // "memakan" entri ini (lalu dipasang lagi) dan siswa tetap di ujian.
+    if (!window.history.state?.[KUNCI_RIWAYAT]) {
+      window.history.pushState({ ...window.history.state, [KUNCI_RIWAYAT]: true }, '', window.location.href)
+    }
     return () => {
       terpasangRef.current = false
       setTimeout(() => {
         if (!terpasangRef.current) {
           hentikanAlarm()
           keluarLayarPenuh()
+          clearTimeout(peringatanTimerRef.current)
+          // Buang entri penguncian supaya Back setelah ujian berperilaku normal.
+          if (window.history.state?.[KUNCI_RIWAYAT]) window.history.back()
         }
       }, 0)
     }
@@ -311,6 +384,15 @@ export default function ModeUjianAman({ ujianId, awalPelanggaran = 0, judul, sub
               Kembali ke Layar Penuh
             </button>
           </div>
+        </div>
+      )}
+
+      {peringatan && (
+        <div
+          role="alert"
+          className="fixed left-1/2 bottom-6 z-40 -translate-x-1/2 max-w-[calc(100%-2rem)] bg-navy text-white text-sm font-semibold rounded-full px-5 py-3 shadow-lg"
+        >
+          {peringatan}
         </div>
       )}
 

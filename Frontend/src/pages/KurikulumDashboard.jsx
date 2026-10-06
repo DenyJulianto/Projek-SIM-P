@@ -33,12 +33,14 @@ const ProgramSemesterManagement = lazy(() => import('./ProgramSemesterManagement
 const ProgramTahunanManagement = lazy(() => import('./ProgramTahunanManagement'))
 const TujuanPembelajaranManagement = lazy(() => import('./TujuanPembelajaranManagement'))
 const PersetujuanPerangkatAjar = lazy(() => import('./PersetujuanPerangkatAjar'))
+const TahunAjaranSemesterPage = lazy(() => import('./TahunAjaranSemesterPage'))
 
 const MENU_GROUPS = [
   { section: null, items: [{ key: 'home', label: 'Dashboard', icon: GridIcon }] },
   {
     section: 'Kurikulum',
     items: [
+      { key: 'tahun-ajaran', label: 'Tahun Ajaran & Semester', icon: CalendarIcon },
       { key: 'struktur-kurikulum', label: 'Struktur Kurikulum', icon: LayersIcon },
       { key: 'mata-pelajaran', label: 'Mata Pelajaran', icon: BookIcon },
       { key: 'capaian-pembelajaran', label: 'Capaian Pembelajaran', icon: TargetIcon },
@@ -213,6 +215,7 @@ export default function KurikulumDashboard() {
         {view === 'struktur-kurikulum' && <StrukturKurikulumManagement onBack={() => setView('home')} />}
         {view === 'capaian-pembelajaran' && <CapaianPembelajaranManagement onBack={() => setView('home')} />}
         {view === 'tujuan-pembelajaran' && <TujuanPembelajaranManagement onBack={() => setView('home')} />}
+        {view === 'tahun-ajaran' && <TahunAjaranSemesterPage onBack={() => setView('home')} />}
         {view === 'kkm' && <KkmKktpManagement onBack={() => setView('home')} />}
         {view === 'prosem' && <ProgramSemesterManagement onBack={() => setView('home')} />}
         {view === 'protah' && <ProgramTahunanManagement onBack={() => setView('home')} />}

@@ -38,5 +38,8 @@ class AppServiceProvider extends ServiceProvider
         // salah ketik kode beberapa kali ikut memblokir "Kirim Ulang".
         RateLimiter::for('forgot-password', fn (Request $request) => Limit::perMinute(5)->by('forgot-password|'.$request->ip()));
         RateLimiter::for('reset-password', fn (Request $request) => Limit::perMinute(10)->by('reset-password|'.$request->ip()));
+        // Batas kasar per IP; penguncian per akun ada di AuthController::login().
+        RateLimiter::for('login', fn (Request $request) => Limit::perMinute(20)->by('login|'.$request->ip()));
+        RateLimiter::for('akun-sensitif', fn (Request $request) => Limit::perMinute(10)->by('akun-sensitif|'.($request->user()?->id ?? $request->ip())));
     }
 }

@@ -398,7 +398,7 @@ class StudentSelfController extends Controller
     public function ujianPelanggaran(Request $request, Ujian $ujian): JsonResponse
     {
         $data = $request->validate([
-            'jenis' => ['required', 'in:keluar_layar_penuh,pindah_tab,pindah_jendela'],
+            'jenis' => ['required', 'in:keluar_layar_penuh,pindah_tab,pindah_jendela,keluar_halaman'],
         ]);
         $siswa = $this->siswaFor($request);
 
@@ -430,6 +430,7 @@ class StudentSelfController extends Controller
             'keluar_layar_penuh' => 'keluar dari layar penuh',
             'pindah_tab' => 'pindah ke tab lain',
             'pindah_jendela' => 'pindah ke jendela/aplikasi lain',
+            'keluar_halaman' => 'mencoba meninggalkan halaman ujian',
         ][$jenis];
 
         // Guru pembuat kuis dan wali kelas siswa (untuk pemantauan kelasnya).

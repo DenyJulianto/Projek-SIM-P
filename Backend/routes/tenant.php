@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Api\AbsensiController;
 use App\Http\Controllers\Api\AbsensiGuruController;
+use App\Http\Controllers\Api\AkunSiswaController;
 use App\Http\Controllers\Api\AnggaranPosController;
 use App\Http\Controllers\Api\ArsipDokumenController;
 use App\Http\Controllers\Api\AuditLogController;
@@ -114,6 +115,11 @@ use App\Http\Controllers\Api\TahunAjaranController;
 use App\Http\Controllers\Api\TujuanPembelajaranController;
 use App\Http\Controllers\Api\TugasController;
 use App\Http\Controllers\Api\UjianController;
+use App\Http\Controllers\Api\ImportStafController;
+use App\Http\Controllers\Api\PendaftaranPegawaiController;
+use App\Http\Controllers\Api\PendaftaranSiswaController;
+use App\Http\Controllers\Api\UndanganController;
+use App\Http\Controllers\Api\Central\TwoFactorController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\WaliKelasSelfController;
 use Illuminate\Support\Facades\Route;
@@ -137,12 +143,14 @@ Route::middleware([
     InitializeTenancyByDomain::class,
     PreventAccessFromCentralDomains::class,
 ])->group(function () {
-    Route::post('/login', [AuthController::class, 'login']);
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/verify-email', [AuthController::class, 'verifyEmail']);
-    Route::post('/resend-verification-code', [AuthController::class, 'resendVerificationCode']);
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
+    Route::post('/2fa/verify', [AuthController::class, 'verifyTwoFactor'])->middleware('throttle:login');
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:forgot-password');
     Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:reset-password');
+    Route::get('/undangan/{user}', [UndanganController::class, 'show'])->whereNumber('user')
+        ->middleware('throttle:reset-password')->name('undangan.terima');
+    Route::post('/undangan/{user}', [UndanganController::class, 'terima'])->whereNumber('user')
+        ->middleware('throttle:reset-password');
 
     Route::get('avatar/{path}', [AvatarController::class, 'show'])->where('path', '.*');
     Route::get('landing-gambar/{file}', [ProfilPublikController::class, 'showGambar']);
@@ -163,11 +171,25 @@ Route::middleware([
         Route::get('/kegiatan', [ProfilPublikController::class, 'kegiatan']);
         Route::get('/prestasi', [ProfilPublikController::class, 'prestasi']);
         Route::get('/ppdb', [ProfilPublikController::class, 'ppdb']);
+        Route::get('/pendaftaran-pegawai/opsi', [PendaftaranPegawaiController::class, 'opsi']);
     });
 
-    Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/pendaftaran-pegawai', [PendaftaranPegawaiController::class, 'store'])->middleware('throttle:login');
+    Route::post('/pendaftaran-siswa', [PendaftaranSiswaController::class, 'store'])->middleware('throttle:login');
+
+    Route::middleware(['auth:sanctum', 'account.active', 'role.active', 'password.changed', 'twofactor.required'])->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/me', [AuthController::class, 'me']);
+        Route::put('/me/password', [AuthController::class, 'changePassword'])->middleware('throttle:akun-sensitif');
+        Route::put('/me/peran-aktif', [AuthController::class, 'setActiveRole']);
+
+        Route::prefix('me/2fa')->middleware('throttle:akun-sensitif')->group(function () {
+            Route::get('/', [TwoFactorController::class, 'status']);
+            Route::post('setup', [TwoFactorController::class, 'setup']);
+            Route::post('confirm', [TwoFactorController::class, 'confirm']);
+            Route::post('disable', [TwoFactorController::class, 'disable']);
+            Route::post('recovery-codes', [TwoFactorController::class, 'regenerateRecoveryCodes']);
+        });
         Route::put('/me', [AuthController::class, 'updateMe']);
         Route::post('/me/avatar', [AuthController::class, 'updateAvatar']);
 
@@ -259,6 +281,7 @@ Route::middleware([
         Route::get('/me/guru/jadwal', [GuruSelfController::class, 'jadwal']);
         Route::get('/me/guru/kelas', [GuruSelfController::class, 'kelas']);
         Route::get('/me/guru/mata-pelajaran', [GuruSelfController::class, 'mataPelajaran']);
+        Route::get('/me/guru/pengampuan', [GuruSelfController::class, 'pengampuan']);
         Route::get('/me/guru/rekap-nilai', [GuruSelfController::class, 'rekapNilai']);
 
         Route::get('/me/wali-kelas', [WaliKelasSelfController::class, 'kelasBinaan']);
@@ -788,14 +811,23 @@ Route::middleware([
         Route::get('guru/export', [GuruController::class, 'export'])
             ->middleware('permission:pegawai.manage');
 
-        // Daftar & detail guru juga dibaca pemantau kehadiran guru (mis. Wakil Kepala Sekolah); perubahan tetap khusus pegawai.manage.
+        // Daftar & detail guru juga dibaca pemantau kehadiran guru (mis. Wakil Kepala Sekolah)
+        // dan Kurikulum (memilih guru di jadwal, pembagian mapel, wali kelas); perubahan tetap khusus pegawai.manage.
         Route::apiResource('guru', GuruController::class)
             ->only(['index', 'show'])
-            ->middleware('permission:pegawai.manage|monitoring-guru.absensi-guru');
+            ->middleware('permission:pegawai.manage|monitoring-guru.absensi-guru|kurikulum.manage|jadwal.manage');
 
         Route::apiResource('guru', GuruController::class)
             ->except(['index', 'show'])
             ->middleware('permission:pegawai.manage');
+
+        Route::middleware('permission:siswa.manage')->prefix('akun-siswa')->group(function () {
+            Route::get('/', [AkunSiswaController::class, 'index']);
+            Route::post('/', [AkunSiswaController::class, 'store']);
+            Route::get('{batch}', [AkunSiswaController::class, 'show'])->whereNumber('batch');
+            Route::get('{batch}/kredensial', [AkunSiswaController::class, 'unduh'])->whereNumber('batch');
+            Route::delete('{batch}/kredensial', [AkunSiswaController::class, 'hapusKredensial'])->whereNumber('batch');
+        });
 
         Route::apiResource('siswa', SiswaController::class)
             ->only(['index', 'show'])
@@ -887,6 +919,18 @@ Route::middleware([
         Route::post('users/{user}/reset-password', [UserController::class, 'resetPassword'])
             ->middleware('permission:pengguna.manage');
 
+        Route::middleware('permission:pengguna.manage')->group(function () {
+            Route::get('staf/import-template', [ImportStafController::class, 'template']);
+            Route::post('staf/import', [ImportStafController::class, 'import']);
+            Route::post('users/{user}/undangan', [UndanganController::class, 'kirimUlang']);
+            Route::get('pendaftaran-pegawai', [PendaftaranPegawaiController::class, 'index']);
+            Route::post('pendaftaran-pegawai/{pendaftaran}/setujui', [PendaftaranPegawaiController::class, 'setujui'])->whereNumber('pendaftaran');
+            Route::post('pendaftaran-pegawai/{pendaftaran}/tolak', [PendaftaranPegawaiController::class, 'tolak'])->whereNumber('pendaftaran');
+            Route::get('pendaftaran-siswa', [PendaftaranSiswaController::class, 'index']);
+            Route::post('pendaftaran-siswa/{pendaftaran}/setujui', [PendaftaranSiswaController::class, 'setujui'])->whereNumber('pendaftaran');
+            Route::post('pendaftaran-siswa/{pendaftaran}/tolak', [PendaftaranSiswaController::class, 'tolak'])->whereNumber('pendaftaran');
+        });
+
         Route::get('users/{user}/sessions', [UserController::class, 'sessions'])
             ->middleware('permission:pengguna.manage');
 
@@ -955,13 +999,16 @@ Route::middleware([
             Route::post('ujian-jawaban/{jawaban}/nilai', [UjianController::class, 'nilaiEssay']);
         });
 
-        Route::middleware('permission:pengguna.manage')->group(function () {
+        // Tahun ajaran & semester dikelola Admin dan Wakasek Kurikulum.
+        Route::middleware('permission:pengguna.manage|kurikulum.manage')->group(function () {
             Route::apiResource('tahun-ajaran', TahunAjaranController::class)
                 ->only(['index', 'store', 'update', 'destroy']);
 
             Route::apiResource('semester', SemesterController::class)
                 ->only(['index', 'store', 'update', 'destroy']);
+        });
 
+        Route::middleware('permission:pengguna.manage')->group(function () {
             Route::get('rapor-template', [SystemSettingsController::class, 'raporTemplate']);
             Route::put('rapor-template', [SystemSettingsController::class, 'updateRaporTemplate']);
 

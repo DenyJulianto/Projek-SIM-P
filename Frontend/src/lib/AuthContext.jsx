@@ -24,8 +24,14 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false))
   }, [])
 
-  async function login(email, password, remember = true) {
-    const res = await api.login(email, password)
+  useEffect(() => {
+    const keluar = () => setUser(null)
+    window.addEventListener('sesi-berakhir', keluar)
+    return () => window.removeEventListener('sesi-berakhir', keluar)
+  }, [])
+
+  async function login(identitas, password, remember = true) {
+    const res = await api.login(identitas, password)
 
     // Akun dengan 2FA aktif (cuma pernah terjadi untuk Super Admin) belum
     // dapat token di sini — Login.jsx perlu menampilkan langkah kedua
@@ -55,18 +61,10 @@ export function AuthProvider({ children }) {
     return user
   }
 
-  async function register(name, email, password, passwordConfirmation, recaptchaToken) {
-    return api.register(name, email, password, passwordConfirmation, recaptchaToken)
-  }
-
-  // Tidak auto-login: link verifikasi hanya mengaktifkan akun, pengguna
-  // tetap harus masuk lewat halaman login secara terpisah.
-  async function verifyEmailLink(email, token) {
-    return api.verifyEmailLink(email, token)
-  }
-
-  async function resendVerificationCode(email) {
-    return api.resendVerificationCode(email)
+  async function gantiPeran(role) {
+    const res = await api.setPeranAktif(role)
+    setUser(res.user)
+    return res.user
   }
 
   async function logout() {
@@ -100,9 +98,7 @@ export function AuthProvider({ children }) {
         loading,
         login,
         verifyTwoFactor,
-        register,
-        verifyEmailLink,
-        resendVerificationCode,
+        gantiPeran,
         logout,
         hasPermission,
         hasRole,

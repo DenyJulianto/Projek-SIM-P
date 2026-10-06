@@ -1,7 +1,6 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useViewUrl } from '../lib/useViewUrl'
-import EditProfilModal from '../components/EditProfilModal'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import MiniCalendar from '../components/MiniCalendar'
 import { useAuth } from '../lib/AuthContext'
@@ -14,35 +13,85 @@ import LogoHorizontal from '../components/LogoHorizontal'
 // jadi satu file JS raksasa yang diunduh & di-parse SEMUA pengguna di awal,
 // apa pun rolenya — inilah penyebab utama "menu lambat dimuat". React.lazy
 // memecahnya jadi chunk terpisah per halaman, diunduh hanya saat dibuka.
-const AdminHome = lazy(() => import('./admin/AdminHome'))
-const LandingEditor = lazy(() => import('./LandingEditor'))
-const PpdbManagement = lazy(() => import('./PpdbManagement'))
-const AttendanceRecap = lazy(() => import('./AttendanceRecap'))
-const AuditLog = lazy(() => import('./AuditLog'))
-const BackupRestore = lazy(() => import('./BackupRestore'))
+//
+// Pemuat halaman menu admin dikumpulkan per key menu, supaya file halaman
+// bisa diunduh lebih awal (prefetch) saat kursor mendekati menunya atau saat
+// browser sedang menganggur — begitu diklik, halaman langsung tampil tanpa
+// menunggu unduhan.
+const MUAT_HALAMAN = {
+  dashboard: () => import('./admin/AdminHome'),
+  siswa: () => import('./SiswaManagement'),
+  guru: () => import('./GuruManagement'),
+  kelas: () => import('./KelasManagement'),
+  'absensi-guru': () => import('./AttendanceRecap'),
+  persuratan: () => import('./SuratArsipManagement'),
+  'konfirmasi-pengguna': () => import('./KonfirmasiPengguna'),
+  pengguna: () => import('./UserManagement'),
+  inventaris: () => import('./InventoryManagement'),
+  'hak-akses': () => import('./RoleManagement'),
+  konfigurasi: () => import('./SystemConfig'),
+  integrasi: () => import('./Integrations'),
+  backup: () => import('./BackupRestore'),
+  sinkronisasi: () => import('./SinkronisasiData'),
+  'audit-log': () => import('./AuditLog'),
+  profile: () => import('./MyProfile'),
+  ppdb: () => import('./PpdbManagement'),
+  landing: () => import('./LandingEditor'),
+}
+
+function prefetchHalaman(key) {
+  MUAT_HALAMAN[key]?.().catch(() => {})
+}
+
+const AdminHome = lazy(MUAT_HALAMAN.dashboard)
+const LandingEditor = lazy(MUAT_HALAMAN.landing)
+const PpdbManagement = lazy(MUAT_HALAMAN.ppdb)
+const AttendanceRecap = lazy(MUAT_HALAMAN['absensi-guru'])
+const AuditLog = lazy(MUAT_HALAMAN['audit-log'])
+const BackupRestore = lazy(MUAT_HALAMAN.backup)
+const GuruManagement = lazy(MUAT_HALAMAN.guru)
+const Integrations = lazy(MUAT_HALAMAN.integrasi)
+const InventoryManagement = lazy(MUAT_HALAMAN.inventaris)
+const KelasManagement = lazy(MUAT_HALAMAN.kelas)
+const MyProfile = lazy(MUAT_HALAMAN.profile)
+const RoleManagement = lazy(MUAT_HALAMAN['hak-akses'])
+const SiswaManagement = lazy(MUAT_HALAMAN.siswa)
+const SinkronisasiData = lazy(MUAT_HALAMAN.sinkronisasi)
+const SuratArsipManagement = lazy(MUAT_HALAMAN.persuratan)
+const SystemConfig = lazy(MUAT_HALAMAN.konfigurasi)
+const UserManagement = lazy(MUAT_HALAMAN.pengguna)
+const KonfirmasiPengguna = lazy(MUAT_HALAMAN['konfirmasi-pengguna'])
+
 const BendaharaDashboard = lazy(() => import('./BendaharaDashboard'))
 const BkDashboard = lazy(() => import('./BkDashboard'))
-const GuruManagement = lazy(() => import('./GuruManagement'))
 const GuruMapelDashboard = lazy(() => import('./GuruMapelDashboard'))
-const Integrations = lazy(() => import('./Integrations'))
-const InventoryManagement = lazy(() => import('./InventoryManagement'))
-const KelasManagement = lazy(() => import('./KelasManagement'))
 const KesiswaanDashboard = lazy(() => import('./KesiswaanDashboard'))
 const KurikulumDashboard = lazy(() => import('./KurikulumDashboard'))
-const MyProfile = lazy(() => import('./MyProfile'))
 const OrangTuaDashboard = lazy(() => import('./OrangTuaDashboard'))
 const PrincipalDashboard = lazy(() => import('./PrincipalDashboard'))
-const RoleManagement = lazy(() => import('./RoleManagement'))
 const SiswaDashboard = lazy(() => import('./SiswaDashboard'))
-const SiswaManagement = lazy(() => import('./SiswaManagement'))
-const SinkronisasiData = lazy(() => import('./SinkronisasiData'))
 const SuperAdminDashboard = lazy(() => import('./SuperAdminDashboard'))
-const SuratArsipManagement = lazy(() => import('./SuratArsipManagement'))
-const SystemConfig = lazy(() => import('./SystemConfig'))
 const TataUsahaDashboard = lazy(() => import('./TataUsahaDashboard'))
-const UserManagement = lazy(() => import('./UserManagement'))
 const WakasekDashboard = lazy(() => import('./WakasekDashboard'))
 const WaliKelasDashboard = lazy(() => import('./WaliKelasDashboard'))
+
+// Dasbor khusus per peran (bukan admin), diperiksa berurutan.
+const DASBOR_PERAN = [
+  ['Kepala Sekolah', PrincipalDashboard],
+  ['Tata Usaha', TataUsahaDashboard],
+  ['Kurikulum', KurikulumDashboard],
+  ['Kesiswaan', KesiswaanDashboard],
+  ['Siswa', SiswaDashboard],
+  ['Orang Tua', OrangTuaDashboard],
+  ['Guru BK', BkDashboard],
+  ['Bendahara', BendaharaDashboard],
+  ['Guru Mata Pelajaran', GuruMapelDashboard],
+  ['Wakil Kepala Sekolah', WakasekDashboard],
+  ['Wali Kelas', WaliKelasDashboard],
+]
+
+// Selang pembaruan badge "Konfirmasi Pengguna".
+const SELANG_BADGE_MS = 60_000
 
 function PageLoadingFallback() {
   return (
@@ -61,6 +110,7 @@ const MENU_GROUPS = [
     section: 'Sistem',
     items: [
       { key: 'pengguna', label: 'Pengguna', icon: UsersIcon, permission: 'pengguna.manage' },
+      { key: 'konfirmasi-pengguna', label: 'Konfirmasi Pengguna', icon: UserCheckIcon, permission: 'pengguna.manage' },
       { key: 'hak-akses', label: 'Hak Akses', icon: ShieldIcon, permission: 'pengguna.manage' },
       { key: 'konfigurasi', label: 'Konfigurasi Sistem', icon: GearIcon, permission: 'pengguna.manage' },
       { key: 'integrasi', label: 'Integrasi', icon: PlugIcon, permission: 'pengguna.manage' },
@@ -92,14 +142,42 @@ export default function Dashboard() {
   const { user, logout, hasPermission, isSuperAdmin } = useAuth()
   const location = useLocation()
   const [view, setView] = useViewUrl()
-  const [profil, setProfil] = useState(null)
-  const [editingProfil, setEditingProfil] = useState(false)
   const [stats, setStats] = useState({ siswa: null, guru: null, kelas: null })
   const [notices, setNotices] = useState([])
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const [openSection, setOpenSection] = useState(null)
 
   const isAdmin = hasPermission('pengguna.manage')
+  const [menungguKonfirmasi, setMenungguKonfirmasi] = useState(0)
+
+  // Tentukan dulu tampilan mana yang dipakai, supaya data milik tampilan
+  // lain tidak ikut diminta ke server (server dev melayani satu permintaan
+  // sekaligus, jadi permintaan sia-sia membuat halaman yang dibuka ikut antre).
+  const superAdmin = isSuperAdmin()
+  const RoleDashboard = superAdmin || isAdmin
+    ? null
+    : DASBOR_PERAN.find(([peran]) => user?.roles?.some((r) => r.name === peran))?.[1] ?? null
+  const layoutUmum = !superAdmin && !RoleDashboard
+  const berandaUmum = layoutUmum && !isAdmin
+
+  const muatMenungguKonfirmasi = useCallback(() => {
+    if (!isAdmin) return
+    // Badge = pendaftaran siswa + pegawai yang menunggu konfirmasi.
+    Promise.all([
+      api.listPendaftaranPegawai('menunggu').then((r) => r.menunggu).catch(() => 0),
+      api.listPendaftaranSiswa('menunggu').then((r) => r.menunggu).catch(() => 0),
+    ]).then(([pegawai, siswa]) => setMenungguKonfirmasi(pegawai + siswa))
+  }, [isAdmin])
+
+  // Badge diperbarui berkala dan setelah admin memproses pendaftaran
+  // (onChanged), bukan di setiap klik menu.
+  useEffect(() => {
+    if (!layoutUmum || !isAdmin) return
+    muatMenungguKonfirmasi()
+    const t = setInterval(muatMenungguKonfirmasi, SELANG_BADGE_MS)
+    return () => clearInterval(t)
+  }, [layoutUmum, isAdmin, muatMenungguKonfirmasi])
+
   const menuGroups = MENU_GROUPS.map((group) => ({
     ...group,
     items: group.items.filter((item) => !item.permission || hasPermission(item.permission)),
@@ -117,7 +195,25 @@ export default function Dashboard() {
     setOpenSection((prev) => (prev === section ? null : section))
   }
 
+  // Setelah layout admin tampil, unduh file halaman menu yang boleh dibuka
+  // saat browser menganggur, supaya klik menu berikutnya tidak menunggu.
   useEffect(() => {
+    if (!layoutUmum) return
+    const keys = menuGroups.flatMap((g) => g.items.map((i) => i.key))
+    const jalankan = () => keys.forEach(prefetchHalaman)
+    if ('requestIdleCallback' in window) {
+      const id = window.requestIdleCallback(jalankan, { timeout: 4000 })
+      return () => window.cancelIdleCallback(id)
+    }
+    const t = setTimeout(jalankan, 1500)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layoutUmum])
+
+  // Statistik & pengumuman hanya dipakai beranda umum (bukan admin, bukan
+  // dasbor peran) — jangan diminta kalau tidak akan ditampilkan.
+  useEffect(() => {
+    if (!berandaUmum) return
     if (hasPermission('siswa.manage')) {
       api.countSiswa().then((r) => setStats((s) => ({ ...s, siswa: r.total }))).catch(() => {})
     }
@@ -149,7 +245,8 @@ export default function Dashboard() {
       ].sort((a, b) => (b.date || '').localeCompare(a.date || ''))
       setNotices(items.slice(0, 5))
     })
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [berandaUmum])
 
   const today = new Date()
   const todayLabel = today.toLocaleDateString('id-ID', {
@@ -170,37 +267,9 @@ export default function Dashboard() {
     return <Navigate to="/dashboard" replace />
   }
 
-  if (isSuperAdmin()) {
+  if (superAdmin) {
     return <SuperAdminDashboard />
   }
-
-  const hasRole = (name) => user?.roles?.some((r) => r.name === name) && !isAdmin
-
-  const RoleDashboard = isSuperAdmin()
-    ? SuperAdminDashboard
-    : hasRole('Kepala Sekolah')
-      ? PrincipalDashboard
-      : hasRole('Tata Usaha')
-        ? TataUsahaDashboard
-        : hasRole('Kurikulum')
-          ? KurikulumDashboard
-          : hasRole('Kesiswaan')
-            ? KesiswaanDashboard
-            : hasRole('Siswa')
-              ? SiswaDashboard
-              : hasRole('Orang Tua')
-                ? OrangTuaDashboard
-                : hasRole('Guru BK')
-                  ? BkDashboard
-                  : hasRole('Bendahara')
-                    ? BendaharaDashboard
-                    : hasRole('Guru Mata Pelajaran')
-                      ? GuruMapelDashboard
-                      : hasRole('Wakil Kepala Sekolah')
-                        ? WakasekDashboard
-                        : hasRole('Wali Kelas')
-                          ? WaliKelasDashboard
-                          : null
 
   if (RoleDashboard) {
     return (
@@ -234,6 +303,8 @@ export default function Dashboard() {
                         <button
                           key={item.key}
                           onClick={() => (item.key === 'dashboard' ? setView('home') : handleAction(item))}
+                          onMouseEnter={() => prefetchHalaman(item.key)}
+                          onFocus={() => prefetchHalaman(item.key)}
                           className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${
                             active
                               ? 'bg-navy-light text-white shadow-sm'
@@ -272,6 +343,8 @@ export default function Dashboard() {
                           <button
                             key={item.key}
                             onClick={() => handleAction(item)}
+                            onMouseEnter={() => prefetchHalaman(item.key)}
+                            onFocus={() => prefetchHalaman(item.key)}
                             className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${
                               active
                                 ? 'bg-navy-light text-white shadow-sm'
@@ -280,6 +353,11 @@ export default function Dashboard() {
                           >
                             <Icon className="h-4.5 w-4.5 shrink-0" />
                             <span className="truncate min-w-0">{item.label}</span>
+                            {item.key === 'konfirmasi-pengguna' && menungguKonfirmasi > 0 && (
+                              <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-amber-400 text-navy text-[11px] font-bold flex items-center justify-center">
+                                {menungguKonfirmasi}
+                              </span>
+                            )}
                           </button>
                         )
                       })}
@@ -313,6 +391,8 @@ export default function Dashboard() {
             <AttendanceRecap onBack={() => setView('home')} canSiswa={false} canGuru={true} />
           ) : view === 'persuratan' ? (
             <SuratArsipManagement onBack={() => setView('home')} />
+          ) : view === 'konfirmasi-pengguna' && isAdmin ? (
+            <KonfirmasiPengguna onBack={() => setView('home')} onChanged={muatMenungguKonfirmasi} />
           ) : view === 'pengguna' ? (
             <UserManagement onBack={() => setView('home')} />
           ) : view === 'inventaris' ? (
@@ -594,6 +674,16 @@ function InventoryIcon(props) {
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M3 7h18v4H3z" />
       <path d="M5 11v9h14v-9M10 15h4" />
+    </svg>
+  )
+}
+
+function UserCheckIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20c0-3.6 2.9-6 6.5-6 1.7 0 3.2.5 4.3 1.4" />
+      <path d="m15.5 18 2 2 4-4.5" />
     </svg>
   )
 }
