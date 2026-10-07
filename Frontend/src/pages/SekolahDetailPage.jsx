@@ -75,6 +75,11 @@ export default function SekolahDetailPage({
   }
 
   async function handleSave() {
+    // Negeri/swasta menentukan pilihan di form pendaftaran pegawai sekolah ini.
+    if (!form.status_sekolah) {
+      setError('Pilih status sekolah: Negeri atau Swasta.')
+      return
+    }
     setSaving(true)
     setError('')
     try {
@@ -120,7 +125,11 @@ export default function SekolahDetailPage({
       ? 'Negeri'
       : sekolah.status_sekolah === 'swasta'
         ? 'Swasta'
-        : '-'
+        : (
+            <span className="text-amber-700" title="Wajib diisi: menentukan pilihan di form pendaftaran pegawai">
+              Belum diisi — klik Edit
+            </span>
+          )
 
   const tahunBerdiriSk = [
     sekolah.tahun_berdiri ? `Tahun ${sekolah.tahun_berdiri}` : null,
@@ -237,13 +246,13 @@ export default function SekolahDetailPage({
               ))}
             </select>
           </Row>
-          <Row label="Status Sekolah" value={statusSekolahLabel} editing={editing}>
+          <Row label="Status Sekolah *" value={statusSekolahLabel} editing={editing}>
             <select
               value={form.status_sekolah}
               onChange={(e) => update('status_sekolah', e.target.value)}
               className="input"
             >
-              <option value="">Pilih status</option>
+              <option value="">Pilih Negeri/Swasta</option>
               <option value="negeri">Negeri</option>
               <option value="swasta">Swasta</option>
             </select>

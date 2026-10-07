@@ -11,6 +11,7 @@ import MyProfile from './MyProfile'
 import NilaiManagement from './NilaiManagement'
 import NilaiSikapManagement from './NilaiSikapManagement'
 import ModulAjarManagement from './ModulAjarManagement'
+import DokumenPendukungGuru from './DokumenPendukungGuru'
 import MiniCalendar from '../components/MiniCalendar'
 import { ThemedInfoModal, ThemedModalShell, useThemedConfirm } from '../components/ThemedModal'
 
@@ -23,6 +24,7 @@ const MENU_GROUPS = [
       { key: 'kelas-saya', label: 'Kelas Saya', icon: ClassIcon },
       { key: 'mapel-saya', label: 'Mata Pelajaran Saya', icon: BookIcon },
       { key: 'modul-ajar', label: 'Perangkat Ajar', icon: DocIcon },
+      { key: 'dokumen-pendukung', label: 'Dokumen Pendukung', icon: FolderIcon },
       { key: 'notifikasi', label: 'Notifikasi Siswa', icon: NotifBellIcon },
     ],
   },
@@ -219,6 +221,7 @@ export default function GuruMapelDashboard() {
         {view === 'kelas-saya' && <KelasSayaView onBack={() => setView('home')} />}
         {view === 'mapel-saya' && <MapelSayaView onBack={() => setView('home')} />}
         {view === 'modul-ajar' && <ModulAjarManagement onBack={() => setView('home')} />}
+        {view === 'dokumen-pendukung' && <DokumenPendukungGuru onBack={() => setView('home')} />}
         {view === 'absensi-siswa' && <KehadiranGuruMapel onBack={() => setView('home')} />}
         {view === 'nilai' && <NilaiManagement onBack={() => setView('home')} title="Nilai" />}
         {view === 'sikap' && <NilaiSikapManagement onBack={() => setView('home')} />}

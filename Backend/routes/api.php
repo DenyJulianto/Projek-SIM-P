@@ -7,8 +7,10 @@ use App\Http\Controllers\Api\Central\AuditController;
 use App\Http\Controllers\Api\Central\DashboardController;
 use App\Http\Controllers\Api\Central\GuruDirectoryController;
 use App\Http\Controllers\Api\Central\IntegrationTokenController;
+use App\Http\Controllers\Api\Central\LandingKontenController;
 use App\Http\Controllers\Api\Central\ModuleController;
 use App\Http\Controllers\Api\Central\NationalBackupController;
+use App\Http\Controllers\Api\Central\PlatformStatistikController;
 use App\Http\Controllers\Api\Central\RoleCatalogController;
 use App\Http\Controllers\Api\Central\SchoolAccessController;
 use App\Http\Controllers\Api\Central\SchoolSyncController;
@@ -32,6 +34,9 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
+Route::get('/platform/statistik', PlatformStatistikController::class)->middleware('throttle:60,1');
+Route::get('/platform/konten', [LandingKontenController::class, 'publik'])->middleware('throttle:60,1');
+Route::get('/platform/gambar/{file}', [LandingKontenController::class, 'gambar']);
 Route::post('/2fa/verify', [AuthController::class, 'verifyTwoFactor'])->middleware('throttle:login');
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -95,6 +100,23 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/integrasi-token', [IntegrationTokenController::class, 'index']);
         Route::post('/integrasi-token', [IntegrationTokenController::class, 'store']);
         Route::delete('/integrasi-token/{integrationToken}', [IntegrationTokenController::class, 'destroy']);
+
+        // Kelola Landing Page (konten landing platform). Unggah gambar slide
+        // lewat POST multipart, jadi pembaruan slide juga memakai POST.
+        Route::get('/landing/konten', [LandingKontenController::class, 'index']);
+        Route::put('/landing/pengaturan', [LandingKontenController::class, 'updatePengaturan']);
+        Route::post('/landing/slide', [LandingKontenController::class, 'storeSlide']);
+        Route::post('/landing/slide/{slide}', [LandingKontenController::class, 'updateSlide']);
+        Route::delete('/landing/slide/{slide}', [LandingKontenController::class, 'destroySlide']);
+        Route::post('/landing/fitur', [LandingKontenController::class, 'storeFitur']);
+        Route::post('/landing/fitur/{fitur}', [LandingKontenController::class, 'updateFitur']);
+        Route::delete('/landing/fitur/{fitur}', [LandingKontenController::class, 'destroyFitur']);
+        Route::post('/landing/manfaat', [LandingKontenController::class, 'storeManfaat']);
+        Route::post('/landing/manfaat/{manfaat}', [LandingKontenController::class, 'updateManfaat']);
+        Route::delete('/landing/manfaat/{manfaat}', [LandingKontenController::class, 'destroyManfaat']);
+        Route::post('/landing/testimoni', [LandingKontenController::class, 'storeTestimoni']);
+        Route::put('/landing/testimoni/{testimoni}', [LandingKontenController::class, 'updateTestimoni']);
+        Route::delete('/landing/testimoni/{testimoni}', [LandingKontenController::class, 'destroyTestimoni']);
 
         Route::get('/roles-katalog', [RoleCatalogController::class, 'index']);
 

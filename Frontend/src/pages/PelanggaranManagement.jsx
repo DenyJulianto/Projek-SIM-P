@@ -6,15 +6,17 @@ const TINGKAT_TONE = {
   ringan: 'bg-slate-100 text-slate-600',
   sedang: 'bg-amber-100 text-amber-700',
   berat: 'bg-red-100 text-red-600',
+  sangat_berat: 'bg-red-600 text-white',
 }
 
-const TINGKAT_LABEL = { ringan: 'Ringan', sedang: 'Sedang', berat: 'Berat' }
+const TINGKAT_LABEL = { ringan: 'Ringan', sedang: 'Sedang', berat: 'Berat', sangat_berat: 'Sangat Berat' }
 
 const TINGKAT_TABS = [
   { value: '', label: 'Semua' },
   { value: 'ringan', label: 'Ringan' },
   { value: 'sedang', label: 'Sedang' },
   { value: 'berat', label: 'Berat' },
+  { value: 'sangat_berat', label: 'Sangat Berat' },
 ]
 
 const PANEL_GRADIENTS = [
@@ -86,7 +88,7 @@ export default function PelanggaranManagement({ onBack }) {
       total: list.length,
       ringan: list.filter((i) => i.tingkat === 'ringan').length,
       sedang: list.filter((i) => i.tingkat === 'sedang').length,
-      berat: list.filter((i) => i.tingkat === 'berat').length,
+      berat: list.filter((i) => ['berat', 'sangat_berat'].includes(i.tingkat)).length,
     }
   }, [items])
 
@@ -146,7 +148,7 @@ export default function PelanggaranManagement({ onBack }) {
         <div className="rounded-2xl bg-gradient-to-br from-rose-600 to-red-500 text-white p-4">
           <PelAlertIcon className="h-5 w-5 text-white/70 mb-2" />
           <p className="text-2xl font-extrabold leading-none">{counts.berat}</p>
-          <p className="text-[11px] text-white/75 mt-1.5 uppercase tracking-wide">Berat</p>
+          <p className="text-[11px] text-white/75 mt-1.5 uppercase tracking-wide">Berat / Sangat Berat</p>
         </div>
       </div>
 

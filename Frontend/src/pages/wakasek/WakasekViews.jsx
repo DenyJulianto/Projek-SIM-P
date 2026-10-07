@@ -34,7 +34,9 @@ const TINGKAT_PILL = {
   ringan: 'bg-emerald-100 text-emerald-700',
   sedang: 'bg-amber-100 text-amber-700',
   berat: 'bg-rose-100 text-rose-600',
+  sangat_berat: 'bg-rose-600 text-white',
 }
+const TINGKAT_LABEL = { ringan: 'Ringan', sedang: 'Sedang', berat: 'Berat', sangat_berat: 'Sangat Berat' }
 
 const sum = (list, pick) => list.reduce((total, item) => total + (Number(pick(item)) || 0), 0)
 const unik = (list, pick) => [...new Set(list.map(pick).filter(Boolean))].sort().map((v) => ({ value: v, label: v }))
@@ -285,18 +287,18 @@ function PelanggaranView({ laporan = false }) {
         searchPlaceholder="Cari siswa atau jenis pelanggaran..."
         monthOf={(p) => (p.tanggal || '').slice(0, 7)}
         monthTitle="Bulan kejadian"
-        selects={[{ key: 'tingkat', icon: AlertIcon, placeholder: 'Semua Tingkat', options: () => ['ringan', 'sedang', 'berat'].map((v) => ({ value: v, label: cap(v) })), match: (p, v) => p.tingkat === v }]}
+        selects={[{ key: 'tingkat', icon: AlertIcon, placeholder: 'Semua Tingkat', options: () => Object.entries(TINGKAT_LABEL).map(([value, label]) => ({ value, label })), match: (p, v) => p.tingkat === v }]}
         cards={(f) => [
           { icon: AlertIcon, circle: 'bg-amber-500', label: 'Total Pelanggaran', value: f ? f.length : '-', note: 'Sesuai filter' },
           { icon: CheckIcon, circle: 'bg-emerald-500', label: 'Ringan', value: f ? f.filter((p) => p.tingkat === 'ringan').length : '-', note: 'Tingkat ringan' },
           { icon: ClockIcon, circle: 'bg-blue-500', label: 'Sedang', value: f ? f.filter((p) => p.tingkat === 'sedang').length : '-', note: 'Tingkat sedang' },
-          { icon: AlertIcon, circle: 'bg-rose-500', label: 'Berat', value: f ? f.filter((p) => p.tingkat === 'berat').length : '-', note: 'Perlu tindak lanjut' },
+          { icon: AlertIcon, circle: 'bg-rose-500', label: 'Berat / Sangat Berat', value: f ? f.filter((p) => ['berat', 'sangat_berat'].includes(p.tingkat)).length : '-', note: 'Perlu tindak lanjut' },
         ]}
         columns={[
           { label: 'Tanggal', render: (p) => <span className="text-navy/70 whitespace-nowrap">{formatTanggal(p.tanggal)}</span> },
           { label: 'Siswa', render: (p) => <span className="font-semibold text-navy">{p.siswa?.nama || '-'}<span className="block text-[11px] font-normal text-navy/50">{p.siswa?.kelas?.nama_kelas || ''}</span></span> },
           { label: 'Pelanggaran', render: (p) => <span className="text-navy/70">{p.jenis}</span> },
-          { label: 'Tingkat', render: (p) => <Pill tone={TINGKAT_PILL[p.tingkat]}>{cap(p.tingkat)}</Pill> },
+          { label: 'Tingkat', render: (p) => <Pill tone={TINGKAT_PILL[p.tingkat]}>{TINGKAT_LABEL[p.tingkat] ?? cap(p.tingkat)}</Pill> },
           { label: 'Tindakan', render: (p) => <span className="text-navy/70">{p.tindakan || '-'}</span> },
         ]}
         csv={{ name: 'pelanggaran.csv', header: ['No', 'Tanggal', 'Siswa', 'Kelas', 'Pelanggaran', 'Tingkat', 'Tindakan'], row: (p, i) => [i + 1, p.tanggal?.slice(0, 10), p.siswa?.nama, p.siswa?.kelas?.nama_kelas, p.jenis, p.tingkat, p.tindakan] }}
@@ -752,7 +754,7 @@ function MonitoringView({ jenis }) {
 
   const perhatian = {
     akademik: (nilai || []).filter((r) => r.rata_rata !== null && r.rata_rata < 75).map((r) => `Kelas ${r.kelas}: rata-rata nilai ${r.rata_rata}`),
-    kesiswaan: dash?.pelanggaran_terbaru?.filter((p) => p.tingkat === 'berat').map((p) => `${p.siswa?.nama}: ${p.jenis} (berat)`) ?? [],
+    kesiswaan: dash?.pelanggaran_terbaru?.filter((p) => ['berat', 'sangat_berat'].includes(p.tingkat)).map((p) => `${p.siswa?.nama}: ${p.jenis} (${TINGKAT_LABEL[p.tingkat].toLowerCase()})`) ?? [],
     guru: [
       ...(aktivitas || []).filter((g) => g.persen_hadir != null && g.persen_hadir < 85).map((g) => `${g.nama}: kehadiran ${g.persen_hadir}%`),
       ...(beban || []).filter((g) => g.jam_per_minggu > 24).map((g) => `${g.nama}: beban ${g.jam_per_minggu} jam/minggu`),

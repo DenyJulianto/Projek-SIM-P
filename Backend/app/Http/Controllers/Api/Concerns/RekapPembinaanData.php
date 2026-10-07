@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\Concerns;
 
 use App\Models\Kelas;
-use App\Models\PembinaanTindakLanjut;
 use App\Models\Pelanggaran;
+use App\Models\PembinaanTindakLanjut;
 use App\Models\Prestasi;
 use App\Models\Semester;
 use App\Models\Siswa;
@@ -24,7 +24,7 @@ trait RekapPembinaanData
 {
     protected const LOG_PEMBINAAN = 'pembinaan';
 
-    public const TINGKAT_PELANGGARAN = ['ringan' => 'Ringan', 'sedang' => 'Sedang', 'berat' => 'Berat'];
+    public const TINGKAT_PELANGGARAN = Pelanggaran::TINGKAT;
 
     public const STATUS_PELANGGARAN = ['aktif' => 'Aktif', 'dalam_pembinaan' => 'Dalam Pembinaan', 'selesai' => 'Selesai'];
 
@@ -90,7 +90,7 @@ trait RekapPembinaanData
             'tahun_ajaran_id' => ['nullable', 'integer', 'exists:tahun_ajaran,id'], 'semester' => ['nullable', 'in:ganjil,genap'],
             'dari' => ['nullable', 'date'], 'sampai' => ['nullable', 'date', 'after_or_equal:dari'],
             'jenis_data' => ['nullable', 'in:semua,pelanggaran,prestasi,tindak_lanjut'],
-            'pel_kategori' => ['nullable', 'string', 'max:60'], 'pel_tingkat' => ['nullable', 'in:ringan,sedang,berat'], 'pel_status' => ['nullable', 'in:aktif,dalam_pembinaan,selesai'], 'pel_search' => ['nullable', 'string', 'max:100'],
+            'pel_kategori' => ['nullable', 'string', 'max:60'], 'pel_tingkat' => ['nullable', 'in:ringan,sedang,berat,sangat_berat'], 'pel_status' => ['nullable', 'in:aktif,dalam_pembinaan,selesai'], 'pel_search' => ['nullable', 'string', 'max:100'],
             'pre_bidang' => ['nullable', 'string', 'max:60'], 'pre_tingkat' => ['nullable', 'in:'.implode(',', array_keys(self::TINGKAT_PRESTASI))], 'pre_jenis' => ['nullable', 'in:individu,kelompok'], 'pre_search' => ['nullable', 'string', 'max:100'],
             'tl_status' => ['nullable', 'in:direncanakan,berjalan,selesai,dibatalkan'], 'tl_search' => ['nullable', 'string', 'max:100'],
             'bagian' => ['nullable', 'in:semua,pelanggaran,prestasi,tindak_lanjut,timeline'],

@@ -6,6 +6,7 @@ const TINGKAT_OPTIONS = [
   { value: 'ringan', label: 'Ringan' },
   { value: 'sedang', label: 'Sedang' },
   { value: 'berat', label: 'Berat' },
+  { value: 'sangat_berat', label: 'Sangat Berat' },
 ]
 
 export default function PelanggaranFormModal({ item, onClose, onSaved }) {

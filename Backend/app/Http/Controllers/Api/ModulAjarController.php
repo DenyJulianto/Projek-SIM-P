@@ -12,6 +12,7 @@ use App\Models\Kelas;
 use App\Models\MataPelajaran;
 use App\Models\ModulAjar;
 use App\Models\ModulAjarLampiran;
+use App\Models\TahunAjaran;
 use App\Models\TujuanPembelajaran;
 use App\Support\DokumenModulAjar;
 use App\Support\StrukturPerangkatAjar;
@@ -69,33 +70,19 @@ class ModulAjarController extends Controller
         $guru = $this->guruFor($request);
         $jenjang = tenant('jenjang');
 
-        $jadwal = JadwalPelajaran::where('guru_id', $guru->id)
-            ->with(['kelas:id,nama_kelas,tingkat', 'mataPelajaran:id,nama_mapel'])
-            ->get()
-            ->filter(fn ($j) => $j->kelas && $j->mataPelajaran);
-
-        $mengajar = $jadwal->groupBy('mata_pelajaran_id')->map(fn ($items) => [
-            'mata_pelajaran_id' => $items->first()->mata_pelajaran_id,
-            'nama_mapel' => $items->first()->mataPelajaran->nama_mapel,
-            'kelas' => $items->pluck('kelas')->unique('id')->sortBy('nama_kelas')->values()->map(fn ($k) => [
-                'id' => $k->id,
-                'nama_kelas' => $k->nama_kelas,
-                'tingkat' => $k->tingkat,
-                'fase' => StrukturPerangkatAjar::faseDariTingkat($k->tingkat),
-            ]),
-        ])->sortBy('nama_mapel')->values();
-
         return response()->json([
             'identitas' => [
                 'nama_guru' => $this->namaGuru($guru),
+                'nip_guru' => $guru->nip,
                 'institusi' => tenant('nama_sekolah'),
+                'kota' => tenant('kabupaten_kota'),
                 'jenjang' => $jenjang,
                 'tahun_penyusunan' => (string) now()->year,
+                'tahun_ajaran' => $this->tahunAjaranAktif(),
             ],
             'menit_per_jp' => StrukturPerangkatAjar::menitPerJp($jenjang),
             'k13_aktif' => $this->k13Aktif(),
-            'mengajar' => $mengajar,
-            'dimensi_profil' => StrukturPerangkatAjar::DIMENSI_PROFIL,
+            'mengajar' => JadwalPelajaran::mengajarGuru($guru->id),
             'jenis_lampiran' => ModulAjarLampiran::JENIS,
         ]);
     }
@@ -310,6 +297,9 @@ class ModulAjarController extends Controller
         $data['tahun_penyusunan'] = ($data['tahun_penyusunan'] ?? '') ?: ($lama['tahun_penyusunan'] ?? (string) now()->year);
         if ($modul->kurikulum === 'merdeka') {
             $data['institusi'] = ($data['institusi'] ?? '') ?: tenant('nama_sekolah');
+            $data['nip_guru'] = ($data['nip_guru'] ?? '') ?: (string) $guru->nip;
+            $data['kota'] = ($data['kota'] ?? '') ?: (string) tenant('kabupaten_kota');
+            $data['tahun_ajaran'] = ($data['tahun_ajaran'] ?? '') ?: (string) $this->tahunAjaranAktif();
             // Fase selalu dari tingkat kelas yang dipilih (tidak diisi guru).
             $data['fase'] = $kelas ? StrukturPerangkatAjar::faseDariTingkat($kelas->tingkat) : null;
         } else {
@@ -324,10 +314,12 @@ class ModulAjarController extends Controller
             $data['cp'] = $cp->map(fn ($c) => ['id' => $c->id, 'elemen' => $c->elemen, 'deskripsi' => $c->deskripsi])->all();
 
             $tp = $cp->isNotEmpty()
-                ? TujuanPembelajaran::whereIn('id', array_map('intval', (array) ($masukan['tp_ids'] ?? [])))->whereIn('capaian_pembelajaran_id', $data['cp_ids'])->orderBy('urutan')->get(['id', 'deskripsi'])
+                ? TujuanPembelajaran::whereIn('id', array_map('intval', (array) ($masukan['tp_ids'] ?? [])))->whereIn('capaian_pembelajaran_id', $data['cp_ids'])->orderBy('urutan')->get(['id', 'deskripsi', 'capaian_pembelajaran_id'])
                 : collect();
+            $elemen = $cp->pluck('elemen', 'id');
             $data['tp_ids'] = $tp->pluck('id')->all();
-            $data['tp_master'] = $tp->map(fn ($t) => ['id' => $t->id, 'deskripsi' => $t->deskripsi])->all();
+            // Elemen ikut disimpan untuk rekap "TP per elemen" di penutup dokumen.
+            $data['tp_master'] = $tp->map(fn ($t) => ['id' => $t->id, 'deskripsi' => $t->deskripsi, 'elemen' => $elemen[$t->capaian_pembelajaran_id] ?? null])->all();
         }
 
         $modul->fill([
@@ -345,6 +337,12 @@ class ModulAjarController extends Controller
     private function muat(ModulAjar $modul): ModulAjar
     {
         return $modul->fresh(['lampiran', 'peninjau:id,name']);
+    }
+
+    /** Nama tahun ajaran aktif (mis. "2025/2026"), untuk diisikan otomatis. */
+    private function tahunAjaranAktif(): ?string
+    {
+        return TahunAjaran::where('is_active', true)->value('nama');
     }
 
     private function namaGuru(?Guru $guru): ?string

@@ -7,6 +7,7 @@ import NotifBell from '../components/NotifBell'
 import ModeUjianAman, { keluarLayarPenuh, siapkanModeUjian } from '../components/ModeUjianAman'
 import { useAuth } from '../lib/AuthContext'
 import { api, BASE_URL } from '../lib/api'
+import { DaftarRiwayatPoin, PedomanPoin, RingkasanPoin } from '../components/RiwayatPoin'
 import MyProfile from './MyProfile'
 
 const MENU_GROUPS = [
@@ -40,6 +41,7 @@ const MENU_GROUPS = [
     items: [
       { key: 'prestasi', label: 'Prestasi Saya', icon: TrophyIcon },
       { key: 'pelanggaran', label: 'Pelanggaran Saya', icon: ShieldIcon },
+      { key: 'poin', label: 'Poin Saya', icon: ShieldIcon },
       { key: 'ekstrakurikuler', label: 'Ekstrakurikuler', icon: StarIcon },
     ],
   },
@@ -256,6 +258,7 @@ export default function SiswaDashboard() {
         {view === 'saldo' && <SaldoSayaView onBack={() => setView('home')} />}
         {view === 'prestasi' && <PrestasiSayaView onBack={() => setView('home')} />}
         {view === 'pelanggaran' && <PelanggaranSayaView onBack={() => setView('home')} />}
+        {view === 'poin' && <PoinSayaView onBack={() => setView('home')} />}
         {view === 'materi' && <MateriSayaView onBack={() => setView('home')} />}
         {view === 'tugas' && <TugasSayaView onBack={() => setView('home')} />}
         {view === 'ujian' && <UjianSayaView onBack={() => setView('home')} />}
@@ -1627,6 +1630,49 @@ const PELANGGARAN_TINGKAT_STYLE = {
   ringan: { label: 'Ringan', badge: 'bg-amber-100 text-amber-700' },
   sedang: { label: 'Sedang', badge: 'bg-orange-100 text-orange-700' },
   berat: { label: 'Berat', badge: 'bg-red-100 text-red-600' },
+}
+
+/** Menu "Poin Saya" (baca-saja): sisa poin kedisiplinan & riwayat potongannya. */
+function PoinSayaView({ onBack }) {
+  const [data, setData] = useState(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    api.getMySiswaPoin().then(setData).catch((err) => setError(err.message))
+  }, [])
+
+  return (
+    <div>
+      <LearningHeaderCard
+        onBack={onBack}
+        icon={ShieldIcon}
+        title="Poin Saya"
+        subtitle="Poin kedisiplinanmu dimulai dari 100: berkurang karena pelanggaran, bertambah lagi karena prestasi & perilaku terpuji."
+        tagline={
+          <>
+            Jaga Sikap,
+            <br />
+            Jaga Poin
+            <br />
+            Kedisiplinanmu
+          </>
+        }
+      />
+
+      {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
+      {!data && !error && <EmptyState text="Memuat..." />}
+      {data && (
+        <div className="space-y-5">
+          <RingkasanPoin data={data} />
+          <div>
+            <p className="text-sm font-bold text-navy mb-3">Riwayat Pelanggaran & Sisa Poin</p>
+            <DaftarRiwayatPoin data={data} />
+          </div>
+          <PedomanPoin kategori={data.kategori} />
+        </div>
+      )}
+    </div>
+  )
 }
 
 function PelanggaranSayaView({ onBack }) {

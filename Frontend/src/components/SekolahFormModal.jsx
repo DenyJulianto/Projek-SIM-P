@@ -300,13 +300,15 @@ export default function SekolahFormModal({ onClose, onSaved }) {
                 ))}
               </select>
             </Field>
-            <Field label="Status Sekolah">
+            <Field label={<>Status Sekolah <span className="text-red-500">*</span></>}>
               <select
+                required
                 value={form.status_sekolah}
                 onChange={(e) => update('status_sekolah', e.target.value)}
                 className="input"
+                title="Menentukan pilihan status kepegawaian & jabatan di form pendaftaran pegawai"
               >
-                <option value="">Pilih status</option>
+                <option value="">Pilih Negeri/Swasta</option>
                 <option value="negeri">Negeri</option>
                 <option value="swasta">Swasta</option>
               </select>

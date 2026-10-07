@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import logoLambang from '../assets/logo-sim-lambang.png'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import { useAuth } from '../lib/AuthContext'
+import { useViewUrl } from '../lib/useViewUrl'
 import { api, BASE_URL } from '../lib/api'
 import WakasekContent from './wakasek/WakasekViews'
 import WakasekHome from './wakasek/WakasekHome'
@@ -83,7 +84,7 @@ const MENU_GROUPS = [
 
 export default function WakasekDashboard() {
   const { user, logout } = useAuth()
-  const [view, setView] = useState('home')
+  const [view, setView] = useViewUrl()
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const [sekolah, setSekolah] = useState(null)
   const [kepsek, setKepsek] = useState(null)

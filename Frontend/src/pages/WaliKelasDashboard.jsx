@@ -13,6 +13,7 @@ import PelanggaranManagement from './PelanggaranManagement'
 import PrestasiManagement from './PrestasiManagement'
 import RekapPembinaanManagement from './RekapPembinaanManagement'
 import ModulAjarManagement from './ModulAjarManagement'
+import DokumenPendukungGuru from './DokumenPendukungGuru'
 
 const MENU_GROUPS = [
   { section: null, items: [{ key: 'home', label: 'Dashboard', icon: GridIcon }] },
@@ -32,6 +33,7 @@ const MENU_GROUPS = [
       { key: 'input-nilai', label: 'Input Nilai', icon: PencilIcon },
       { key: 'materi-tugas', label: 'Materi / Tugas / Ujian', icon: FolderIcon },
       { key: 'modul-ajar', label: 'Perangkat Ajar', icon: DocIcon },
+      { key: 'dokumen-pendukung', label: 'Dokumen Pendukung', icon: NoteIcon },
       { key: 'notifikasi', label: 'Notifikasi Siswa', icon: NotifBellIcon },
     ],
   },
@@ -61,7 +63,7 @@ const MENU_GROUPS = [
   { section: null, items: [{ key: 'profile', label: 'Profil Saya', icon: ProfileIcon }] },
 ]
 
-const MENGAJAR_VIEWS = ['jadwal-mengajar', 'input-nilai', 'materi-tugas', 'modul-ajar']
+const MENGAJAR_VIEWS = ['jadwal-mengajar', 'input-nilai', 'materi-tugas', 'modul-ajar', 'dokumen-pendukung']
 
 export default function WaliKelasDashboard() {
   const { user, logout } = useAuth()
@@ -268,6 +270,7 @@ export default function WaliKelasDashboard() {
               />
             )}
             {view === 'modul-ajar' && <ModulAjarManagement onBack={() => setView('home')} />}
+            {view === 'dokumen-pendukung' && <DokumenPendukungGuru onBack={() => setView('home')} />}
             {view === 'profil-kelas' && <ProfilKelasView onBack={() => setView('home')} kelas={kelas} user={user} onNavigate={setView} />}
             {view === 'daftar-siswa' && <DaftarSiswaView onBack={() => setView('home')} kelas={kelas} />}
             {view === 'struktur-kelas' && (

@@ -17,6 +17,8 @@ class PelanggaranController extends Controller
     {
         $pelanggaran = Pelanggaran::query()
             ->with('siswa:id,nama,kelas_id')
+            // Penanda untuk form pengurangan poin: sudah dipotong / sedang diajukan BK.
+            ->withExists(['catatanPoin as poin_dipotong', 'pengajuanPoin as poin_diajukan' => fn ($q) => $q->where('status', 'menunggu')])
             ->when($request->filled('siswa_id'), fn ($q) => $q->where('siswa_id', $request->integer('siswa_id')))
             ->orderByDesc('tanggal')
             ->paginate($request->integer('per_page', 15));
@@ -28,7 +30,7 @@ class PelanggaranController extends Controller
     {
         $data = $request->validate([
             'siswa_id' => ['required', 'exists:siswa,id'],
-            'tingkat' => ['required', 'in:ringan,sedang,berat'],
+            'tingkat' => ['required', 'in:'.implode(',', array_keys(Pelanggaran::TINGKAT))],
             'jenis' => ['required', 'string', 'max:255'],
             'tanggal' => ['required', 'date'],
             'keterangan' => ['nullable', 'string'],
@@ -52,7 +54,7 @@ class PelanggaranController extends Controller
     {
         $data = $request->validate([
             'siswa_id' => ['required', 'exists:siswa,id'],
-            'tingkat' => ['required', 'in:ringan,sedang,berat'],
+            'tingkat' => ['required', 'in:'.implode(',', array_keys(Pelanggaran::TINGKAT))],
             'jenis' => ['required', 'string', 'max:255'],
             'tanggal' => ['required', 'date'],
             'keterangan' => ['nullable', 'string'],

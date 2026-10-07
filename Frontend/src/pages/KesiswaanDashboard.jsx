@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useViewUrl } from '../lib/useViewUrl'
 import ComingSoon from '../components/ComingSoon'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
@@ -11,6 +11,7 @@ const AttendanceRecap = lazy(() => import('./AttendanceRecap'))
 const KelasManagement = lazy(() => import('./KelasManagement'))
 const MyProfile = lazy(() => import('./MyProfile'))
 const PelanggaranManagement = lazy(() => import('./PelanggaranManagement'))
+const PoinSiswaManagement = lazy(() => import('./PoinSiswaManagement'))
 const EkskulManagement = lazy(() => import('./EkskulManagement'))
 const LaporanKesiswaanManagement = lazy(() => import('./LaporanKesiswaanManagement'))
 const PpdbManagement = lazy(() => import('./PpdbManagement'))
@@ -35,6 +36,7 @@ const MENU_GROUPS = [
     section: 'Pembinaan',
     items: [
       { key: 'pelanggaran', label: 'Pelanggaran', icon: AlertIcon },
+      { key: 'poin-siswa', label: 'Poin Siswa', icon: FlagIcon },
       { key: 'persetujuan-poin', label: 'Persetujuan Pengurangan Poin', icon: FlagIcon },
       { key: 'prestasi', label: 'Prestasi', icon: TrophyIcon },
       { key: 'ekstrakurikuler', label: 'Ekstrakurikuler', icon: FlagIcon },
@@ -168,6 +170,7 @@ export default function KesiswaanDashboard() {
         {view === 'rekap-ekskul' && <EkskulManagement onBack={() => setView('home')} tabAwal="laporan" />}
         {view === 'kelas-rombel' && <KelasManagement onBack={() => setView('home')} />}
         {view === 'pelanggaran' && <PelanggaranManagement onBack={() => setView('home')} />}
+        {view === 'poin-siswa' && <PoinSiswaManagement onBack={() => setView('home')} />}
         {view === 'persetujuan-poin' && <PersetujuanPoinView onBack={() => setView('home')} />}
         {view === 'prestasi' && <PrestasiManagement onBack={() => setView('home')} />}
         {view === 'kehadiran-siswa' && (
@@ -200,6 +203,7 @@ const PENGAJUAN_STATUS_STYLE = {
   menunggu: { label: 'Menunggu', badge: 'bg-amber-100 text-amber-700' },
   disetujui: { label: 'Disetujui', badge: 'bg-emerald-100 text-emerald-700' },
   ditolak: { label: 'Ditolak', badge: 'bg-red-100 text-red-600' },
+  dibatalkan: { label: 'Dibatalkan', badge: 'bg-navy/10 text-navy/60' },
 }
 
 function PersetujuanPoinView({ onBack }) {
@@ -210,12 +214,15 @@ function PersetujuanPoinView({ onBack }) {
   const [rejectTarget, setRejectTarget] = useState(null)
   const [catatanTolak, setCatatanTolak] = useState('')
 
+  // Hanya respons permintaan terakhir yang dipakai (ganti filter cepat bisa membuat respons lama datang belakangan).
+  const urutanMuat = useRef(0)
   function load() {
+    const ke = ++urutanMuat.current
     setPengajuan(null)
     api
       .listPengajuanPenguranganPoin(statusFilter ? { status: statusFilter } : {})
-      .then((r) => setPengajuan(r.data))
-      .catch((err) => setError(err.message))
+      .then((r) => ke === urutanMuat.current && setPengajuan(r.data))
+      .catch((err) => ke === urutanMuat.current && setError(err.message))
   }
 
   useEffect(load, [statusFilter])
@@ -257,7 +264,7 @@ function PersetujuanPoinView({ onBack }) {
       <h1 className="text-xl font-extrabold text-navy mb-5">Persetujuan Pengurangan Poin</h1>
 
       <div className="flex gap-2 mb-4">
-        {['menunggu', 'disetujui', 'ditolak', ''].map((s) => (
+        {['menunggu', 'disetujui', 'ditolak', 'dibatalkan', ''].map((s) => (
           <button
             key={s || 'semua'}
             onClick={() => setStatusFilter(s)}

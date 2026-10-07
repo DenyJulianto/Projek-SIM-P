@@ -17,9 +17,15 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SekolahController extends Controller
 {
+    private const PESAN_STATUS_SEKOLAH = [
+        'status_sekolah.required' => 'Pilih status sekolah: Negeri atau Swasta.',
+        'status_sekolah.in' => 'Status sekolah harus Negeri atau Swasta.',
+    ];
+
     private const IMPORT_HEADERS = [
         'NPSN', 'Nama Sekolah', 'Jenjang', 'Alamat', 'Kelurahan', 'Kecamatan',
         'Kabupaten/Kota', 'Provinsi', 'Latitude', 'Longitude', 'Telepon', 'Email',
+        'Status Sekolah (Negeri/Swasta)',
     ];
 
     public function index(Request $request): JsonResponse
@@ -99,7 +105,9 @@ class SekolahController extends Controller
             'nama_sekolah' => ['required', 'string', 'max:255'],
             'npsn' => ['nullable', 'string', 'max:20', 'unique:tenants,npsn'],
             'jenjang' => ['nullable', 'string', 'max:20'],
-            'status_sekolah' => ['nullable', 'in:negeri,swasta'],
+            // Negeri/swasta menentukan pilihan status kepegawaian & jabatan di
+            // form pendaftaran pegawai sekolah ini, jadi wajib diisi.
+            'status_sekolah' => ['required', 'in:negeri,swasta'],
             'akreditasi' => ['nullable', 'in:A,B,C,Belum Terakreditasi'],
             'alamat' => ['nullable', 'string'],
             'rt_rw' => ['nullable', 'string', 'max:20'],
@@ -123,7 +131,7 @@ class SekolahController extends Controller
             // karakter tidak valid (mis. "@") lolos tersimpan sebagai domain
             // login sekolah, yang bikin link-nya tidak pernah bisa dibuka.
             'domain' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i'],
-        ]);
+        ], self::PESAN_STATUS_SEKOLAH);
 
         $sekolah = Sekolah::create([
             'id' => $data['id'],
@@ -169,7 +177,7 @@ class SekolahController extends Controller
             'nama_sekolah' => ['sometimes', 'string', 'max:255'],
             'npsn' => ['nullable', 'string', 'max:20', 'unique:tenants,npsn,' . $sekolah->id],
             'jenjang' => ['nullable', 'string', 'max:20'],
-            'status_sekolah' => ['nullable', 'in:negeri,swasta'],
+            'status_sekolah' => ['sometimes', 'required', 'in:negeri,swasta'],
             'akreditasi' => ['nullable', 'in:A,B,C,Belum Terakreditasi'],
             'alamat' => ['nullable', 'string'],
             'rt_rw' => ['nullable', 'string', 'max:20'],
@@ -188,7 +196,7 @@ class SekolahController extends Controller
             'tahun_berdiri' => ['nullable', 'integer', 'digits:4'],
             'no_sk_pendirian' => ['nullable', 'string', 'max:255'],
             'status' => ['sometimes', 'in:active,inactive'],
-        ]);
+        ], self::PESAN_STATUS_SEKOLAH);
 
         $sekolah->update($data);
         $sekolah->loadCount(['guruDirectory as jumlah_guru', 'siswaDirectory as jumlah_siswa']);
@@ -219,10 +227,10 @@ class SekolahController extends Controller
         $sheet->fromArray([
             '20223344', 'SDN Contoh 1', 'SD', 'Jl. Contoh No. 1', 'Kelurahan Contoh',
             'Kecamatan Contoh', 'Kabupaten Contoh', 'Jawa Barat', '-6.914744', '107.609810',
-            '022-1234567', 'sdncontoh1@example.sch.id',
+            '022-1234567', 'sdncontoh1@example.sch.id', 'Negeri',
         ], null, 'A2');
 
-        foreach (range('A', 'L') as $column) {
+        foreach (range('A', 'M') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
 
@@ -270,11 +278,18 @@ class SekolahController extends Controller
 
         foreach ($rows as $i => $row) {
             $rowNumber = $i + 2;
-            [$npsn, $namaSekolah, $jenjang, $alamat, $kelurahan, $kecamatan, $kabupatenKota, $provinsi, $latitude, $longitude, $telepon, $email] = array_pad($row, 12, null);
+            [$npsn, $namaSekolah, $jenjang, $alamat, $kelurahan, $kecamatan, $kabupatenKota, $provinsi, $latitude, $longitude, $telepon, $email, $statusSekolah] = array_pad($row, 13, null);
 
             $namaSekolah = $this->cleanString($namaSekolah);
             if ($namaSekolah === null) {
                 $errors[] = "Baris {$rowNumber}: Nama Sekolah kosong, dilewati.";
+
+                continue;
+            }
+
+            $statusSekolah = mb_strtolower((string) $this->cleanString($statusSekolah));
+            if (! in_array($statusSekolah, ['negeri', 'swasta'], true)) {
+                $errors[] = "Baris {$rowNumber} ({$namaSekolah}): Status Sekolah harus Negeri atau Swasta, dilewati.";
 
                 continue;
             }
@@ -292,6 +307,7 @@ class SekolahController extends Controller
                     'nama_sekolah' => $namaSekolah,
                     'npsn' => $npsn,
                     'jenjang' => $this->cleanString($jenjang),
+                    'status_sekolah' => $statusSekolah,
                     'alamat' => $this->cleanString($alamat),
                     'kelurahan' => $this->cleanString($kelurahan),
                     'kecamatan' => $this->cleanString($kecamatan),
