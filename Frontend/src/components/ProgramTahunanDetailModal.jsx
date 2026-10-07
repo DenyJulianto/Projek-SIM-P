@@ -1,6 +1,6 @@
 import ModalCloseButton from './ModalCloseButton'
 import { useEffect, useState } from 'react'
-import { api } from '../lib/api'
+import { SUMBER_PROGRAM } from '../lib/sumberProgram'
 import ProgramTahunanPrint from './ProgramTahunanPrint'
 
 const BULAN = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
@@ -44,14 +44,14 @@ function rentang(a, b) {
   return a === b ? BULAN[a] : `${BULAN[a]} – ${BULAN[b]}`
 }
 
-export default function ProgramTahunanDetailModal({ id, onClose, onChanged }) {
+export default function ProgramTahunanDetailModal({ id, sumber = SUMBER_PROGRAM['program-tahunan'].kurikulum, onClose, onChanged }) {
   const [detail, setDetail] = useState(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [printing, setPrinting] = useState(false)
 
   function load() {
-    api.getProgramTahunan(id).then(setDetail).catch((err) => setError(err.message))
+    sumber.get(id).then(setDetail).catch((err) => setError(err.message))
   }
 
   useEffect(() => {
@@ -67,8 +67,20 @@ export default function ProgramTahunanDetailModal({ id, onClose, onChanged }) {
     }
     setBusy(true)
     try {
-      await api.updateStatusDokumenProgramTahunan(id, { status_dokumen: status, catatan_verifikasi: catatan || null })
+      await sumber.ubahStatus(id, { status_dokumen: status, catatan_verifikasi: catatan || null })
       load()
+      onChanged?.()
+    } catch (err) {
+      window.alert(err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function aksiGuru(aksi) {
+    setBusy(true)
+    try {
+      setDetail(await sumber[aksi](id))
       onChanged?.()
     } catch (err) {
       window.alert(err.message)
@@ -79,7 +91,7 @@ export default function ProgramTahunanDetailModal({ id, onClose, onChanged }) {
 
   async function handleExport() {
     try {
-      await api.exportProgramTahunan(id)
+      await sumber.exportFile(id)
     } catch (err) {
       window.alert(err.message)
     }
@@ -163,24 +175,52 @@ export default function ProgramTahunanDetailModal({ id, onClose, onChanged }) {
               })}
             </div>
 
-            <div className="bg-navy/5 rounded-2xl p-4 mb-5">
-              <p className="text-xs font-semibold text-navy/50 uppercase tracking-wide mb-2">Status Dokumen / Verifikasi</p>
-              <div className="flex items-center gap-2 flex-wrap">
-                {Object.entries(DOKUMEN_LABEL).map(([v, l]) => (
+            {sumber.guru ? (
+              <div className="bg-navy/5 rounded-2xl p-4 mb-5 flex items-center justify-between gap-3 flex-wrap">
+                <p className="text-xs text-navy/60 max-w-lg">
+                  {detail.status_dokumen === 'draft' && 'Masih draf. Setelah rencana lengkap, ajukan ke Waka Kurikulum.'}
+                  {detail.status_dokumen === 'diajukan' && 'Sedang menunggu ditinjau Waka Kurikulum. Tarik pengajuan bila perlu mengubah isinya.'}
+                  {!['draft', 'diajukan'].includes(detail.status_dokumen) && 'Sudah diverifikasi oleh Waka Kurikulum.'}
+                </p>
+                {detail.status_dokumen === 'draft' && (
                   <button
-                    key={v}
-                    disabled={busy || detail.status_dokumen === v}
-                    onClick={() => ubahStatusDokumen(v)}
-                    className={`text-xs font-semibold px-3.5 py-1.5 rounded-full transition-colors disabled:opacity-100 ${
-                      detail.status_dokumen === v ? `${DOKUMEN_TONE[v]} ring-2 ring-navy/20` : 'bg-white text-navy/60 border border-navy/15 hover:bg-navy hover:text-white disabled:opacity-50'
-                    }`}
+                    onClick={() => aksiGuru('ajukan')}
+                    disabled={busy || !detail.item?.length}
+                    className="text-xs font-semibold text-white bg-navy rounded-full px-4 py-2 hover:bg-navy-light transition-colors disabled:opacity-50"
                   >
-                    {l}
+                    Ajukan ke Kurikulum
                   </button>
-                ))}
-                <span className="text-[11px] text-navy/40">Draft → Diajukan → Terverifikasi</span>
+                )}
+                {detail.status_dokumen === 'diajukan' && (
+                  <button
+                    onClick={() => aksiGuru('tarik')}
+                    disabled={busy}
+                    className="text-xs font-semibold text-navy border border-navy/20 rounded-full px-4 py-2 hover:bg-navy hover:text-white transition-colors disabled:opacity-50"
+                  >
+                    Tarik Pengajuan
+                  </button>
+                )}
               </div>
-            </div>
+            ) : (
+              <div className="bg-navy/5 rounded-2xl p-4 mb-5">
+                <p className="text-xs font-semibold text-navy/50 uppercase tracking-wide mb-2">Status Dokumen / Verifikasi</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {Object.entries(DOKUMEN_LABEL).map(([v, l]) => (
+                    <button
+                      key={v}
+                      disabled={busy || detail.status_dokumen === v}
+                      onClick={() => ubahStatusDokumen(v)}
+                      className={`text-xs font-semibold px-3.5 py-1.5 rounded-full transition-colors disabled:opacity-100 ${
+                        detail.status_dokumen === v ? `${DOKUMEN_TONE[v]} ring-2 ring-navy/20` : 'bg-white text-navy/60 border border-navy/15 hover:bg-navy hover:text-white disabled:opacity-50'
+                      }`}
+                    >
+                      {l}
+                    </button>
+                  ))}
+                  <span className="text-[11px] text-navy/40">Draft → Diajukan → Terverifikasi</span>
+                </div>
+              </div>
+            )}
 
             <div className="overflow-x-auto mb-6">
               <table className="w-full text-xs min-w-[760px]">

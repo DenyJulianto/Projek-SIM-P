@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\CatatanPoin;
 use App\Models\JadwalPelajaran;
 use App\Models\Pelanggaran;
 use App\Models\Prestasi;
@@ -30,9 +31,7 @@ use Illuminate\Validation\ValidationException;
  */
 class ParentSelfController extends Controller
 {
-    public function __construct(private readonly PembayaranOnlineService $pembayaranOnline)
-    {
-    }
+    public function __construct(private readonly PembayaranOnlineService $pembayaranOnline) {}
 
     private function authorizeAnak(Request $request, Siswa $siswa): void
     {
@@ -131,6 +130,14 @@ class ParentSelfController extends Controller
             ->get();
 
         return response()->json($prestasi);
+    }
+
+    /** Menu "Poin Anak" (baca-saja): sisa poin kedisiplinan anak & riwayat potongannya. */
+    public function poin(Request $request, Siswa $siswa): JsonResponse
+    {
+        $this->authorizeAnak($request, $siswa);
+
+        return response()->json($siswa->ringkasanPoin() + ['kategori' => CatatanPoin::KATEGORI]);
     }
 
     public function pelanggaran(Request $request, Siswa $siswa): JsonResponse
@@ -255,7 +262,7 @@ class ParentSelfController extends Controller
 
         activity()
             ->causedBy($request->user())
-            ->log("Mengisi saldo siswa \"{$siswa->nama}\" sebesar Rp " . number_format((float) $data['jumlah'], 0, ',', '.') . '.');
+            ->log("Mengisi saldo siswa \"{$siswa->nama}\" sebesar Rp ".number_format((float) $data['jumlah'], 0, ',', '.').'.');
 
         return response()->json([
             'saldo' => $transaksi->saldo_setelah,
@@ -284,6 +291,7 @@ class ParentSelfController extends Controller
 
         $result = $tugasList->map(function (Tugas $t) use ($jawabanMap) {
             $t->jawaban_saya = $jawabanMap->get($t->id);
+
             return $t;
         });
 

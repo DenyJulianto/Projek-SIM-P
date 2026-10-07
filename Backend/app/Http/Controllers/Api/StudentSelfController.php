@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Absensi;
+use App\Models\CatatanPoin;
 use App\Models\JadwalPelajaran;
 use App\Models\Materi;
 use App\Models\Notifikasi;
@@ -189,6 +190,14 @@ class StudentSelfController extends Controller
             ->get();
 
         return response()->json($prestasi);
+    }
+
+    /** Menu "Poin Saya" (baca-saja): sisa poin kedisiplinan & riwayat potongannya. */
+    public function poin(Request $request): JsonResponse
+    {
+        $siswa = $this->siswaFor($request);
+
+        return response()->json($siswa->ringkasanPoin() + ['kategori' => CatatanPoin::KATEGORI]);
     }
 
     public function pelanggaran(Request $request): JsonResponse

@@ -3,6 +3,7 @@ import { useViewUrl } from '../lib/useViewUrl'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import { useAuth } from '../lib/AuthContext'
 import { api } from '../lib/api'
+import { PEDOMAN_TINGKAT, statusPotongPoin } from '../lib/poinKedisiplinan'
 import KasusManagement from './KasusManagement'
 import KonselingManagement from './KonselingManagement'
 import MyProfile from './MyProfile'
@@ -315,6 +316,7 @@ const PENGAJUAN_STATUS_STYLE = {
   menunggu: { label: 'Menunggu Persetujuan', badge: 'bg-amber-100 text-amber-700' },
   disetujui: { label: 'Disetujui', badge: 'bg-emerald-100 text-emerald-700' },
   ditolak: { label: 'Ditolak', badge: 'bg-red-100 text-red-600' },
+  dibatalkan: { label: 'Dibatalkan', badge: 'bg-navy/10 text-navy/60' },
 }
 
 function PenguranganPoinView({ onBack }) {
@@ -397,7 +399,9 @@ function PenguranganPoinView({ onBack }) {
 
 function AjukanPenguranganPoinModal({ onClose, onSaved }) {
   const [siswaList, setSiswaList] = useState([])
-  const [pelanggaranList, setPelanggaranList] = useState([])
+  // Pelanggaran siswa terakhir yang dimuat; dianggap "memuat" selama siswaId-nya
+  // belum sama dengan siswa yang sedang dipilih.
+  const [pelanggaran, setPelanggaran] = useState({ siswaId: '', data: [], error: '' })
   const [form, setForm] = useState({ siswa_id: '', pelanggaran_id: '', poin_diajukan: '', alasan: '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -407,18 +411,29 @@ function AjukanPenguranganPoinModal({ onClose, onSaved }) {
   }, [])
 
   useEffect(() => {
-    if (!form.siswa_id) {
-      setPelanggaranList([])
-      return
-    }
+    if (!form.siswa_id) return
+    const siswaId = form.siswa_id
     api
-      .listPelanggaran({ siswa_id: form.siswa_id })
-      .then((r) => setPelanggaranList(r.data))
-      .catch(() => setPelanggaranList([]))
+      .listPelanggaran({ siswa_id: siswaId, per_page: 100 })
+      .then((r) => setPelanggaran({ siswaId, data: r.data, error: '' }))
+      .catch((err) => setPelanggaran({ siswaId, data: [], error: err.message }))
   }, [form.siswa_id])
 
+  const memuatPelanggaran = !!form.siswa_id && pelanggaran.siswaId !== form.siswa_id
+  const pelanggaranList = form.siswa_id && !memuatPelanggaran ? pelanggaran.data : []
+  const terpilih = pelanggaranList.find((p) => String(p.id) === form.pelanggaran_id)
+  const pedoman = terpilih ? PEDOMAN_TINGKAT[terpilih.tingkat] : null
+
   function update(field, value) {
-    setForm((f) => ({ ...f, [field]: value }))
+    setForm((f) => ({ ...f, [field]: value, ...(field === 'siswa_id' ? { pelanggaran_id: '', poin_diajukan: '' } : {}) }))
+  }
+
+  // Memilih pelanggaran mengisi poin sesuai pedoman tingkatnya (bisa diubah dalam rentang).
+  function pilihPelanggaran(id) {
+    const p = pelanggaranList.find((x) => String(x.id) === id)
+    const r = p ? PEDOMAN_TINGKAT[p.tingkat] : null
+    const usul = r ? (p.poin >= r.min && p.poin <= r.max ? p.poin : r.min) : ''
+    setForm((f) => ({ ...f, pelanggaran_id: id, poin_diajukan: usul }))
   }
 
   async function handleSubmit(e) {
@@ -469,28 +484,58 @@ function AjukanPenguranganPoinModal({ onClose, onSaved }) {
             <span className="block text-xs font-semibold text-navy/70 mb-1">Pelanggaran Terkait</span>
             <select
               required
-              disabled={!form.siswa_id}
+              disabled={!form.siswa_id || memuatPelanggaran || pelanggaranList.length === 0}
               value={form.pelanggaran_id}
-              onChange={(e) => update('pelanggaran_id', e.target.value)}
+              onChange={(e) => pilihPelanggaran(e.target.value)}
               className="w-full border border-navy/15 rounded-lg px-3 py-2 text-sm disabled:opacity-50"
             >
               <option value="">
-                {form.siswa_id ? 'Pilih pelanggaran' : 'Pilih siswa terlebih dahulu'}
+                {!form.siswa_id
+                  ? 'Pilih siswa terlebih dahulu'
+                  : memuatPelanggaran
+                    ? 'Memuat pelanggaran...'
+                    : pelanggaranList.length === 0
+                      ? 'Belum ada pelanggaran tercatat'
+                      : 'Pilih pelanggaran'}
               </option>
               {pelanggaranList.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.jenis} — {p.tanggal}
+                <option key={p.id} value={p.id} disabled={!!statusPotongPoin(p)}>
+                  {p.jenis} — {PEDOMAN_TINGKAT[p.tingkat]?.label.replace('Pelanggaran ', '') ?? p.tingkat} · {String(p.tanggal).slice(0, 10)}
+                  {statusPotongPoin(p) ? ` (${statusPotongPoin(p)})` : ''}
                 </option>
               ))}
             </select>
+            {form.siswa_id && !memuatPelanggaran && pelanggaran.error && (
+              <span className="block text-xs text-red-600 mt-1">Gagal memuat pelanggaran: {pelanggaran.error}</span>
+            )}
+            {form.siswa_id && !memuatPelanggaran && pelanggaranList.length > 0 && pelanggaranList.every((p) => statusPotongPoin(p)) && (
+              <span className="block text-xs text-navy/60 bg-navy/5 rounded-lg px-3 py-2 mt-1.5">
+                Semua pelanggaran siswa ini sudah dipotong poinnya atau sedang diajukan. Satu pelanggaran hanya bisa memotong poin sekali.
+              </span>
+            )}
+            {form.siswa_id && !memuatPelanggaran && !pelanggaran.error && pelanggaranList.length === 0 && (
+              <span className="block text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-1.5">
+                Siswa ini belum memiliki catatan pelanggaran. Pelanggaran dicatat dulu oleh Kesiswaan, Wali Kelas, atau Wakil
+                Kepala Sekolah di menu Pelanggaran, baru setelah itu bisa diajukan pengurangan poinnya di sini.
+              </span>
+            )}
           </label>
 
           <label className="block">
-            <span className="block text-xs font-semibold text-navy/70 mb-1">Poin yang Diajukan</span>
+            <span className="block text-xs font-semibold text-navy/70 mb-1">
+              Poin yang Diajukan
+              {pedoman && (
+                <span className="font-normal text-navy/45">
+                  {' '}
+                  (pedoman {pedoman.label}: {pedoman.min === pedoman.max ? pedoman.min : `${pedoman.min}–${pedoman.max}`})
+                </span>
+              )}
+            </span>
             <input
               type="number"
               required
-              min="1"
+              min={pedoman?.min ?? 1}
+              max={pedoman?.max ?? 100}
               value={form.poin_diajukan}
               onChange={(e) => update('poin_diajukan', e.target.value)}
               className="w-full border border-navy/15 rounded-lg px-3 py-2 text-sm"
@@ -541,6 +586,7 @@ function PerluPendampinganView({ onBack }) {
     ringan: 'bg-navy/10 text-navy/60',
     sedang: 'bg-amber-100 text-amber-700',
     berat: 'bg-red-100 text-red-600',
+    sangat_berat: 'bg-red-600 text-white',
   }
 
   return (
@@ -554,7 +600,7 @@ function PerluPendampinganView({ onBack }) {
             <div className="flex items-center justify-between mb-2">
               <p className="font-bold text-navy">{d.siswa.nama}</p>
               <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${TINGKAT_TONE[d.tingkat_tertinggi]}`}>
-                {d.tingkat_tertinggi}
+                {d.tingkat_tertinggi?.replace('_', ' ')}
               </span>
             </div>
             <p className="text-sm text-navy/60">{d.jumlah_kasus_aktif} kasus aktif</p>

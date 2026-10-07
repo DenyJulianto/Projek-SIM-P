@@ -14,6 +14,7 @@ import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import NonaktifkanSekolahModal from '../components/NonaktifkanSekolahModal'
 import Pagination from '../components/Pagination'
 import GuruDetailPage from './GuruDetailPage'
+import KelolaLandingPage from './KelolaLandingPage'
 import SekolahDetailPage from './SekolahDetailPage'
 import SekolahGuruListPage from './SekolahGuruListPage'
 import SekolahSiswaListPage from './SekolahSiswaListPage'
@@ -21,6 +22,7 @@ import SiswaDetailPage from './SiswaDetailPage'
 import SekolahFormModal from '../components/SekolahFormModal'
 import SekolahImportModal from '../components/SekolahImportModal'
 import { useAuth } from '../lib/AuthContext'
+import { useViewUrl } from '../lib/useViewUrl'
 import { usePaginatedDirectory } from '../lib/usePaginatedDirectory'
 import { api } from '../lib/api'
 
@@ -79,6 +81,7 @@ const MENU_GROUPS = [
     items: [
       { key: 'backup-restore', label: 'Backup & Restore', icon: DatabaseIcon },
       { key: 'integrasi-sistem', label: 'Integrasi Sistem', icon: PlugIcon },
+      { key: 'kelola-landing', label: 'Kelola Landing Page', icon: LayoutIcon },
     ],
   },
   {
@@ -115,6 +118,7 @@ const REAL_VIEWS = new Set([
   'pengaturan-modul',
   'backup-restore',
   'integrasi-sistem',
+  'kelola-landing',
   'kelola-pengguna',
   'manajemen-role',
   'pengaturan-keamanan',
@@ -122,7 +126,7 @@ const REAL_VIEWS = new Set([
 
 export default function SuperAdminDashboard() {
   const { user, logout } = useAuth()
-  const [view, setView] = useState('beranda')
+  const [view, setView] = useViewUrl('beranda')
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const [openSection, setOpenSection] = useState(null)
 
@@ -253,6 +257,7 @@ export default function SuperAdminDashboard() {
           {view === 'pengaturan-modul' && <PengaturanModul />}
           {view === 'backup-restore' && <BackupRestoreNasional />}
           {view === 'integrasi-sistem' && <IntegrasiSistem />}
+          {view === 'kelola-landing' && <KelolaLandingPage />}
           {view === 'kelola-pengguna' && <KelolaPenggunaNasional />}
           {view === 'manajemen-role' && <ManajemenRole />}
           {view === 'pengaturan-keamanan' && <PengaturanKeamanan />}
@@ -4853,6 +4858,15 @@ function PlugIcon(props) {
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M9 2v4M15 2v4M9 8h6v3a3 3 0 0 1-3 3 3 3 0 0 1-3-3V8Z" />
       <path d="M12 14v4M9 21h6" />
+    </svg>
+  )
+}
+
+function LayoutIcon(props) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M3 9h18M9 9v11" />
     </svg>
   )
 }

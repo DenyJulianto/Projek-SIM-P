@@ -1,6 +1,7 @@
-// Struktur perangkat ajar (RPP K13 / Modul Ajar Kurikulum Merdeka) di sisi
-// frontend. Harus sejalan dengan Backend/app/Support/StrukturPerangkatAjar.php
-// (pembersihan isian, cek kelengkapan saat diajukan, dokumen PDF/Word).
+// Struktur perangkat ajar (RPP K13 / Modul Ajar Kurikulum Merdeka Belajar
+// RPP+) di sisi frontend. Harus sejalan dengan
+// Backend/app/Support/StrukturPerangkatAjar.php (pembersihan isian, cek
+// kelengkapan saat diajukan, dokumen PDF/Word).
 
 export const KURIKULUM_META = {
   merdeka: { label: 'Kurikulum Merdeka', short: 'Modul Ajar', badge: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' },
@@ -14,30 +15,63 @@ export const STATUS_META = {
   disetujui: { label: 'Disetujui', badge: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' },
 }
 
-export const DIMENSI_PROFIL = [
-  'Keimanan dan Ketakwaan terhadap Tuhan YME',
-  'Kewargaan',
-  'Penalaran Kritis',
-  'Kreativitas',
-  'Kolaborasi',
-  'Kemandirian',
-  'Kesehatan',
-  'Komunikasi',
+/** 6 dimensi Profil Pelajar Pancasila. */
+export const PROFIL_PELAJAR = [
+  'Beriman, bertakwa kepada Tuhan YME, dan berakhlak mulia',
+  'Berkebinekaan global',
+  'Bergotong royong',
+  'Mandiri',
+  'Bernalar kritis',
+  'Kreatif',
 ]
 
 export const TARGET_PESERTA = [
   'Peserta didik reguler / tipikal',
-  'Peserta didik dengan kesulitan belajar',
-  'Peserta didik dengan pencapaian tinggi',
+  'Peserta didik berkebutuhan khusus',
+  'Peserta didik pencapaian tinggi (pengayaan)',
 ]
+
+export const MODA = ['Tatap muka', 'Daring', 'Blended (tatap muka dan daring)']
+
+export const METODE = ['Ceramah', 'Tanya jawab', 'Diskusi', 'Demonstrasi', 'Penugasan']
+
+export const RUMUS_NILAI_BAWAAN = 'Nilai = (skor perolehan ÷ skor maksimal) × 100'
+
+// Kerangka isian yang bisa disisipkan guru (tombol "Sisipkan kerangka") —
+// tidak diisikan otomatis supaya cek "wajib diisi" tetap bermakna.
+const KERANGKA_PENDAHULUAN =
+  '<ol><li>Pengkondisian kelas dan presensi: </li><li>Berdoa bersama: </li><li>Literasi / ice breaking: </li>' +
+  '<li>Apersepsi: </li><li>Pertanyaan pemantik: </li><li>Menyampaikan tujuan, langkah, dan jenis asesmen: </li></ol>'
+const KERANGKA_INTI =
+  '<p><b>Langkah sesuai sintaks model pembelajaran:</b></p><ol><li>Tahap 1 – … : kegiatan peserta didik …; peran guru …</li>' +
+  '<li>Tahap 2 – … : kegiatan peserta didik …; peran guru …</li><li>Tahap 3 – … : kegiatan peserta didik …; peran guru …</li></ol>' +
+  '<p><b>Catatan / tips guru:</b> </p>'
+const KERANGKA_PENUTUP =
+  '<ol><li>Refleksi: </li><li>Menyimpulkan materi: </li><li>Penguatan: </li><li>Asesmen hasil belajar: </li>' +
+  '<li>Informasi pertemuan berikutnya: </li><li>Berdoa penutup: </li></ol>'
 
 export const TAHAP = {
   merdeka: [
-    { k: 'pendahuluan', label: 'Pendahuluan', bantu: 'Salam, apersepsi, motivasi, penyampaian tujuan' },
-    { k: 'memahami', label: 'Memahami', bantu: 'Peserta didik membangun pemahaman konsep secara bermakna' },
-    { k: 'mengaplikasi', label: 'Mengaplikasi', bantu: 'Menerapkan pemahaman dalam konteks nyata / pemecahan masalah' },
-    { k: 'merefleksi', label: 'Merefleksi', bantu: 'Mengevaluasi proses dan hasil belajar' },
-    { k: 'penutup', label: 'Penutup', bantu: 'Kesimpulan, umpan balik, rencana pertemuan berikutnya' },
+    {
+      k: 'pendahuluan',
+      label: 'Kegiatan Pendahuluan',
+      bantu: '±10 menit — pengkondisian & presensi, doa, literasi/ice breaking, apersepsi, pertanyaan pemantik, tujuan & asesmen',
+      durasi: 10,
+      kerangka: KERANGKA_PENDAHULUAN,
+    },
+    {
+      k: 'inti',
+      label: 'Kegiatan Inti',
+      bantu: '±50–85 menit — langkah sesuai sintaks model (mis. PBL), aktivitas peserta didik & peran guru, tips guru',
+      kerangka: KERANGKA_INTI,
+    },
+    {
+      k: 'penutup',
+      label: 'Kegiatan Penutup',
+      bantu: '±10 menit — refleksi, kesimpulan, penguatan, asesmen, informasi pertemuan berikutnya, doa',
+      durasi: 10,
+      kerangka: KERANGKA_PENUTUP,
+    },
   ],
   k13: [
     { k: 'pendahuluan', label: 'Pendahuluan', bantu: 'Apersepsi, motivasi, penyampaian tujuan' },
@@ -49,7 +83,8 @@ export const TAHAP = {
 export const LANGKAH = {
   merdeka: [
     { k: 'identitas', label: 'Identitas' },
-    { k: 'desain', label: 'Desain' },
+    { k: 'umum', label: 'Informasi Umum' },
+    { k: 'inti', label: 'Komponen Inti' },
     { k: 'kegiatan', label: 'Kegiatan' },
     { k: 'asesmen', label: 'Asesmen & Refleksi' },
     { k: 'lampiran', label: 'Lampiran' },
@@ -63,33 +98,47 @@ export const LANGKAH = {
   ],
 }
 
+const RUBRIK_SIKAP =
+  '<table><tbody><tr><th>Skor</th><th>Indikator</th></tr><tr><td>4 (Sangat baik)</td><td> </td></tr>' +
+  '<tr><td>3 (Baik)</td><td> </td></tr><tr><td>2 (Cukup)</td><td> </td></tr><tr><td>1 (Perlu bimbingan)</td><td> </td></tr></tbody></table>' +
+  '<p>Aspek sikap yang diamati: </p>'
+const RUBRIK_PENGETAHUAN =
+  '<table><tbody><tr><th>No.</th><th>Aspek / Kriteria</th><th>Ya / Skor</th></tr><tr><td>1</td><td> </td><td> </td></tr>' +
+  '<tr><td>2</td><td> </td><td> </td></tr><tr><td>3</td><td> </td><td> </td></tr></tbody></table>'
+const LKPD =
+  '<p><b>Judul kegiatan:</b> </p><p><b>Tujuan:</b> </p><p><b>Petunjuk:</b></p><ol><li> </li></ol><p><b>Soal / tugas:</b></p><ol><li> </li></ol>'
+
 // Field berformat (editor teks) per langkah. wajib: harus diisi sebelum diajukan.
 export const FIELD = {
   merdeka: {
-    desain: [
-      { k: 'kompetensi_awal', label: 'Kompetensi Awal', bantu: 'Pengetahuan/keterampilan yang perlu dimiliki sebelum mempelajari topik ini' },
-      { k: 'sarana_prasarana', label: 'Sarana dan Prasarana', bantu: 'Media, alat, dan bahan ajar' },
-      { k: 'pemahaman_bermakna', label: 'Pemahaman Bermakna', bantu: 'Manfaat nyata materi bagi kehidupan sehari-hari' },
-      { k: 'pertanyaan_pemantik', label: 'Pertanyaan Pemantik', bantu: 'Pertanyaan pembuka untuk memancing rasa ingin tahu' },
+    umum: [
+      { k: 'karakteristik_peserta', label: 'Karakteristik Peserta Didik', bantu: 'Gambaran umum kemampuan kelas (gaya belajar, minat, kesiapan)' },
+      { k: 'sarana_prasarana', label: 'Sarana dan Prasarana', bantu: 'Media, alat, bahan, dan buku yang digunakan' },
     ],
-    pembelajaranMendalam: [
-      { k: 'praktik_pedagogis', label: 'Praktik Pedagogis (Model / Metode)', bantu: 'mis. Project Based Learning; diskusi, demonstrasi', wajib: true },
-      { k: 'kemitraan_pembelajaran', label: 'Kemitraan Pembelajaran', bantu: 'Kolaborasi dengan orang tua, komunitas, ahli, atau mitra lain' },
-      { k: 'lingkungan_pembelajaran', label: 'Lingkungan Pembelajaran', bantu: 'Ruang fisik, virtual, dan budaya belajar yang dibangun' },
-      { k: 'pemanfaatan_digital', label: 'Pemanfaatan Digital', bantu: 'Teknologi/platform digital yang digunakan' },
-      { k: 'lintas_disiplin', label: 'Lintas Disiplin Ilmu', bantu: 'Keterkaitan dengan mata pelajaran lain' },
-    ],
-    kegiatan: [{ k: 'strategi_diferensiasi', label: 'Strategi Diferensiasi', bantu: 'Penyesuaian konten, proses, atau produk sesuai kebutuhan peserta didik' }],
+    inti: {
+      cp_umum: { k: 'cp_umum', label: 'Capaian Pembelajaran Umum (per Fase)', bantu: 'Opsional — rumusan CP umum fase; CP per elemen dipilih di bawah' },
+      pemahaman_bermakna: { k: 'pemahaman_bermakna', label: 'Pemahaman Bermakna', bantu: 'Ringkasan konsep kunci yang diharapkan dipahami peserta didik' },
+      materi_inti: { k: 'materi_inti', label: 'Materi Inti', bantu: 'Pokok materi yang dipelajari', wajib: true },
+    },
+    kegiatan: [{ k: 'kegiatan_alternatif', label: 'Kegiatan Alternatif', bantu: 'Opsional — bila media/alat utama tidak tersedia' }],
     asesmen: [
-      { k: 'asesmen_diagnostik', label: 'Asesmen Diagnostik (Awal)' },
-      { k: 'asesmen_formatif', label: 'Asesmen Formatif (Proses)', wajib: true },
-      { k: 'asesmen_sumatif', label: 'Asesmen Sumatif (Akhir)', wajib: true },
-      { k: 'kktp', label: 'Kriteria Ketercapaian Tujuan Pembelajaran (KKTP)' },
-      { k: 'pengayaan', label: 'Pengayaan', bantu: 'Untuk peserta didik yang cepat mencapai tujuan' },
-      { k: 'remedial', label: 'Remedial', bantu: 'Untuk peserta didik yang membutuhkan bimbingan' },
-      { k: 'refleksi_guru', label: 'Refleksi Guru', bantu: 'Pertanyaan refleksi untuk guru setelah pembelajaran' },
-      { k: 'refleksi_siswa', label: 'Refleksi Peserta Didik', bantu: 'Pertanyaan refleksi untuk peserta didik' },
-      { k: 'glosarium', label: 'Glosarium' },
+      { k: 'asesmen_diagnostik', label: 'Asesmen Diagnostik', bantu: 'Di awal pembelajaran: kesiapan & pengetahuan awal peserta didik' },
+      { k: 'asesmen_formatif', label: 'Asesmen Formatif', bantu: 'Selama pembelajaran, mis. latihan soal, observasi, umpan balik', wajib: true },
+      { k: 'asesmen_sumatif', label: 'Asesmen Sumatif', bantu: 'Akhir pembelajaran, mis. soal evaluasi', wajib: true },
+    ],
+    refleksi: [
+      { k: 'refleksi_guru', label: 'Refleksi Guru', bantu: 'Keberhasilan, kesulitan, ketercapaian tujuan, strategi yang perlu diperbaiki' },
+      { k: 'refleksi_siswa', label: 'Refleksi Peserta Didik', bantu: 'Pernyataan refleksi diri peserta didik' },
+      { k: 'pemetaan_kemampuan', label: 'Pemetaan Kemampuan Peserta Didik', bantu: 'Untuk keperluan pembelajaran berdiferensiasi' },
+      { k: 'interaksi_ortu', label: 'Interaksi dengan Orang Tua / Wali', bantu: 'Opsional — mis. materi untuk belajar di rumah' },
+    ],
+    lampiran: [
+      { k: 'bahan_bacaan', label: 'Bahan Bacaan Guru dan Peserta Didik', bantu: 'Teks cerita, gambar, tabel materi' },
+      { k: 'lkpd', label: 'Lembar Kerja Peserta Didik (LKPD)', bantu: 'Kolom nama dan nilai ditambahkan otomatis di dokumen', kerangka: LKPD },
+      { k: 'rubrik_sikap', label: 'Rubrik Penilaian Sikap', bantu: 'Skor 1–4 dengan indikatornya', kerangka: RUBRIK_SIKAP },
+      { k: 'rubrik_pengetahuan', label: 'Rubrik Penilaian Pengetahuan dan Keterampilan', bantu: 'Ceklis atau skala', kerangka: RUBRIK_PENGETAHUAN },
+      { k: 'remedial', label: 'Remedial', bantu: 'Strategi bantuan bagi peserta didik yang mengalami kesulitan' },
+      { k: 'pengayaan', label: 'Pengayaan', bantu: 'Kegiatan dan soal bagi peserta didik yang sudah menguasai materi' },
       { k: 'daftar_pustaka', label: 'Daftar Pustaka' },
     ],
   },
@@ -176,41 +225,45 @@ export function labelFase(k) {
 }
 
 export function pertemuanKosong(kurikulum) {
-  return { topik: '', tahap: Object.fromEntries(TAHAP[kurikulum].map((t) => [t.k, { isi: '', durasi: '' }])) }
+  return { topik: '', tahap: Object.fromEntries(TAHAP[kurikulum].map((t) => [t.k, { isi: '', durasi: t.durasi ?? '' }])) }
 }
 
-const PETA_P3 = {
-  'Beriman, bertakwa kepada Tuhan YME, dan berakhlak mulia': 'Keimanan dan Ketakwaan terhadap Tuhan YME',
-  'Berkebinekaan global': 'Kewargaan',
-  'Bergotong royong': 'Kolaborasi',
-  Mandiri: 'Kemandirian',
-  'Bernalar kritis': 'Penalaran Kritis',
-  Kreatif: 'Kreativitas',
+export function atpKosong(waktu = '') {
+  return { waktu, kegiatan: '', kemampuan: '' }
 }
 
-// Seragamkan data lama (format sebelum perombakan) agar bisa dibuka di form.
+/** Baris ATP yang lengkap (kegiatan & kemampuan terisi). */
+export function atpLengkap(d) {
+  return (d.atp || []).filter((a) => a.kegiatan?.trim() && a.kemampuan?.trim())
+}
+
+/** Kalimat ATP: "Melalui kegiatan …, peserta didik dapat …." */
+export function kalimatAtp(a) {
+  const kegiatan = a.kegiatan.trim().replace(/[ .,]+$/, '').replace(/^melalui kegiatan\s+/i, '')
+  const kemampuan = a.kemampuan.trim().replace(/[ .]+$/, '').replace(/^peserta didik (dapat|mampu)\s+/i, '')
+  const kecil = (s) => s.charAt(0).toLowerCase() + s.slice(1)
+  return `Melalui kegiatan ${kecil(kegiatan)}, peserta didik dapat ${kecil(kemampuan)}.`
+}
+
+// Seragamkan data lama / data baru agar bisa dibuka di form.
 export function normalisasi(data, kurikulum) {
   const d = { ...(data || {}) }
-  if (!d.dimensi_profil?.length && d.profil_pelajar?.length) {
-    d.dimensi_profil = [...new Set(d.profil_pelajar.map((x) => PETA_P3[x]).filter(Boolean))]
-  }
-  if (d.target_peserta?.length) d.target_peserta = d.target_peserta.map((x) => String(x).replace('Siswa ', 'Peserta didik '))
   if (!d.pertemuan?.length) {
     const p = pertemuanKosong(kurikulum)
-    const inti = kurikulum === 'merdeka' ? 'memahami' : 'inti'
     p.tahap.pendahuluan.isi = d.pendahuluan || ''
-    p.tahap[inti].isi = d.kegiatan_inti || ''
+    p.tahap.inti.isi = d.kegiatan_inti || ''
     p.tahap.penutup.isi = d.penutup || ''
     d.pertemuan = [p]
   }
   d.alokasi = { pertemuan: '', jp: '', menit_per_jp: '', ...(d.alokasi || {}) }
+  if (kurikulum === 'merdeka' && !d.atp?.length) d.atp = [atpKosong('Pertemuan 1')]
   return d
 }
 
 // Daftar kekurangan per langkah sebelum diajukan (sama dengan cek di server).
 export function kekurangan(form, kurikulum) {
   const d = form.data
-  const hasil = { identitas: [], desain: [], kegiatan: [], asesmen: [], lampiran: [] }
+  const hasil = Object.fromEntries(LANGKAH[kurikulum].map((l) => [l.k, []]))
   if (!form.judul?.trim()) hasil.identitas.push('Judul')
   if (!form.mata_pelajaran_id) hasil.identitas.push('Mata pelajaran')
   if (!form.kelas_id) hasil.identitas.push('Kelas')
@@ -218,17 +271,23 @@ export function kekurangan(form, kurikulum) {
   const a = d.alokasi || {}
   if (!a.pertemuan || !a.jp || !a.menit_per_jp) hasil.identitas.push('Alokasi waktu')
   if (kurikulum === 'merdeka') {
-    if (!d.cp_ids?.length) hasil.desain.push('Capaian pembelajaran')
-    if (!d.tp_ids?.length && !teksPolos(d.tujuan_pembelajaran)) hasil.desain.push('Tujuan pembelajaran')
-    if (!d.dimensi_profil?.length) hasil.desain.push('Dimensi profil lulusan')
-  } else if (!d.materi_pokok?.trim()) hasil.identitas.push('Materi pokok')
-  if (kurikulum === 'k13') {
+    if (!d.tahun_ajaran?.trim()) hasil.identitas.push('Tahun ajaran')
+    if (!d.moda) hasil.umum.push('Moda pembelajaran')
+    if (!d.metode?.length && !d.metode_lain?.trim()) hasil.umum.push('Metode pembelajaran')
+    if (!d.model_pembelajaran?.trim()) hasil.umum.push('Model pembelajaran')
+    if (!d.profil_pelajar?.length) hasil.umum.push('Profil Pelajar Pancasila')
+    if (!d.cp_ids?.length) hasil.inti.push('Capaian pembelajaran')
+    if (!d.tp_ids?.length && !teksPolos(d.tujuan_pembelajaran)) hasil.inti.push('Tujuan pembelajaran')
+    if (!atpLengkap(d).length) hasil.inti.push('Alur tujuan pembelajaran')
+    if (!teksPolos(d.materi_inti)) hasil.inti.push('Materi inti')
+    for (const f of FIELD.merdeka.asesmen) if (f.wajib && !teksPolos(d[f.k])) hasil.asesmen.push(f.label)
+  } else {
+    if (!d.materi_pokok?.trim()) hasil.identitas.push('Materi pokok')
     if (!String(d.kkm || '').trim()) hasil.desain.push('KKM')
     if (!d.model_pembelajaran?.trim()) hasil.kegiatan.push('Model pembelajaran')
-  }
-  for (const [langkah, daftar] of Object.entries(FIELD[kurikulum])) {
-    const target = langkah === 'pembelajaranMendalam' ? 'desain' : langkah
-    for (const f of daftar) if (f.wajib && !teksPolos(d[f.k])) hasil[target].push(f.label)
+    for (const [langkah, daftar] of Object.entries(FIELD.k13)) {
+      for (const f of daftar) if (f.wajib && !teksPolos(d[f.k])) hasil[langkah].push(f.label)
+    }
   }
   if (!d.pertemuan?.length) hasil.kegiatan.push('Minimal 1 pertemuan')
   ;(d.pertemuan || []).forEach((p, i) => {

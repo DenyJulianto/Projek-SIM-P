@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\CatatanPoin;
+use App\Models\Pelanggaran;
 use App\Models\PengajuanPenguranganPoin;
 use App\Notifications\PenguranganPoinDisetujuiNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Alur pengurangan poin kedisiplinan: BK mengajukan (store), Kesiswaan
@@ -45,6 +48,23 @@ class PengajuanPenguranganPoinController extends Controller
             'alasan' => ['required', 'string'],
         ]);
 
+        $pelanggaran = Pelanggaran::find($data['pelanggaran_id']);
+        abort_if($pelanggaran->siswa_id !== (int) $data['siswa_id'], 422, 'Pelanggaran yang dipilih bukan milik siswa ini.');
+
+        // Satu pelanggaran hanya memotong poin sekali, termasuk bila Kesiswaan
+        // sudah memotongnya langsung di menu Poin Siswa.
+        if ($alasan = $pelanggaran->alasanSudahDipotong()) {
+            throw ValidationException::withMessages(['pelanggaran_id' => $alasan]);
+        }
+
+        // Poin mengikuti pedoman tata tertib sesuai tingkat pelanggaran.
+        $pedoman = CatatanPoin::KATEGORI[$pelanggaran->tingkat] ?? null;
+        if ($pedoman && ($data['poin_diajukan'] < $pedoman['min'] || $data['poin_diajukan'] > $pedoman['max'])) {
+            throw ValidationException::withMessages([
+                'poin_diajukan' => "Poin untuk {$pedoman['label']} harus ".($pedoman['min'] === $pedoman['max'] ? $pedoman['min'] : "{$pedoman['min']}–{$pedoman['max']}").'.',
+            ]);
+        }
+
         $pengajuan = PengajuanPenguranganPoin::create($data + [
             'diajukan_oleh' => $request->user()->id,
             'status' => 'menunggu',
@@ -61,15 +81,33 @@ class PengajuanPenguranganPoinController extends Controller
     public function setujui(Request $request, PengajuanPenguranganPoin $pengajuan): JsonResponse
     {
         abort_if($pengajuan->status !== 'menunggu', 422, 'Pengajuan ini sudah diputuskan.');
+        // Kesiswaan mungkin sudah memotong langsung setelah BK mengajukan.
+        if ($alasan = $pengajuan->pelanggaran?->alasanSudahDipotong(null, $pengajuan->id)) {
+            abort(422, $alasan.' Tolak pengajuan ini.');
+        }
 
         $data = $request->validate([
             'catatan_kesiswaan' => ['nullable', 'string'],
         ]);
 
         DB::transaction(function () use ($pengajuan, $request, $data) {
+            // Dicatat di buku poin (sama seperti pengurangan langsung dari menu
+            // Poin Siswa) dengan kategori sesuai tingkat pelanggarannya, lalu
+            // sisa poin dihitung ulang.
             $siswa = $pengajuan->siswa()->lockForUpdate()->first();
-            $siswa->poin_disiplin = max(0, $siswa->poin_disiplin - $pengajuan->poin_diajukan);
-            $siswa->save();
+            $pengajuan->loadMissing('pelanggaran:id,jenis,tingkat');
+            $siswa->catatanPoin()->create([
+                'kategori' => array_key_exists($pengajuan->pelanggaran->tingkat, Pelanggaran::TINGKAT)
+                    ? $pengajuan->pelanggaran->tingkat
+                    : 'sedang',
+                'pelanggaran_id' => $pengajuan->pelanggaran_id,
+                'pengajuan_id' => $pengajuan->id,
+                'poin' => $pengajuan->poin_diajukan,
+                'keterangan' => "Pelanggaran: {$pengajuan->pelanggaran->jenis} (pengajuan BK)",
+                'tanggal' => now()->toDateString(),
+                'dicatat_oleh' => $request->user()->id,
+            ]);
+            $siswa->hitungUlangPoin();
 
             $pengajuan->update([
                 'status' => 'disetujui',

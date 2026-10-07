@@ -164,9 +164,9 @@ export function RingkasanPembinaan({ r }) {
           <div className="space-y-1.5">
             {r.per_tingkat_pelanggaran.map((t) => (
               <div key={t.key} className="flex items-center gap-2 text-xs">
-                <span className="w-14 text-navy/60">{t.label}</span>
+                <span className="w-20 text-navy/60">{t.label}</span>
                 <div className="flex-1 h-2 bg-navy/10 rounded-full overflow-hidden">
-                  <div className={`h-full ${t.key === 'berat' ? 'bg-red-500' : t.key === 'sedang' ? 'bg-amber-500' : 'bg-navy/40'}`} style={{ width: `${(t.jumlah / maks) * 100}%` }} />
+                  <div className={`h-full ${t.key === 'sangat_berat' ? 'bg-red-700' : t.key === 'berat' ? 'bg-red-500' : t.key === 'sedang' ? 'bg-amber-500' : 'bg-navy/40'}`} style={{ width: `${(t.jumlah / maks) * 100}%` }} />
                 </div>
                 <span className="w-5 text-right tabular-nums font-semibold text-navy">{t.jumlah}</span>
               </div>

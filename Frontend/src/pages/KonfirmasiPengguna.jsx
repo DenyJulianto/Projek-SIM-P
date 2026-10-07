@@ -13,7 +13,25 @@ const JENIS = [
 ]
 
 const PERAN_BUKAN_STAF = ['Super Admin', 'Siswa', 'Orang Tua']
-const PERAN_BAWAAN = { Guru: ['Guru Mata Pelajaran'], 'Tenaga Kependidikan': ['Tata Usaha'] }
+
+// "Guru" = nilai lama sebelum jenis pegawai diganti menjadi "Pendidik".
+const isPendidik = (jenis) => jenis === 'Pendidik' || jenis === 'Guru'
+
+/**
+ * Peran sistem yang diusulkan dari jabatan yang diajukan (admin tetap bisa
+ * mengubahnya). Jabatan tanpa padanan peran memakai usulan dari jenis pegawai.
+ */
+function usulanPeran(p) {
+  const j = p.jabatan || ''
+  if (j === 'Kepala Sekolah') return ['Kepala Sekolah']
+  if (/Wakil Kepala Sekolah Bidang Kurikulum/.test(j)) return ['Kurikulum']
+  if (/Wakil Kepala Sekolah Bidang Kesiswaan/.test(j)) return ['Kesiswaan']
+  if (/^Wakil Kepala Sekolah/.test(j)) return ['Wakil Kepala Sekolah']
+  if (/Bimbingan Konseling/.test(j)) return ['Guru BK']
+  if (/Keuangan|Bendahara/.test(j)) return ['Tata Usaha', 'Bendahara']
+  if (/Tata Usaha|Administrasi/.test(j)) return ['Tata Usaha']
+  return isPendidik(p.jenis_pegawai) ? ['Guru Mata Pelajaran'] : ['Tata Usaha']
+}
 
 /**
  * Konfirmasi pendaftaran mandiri. Siswa: admin memilih kelas saat menyetujui,
@@ -481,7 +499,7 @@ function PendaftaranPegawaiPanel({ onChanged }) {
               </div>
               {tab === 'menunggu' && aksi?.id !== p.id && (
                 <TombolAksi
-                  onSetujui={() => setAksi({ id: p.id, jenis: 'setujui', roles: PERAN_BAWAAN[p.jenis_pegawai] ?? [], jenis_kelamin: '' })}
+                  onSetujui={() => setAksi({ id: p.id, jenis: 'setujui', roles: usulanPeran(p).filter((r) => peranStaf.includes(r)), jenis_kelamin: '' })}
                   onTolak={() => setAksi({ id: p.id, jenis: 'tolak', alasan: '' })}
                 />
               )}
@@ -494,7 +512,7 @@ function PendaftaranPegawaiPanel({ onChanged }) {
               {p.nuptk && <Baris l="NUPTK" v={p.nuptk} />}
               {p.nik && <Baris l="NIK" v={p.nik} />}
               <Baris l="Jabatan diajukan" v={p.jabatan} />
-              {p.jenis_pegawai === 'Guru' && <Baris l="Mata pelajaran" v={p.mata_pelajaran} />}
+              {isPendidik(p.jenis_pegawai) && <Baris l="Mata pelajaran" v={p.mata_pelajaran} />}
             </dl>
             {p.akun_terdaftar && (
               <p

@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import ProgramSemesterDetailModal from '../components/ProgramSemesterDetailModal'
 import { api } from '../lib/api'
+import { SUMBER_PROGRAM, kelasDiajar, mapelDiajar } from '../lib/sumberProgram'
 
 const DOKUMEN_LABEL = { draft: 'Draft', diajukan: 'Diajukan', disahkan: 'Disahkan' }
 const DOKUMEN_TONE = {
@@ -38,7 +39,12 @@ function emptyRow(semester) {
   }
 }
 
-export default function ProgramSemesterManagement({ onBack }) {
+// `guru`: mode Guru Mapel/Wali Kelas — hanya dokumen milik sendiri untuk kelas &
+// mapel yang diajar, diajukan ke Kurikulum untuk diverifikasi.
+export default function ProgramSemesterManagement({ onBack, guru = false, tanpaJudul = false }) {
+  const sumber = SUMBER_PROGRAM['program-semester'][guru ? 'guru' : 'kurikulum']
+  const [mengajar, setMengajar] = useState([])
+  const [taAktif, setTaAktif] = useState('')
   const [mode, setMode] = useState('list')
   const [editingId, setEditingId] = useState(null)
   const [list, setList] = useState(null)
@@ -63,8 +69,8 @@ export default function ProgramSemesterManagement({ onBack }) {
     if (kelasFilter) params.kelas_id = kelasFilter
     if (mapelFilter) params.mata_pelajaran_id = mapelFilter
     if (dokumenFilter) params.status_dokumen = dokumenFilter
-    api
-      .listProgramSemester(params)
+    sumber
+      .list(params)
       .then((r) => setList(r.data ?? r))
       .catch((err) => setError(err.message))
   }
@@ -75,16 +81,29 @@ export default function ProgramSemesterManagement({ onBack }) {
   }, [tahunFilter, semesterFilter, kelasFilter, mapelFilter, dokumenFilter])
 
   useEffect(() => {
+    if (guru) {
+      sumber
+        .opsi()
+        .then((o) => {
+          setTahunAjaranList(o.tahun_ajaran)
+          setMengajar(o.mengajar)
+          setKelasList(kelasDiajar(o.mengajar))
+          setMapelList(mapelDiajar(o.mengajar))
+          setTaAktif(o.tahun_ajaran_aktif || '')
+        })
+        .catch(() => {})
+      return
+    }
     api.listTahunAjaranKurikulum().then(setTahunAjaranList).catch(() => {})
     api.listKelasAll().then((r) => setKelasList(r.data ?? r)).catch(() => {})
     api.listMataPelajaran().then((r) => setMapelList(r.data ?? r)).catch(() => {})
-  }, [])
+  }, [guru, sumber])
 
   async function handleDelete(item) {
     if (!window.confirm(`Hapus Program Semester ${item.mata_pelajaran?.nama_mapel} — ${item.kelas?.nama_kelas}?`)) return
     setBusyId(item.id)
     try {
-      await api.deleteProgramSemester(item.id)
+      await sumber.remove(item.id)
       load()
     } catch (err) {
       window.alert(err.message)
@@ -103,6 +122,9 @@ export default function ProgramSemesterManagement({ onBack }) {
     return (
       <ProgramSemesterEditor
         id={editingId}
+        sumber={sumber}
+        mengajar={mengajar}
+        taAktif={taAktif}
         tahunAjaranList={tahunAjaranList}
         kelasList={kelasList}
         mapelList={mapelList}
@@ -116,12 +138,18 @@ export default function ProgramSemesterManagement({ onBack }) {
     <div>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
-          <button onClick={onBack} className="text-sm text-navy/50 hover:text-navy mb-1">
-            ← Kembali ke Dashboard
-          </button>
-          <h1 className="text-2xl font-extrabold text-navy">Program Semester</h1>
+          {!tanpaJudul && (
+            <>
+              <button onClick={onBack} className="text-sm text-navy/50 hover:text-navy mb-1">
+                ← Kembali ke Dashboard
+              </button>
+              <h1 className="text-2xl font-extrabold text-navy">Program Semester</h1>
+            </>
+          )}
           <p className="text-sm text-navy/50 mt-1 max-w-xl">
-            Susun rencana pembelajaran satu semester per kelas dan mata pelajaran: TP, materi, alokasi JP, minggu, dan bulan pelaksanaan.
+            {guru
+              ? 'Rencana pembelajaran untuk kelas dan mata pelajaran yang Anda ajar. Setelah lengkap, ajukan ke Waka Kurikulum untuk disahkan.'
+              : 'Susun rencana pembelajaran satu semester per kelas dan mata pelajaran: TP, materi, alokasi JP, minggu, dan bulan pelaksanaan.'}
           </p>
         </div>
         <button
@@ -182,6 +210,7 @@ export default function ProgramSemesterManagement({ onBack }) {
           const persen = p.item_count > 0 ? Math.round((p.item_terlaksana / p.item_count) * 100) : 0
           const jpTerlaksana = Number(p.jp_terlaksana ?? 0)
           const persenJp = Number(p.total_jp) > 0 ? Math.round((jpTerlaksana / Number(p.total_jp)) * 100) : 0
+          const terkunci = guru && p.status_dokumen !== 'draft'
           return (
             <div key={p.id} className="bg-white rounded-2xl border border-navy/10 p-5">
               <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -197,7 +226,7 @@ export default function ProgramSemesterManagement({ onBack }) {
                     Semester {p.semester} — Tahun Ajaran {p.tahun_ajaran?.nama}
                   </p>
                   <p className="text-xs text-navy/40 mt-1">
-                    Guru: {p.guru?.nama || '-'} — {p.item_count} pertemuan/topik — total {p.total_jp ?? 0} JP
+                    {guru ? '' : `Guru: ${p.guru?.nama || '-'} — `}{p.item_count} pertemuan/topik — total {p.total_jp ?? 0} JP
                   </p>
                   <div className="mt-2 flex items-center gap-2">
                     <div className="h-2 w-40 rounded-full bg-navy/5 overflow-hidden">
@@ -207,6 +236,9 @@ export default function ProgramSemesterManagement({ onBack }) {
                       {persen}% baris — {persenJp}% JP terlaksana
                     </span>
                   </div>
+                  {guru && p.catatan_verifikasi && (
+                    <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-1.5 mt-2">Catatan Kurikulum: {p.catatan_verifikasi}</p>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -220,13 +252,15 @@ export default function ProgramSemesterManagement({ onBack }) {
                       setEditingId(p.id)
                       setMode('editor')
                     }}
-                    className="text-xs font-semibold text-navy border border-navy/20 rounded-full px-3.5 py-1.5 hover:bg-navy hover:text-white transition-colors"
+                    disabled={terkunci}
+                    title={terkunci ? 'Tarik pengajuan terlebih dahulu (di Detail) untuk mengubah' : undefined}
+                    className="text-xs font-semibold text-navy border border-navy/20 rounded-full px-3.5 py-1.5 hover:bg-navy hover:text-white transition-colors disabled:opacity-40 disabled:pointer-events-none"
                   >
                     Buka / Edit
                   </button>
                   <button
                     onClick={() => handleDelete(p)}
-                    disabled={busyId === p.id}
+                    disabled={busyId === p.id || terkunci}
                     className="text-xs font-semibold text-red-600 border border-red-200 rounded-full px-3.5 py-1.5 hover:bg-red-600 hover:text-white transition-colors disabled:opacity-50"
                   >
                     Hapus
@@ -236,27 +270,29 @@ export default function ProgramSemesterManagement({ onBack }) {
             </div>
           )
         })}
-        {list && list.length === 0 && <p className="text-sm text-navy/40 text-center py-10">Belum ada Program Semester.</p>}
+        {list && list.length === 0 && <p className="text-sm text-navy/40 text-center py-10">
+            Belum ada Program Semester.{guru && mapelList.length === 0 ? ' Anda belum punya jadwal mengajar, jadi belum bisa menyusunnya.' : ''}
+          </p>}
         {list === null && <p className="text-sm text-navy/40 text-center py-10">Memuat...</p>}
       </div>
 
-      {detailId && <ProgramSemesterDetailModal id={detailId} onClose={() => setDetailId(null)} onChanged={load} />}
+      {detailId && <ProgramSemesterDetailModal id={detailId} sumber={sumber} onClose={() => setDetailId(null)} onChanged={load} />}
     </div>
   )
 }
 
-function ProgramSemesterEditor({ id, tahunAjaranList, kelasList, mapelList, onCancel, onSaved }) {
+function ProgramSemesterEditor({ id, sumber, mengajar, taAktif, tahunAjaranList, kelasList, mapelList, onCancel, onSaved }) {
   const [loading, setLoading] = useState(!!id)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [header, setHeader] = useState({ tahun_ajaran_id: '', semester: 'ganjil', kelas_id: '', fase: '', mata_pelajaran_id: '', guru_id: '', catatan: '' })
+  const [header, setHeader] = useState({ tahun_ajaran_id: id ? '' : taAktif, semester: 'ganjil', kelas_id: '', fase: '', mata_pelajaran_id: '', guru_id: '', catatan: '' })
   const [rows, setRows] = useState([emptyRow('ganjil')])
   const [opsi, setOpsi] = useState({ guru: [], tujuan_pembelajaran: [] })
 
   useEffect(() => {
     if (!id) return
-    api
-      .getProgramSemester(id)
+    sumber
+      .get(id)
       .then((p) => {
         setHeader({
           tahun_ajaran_id: p.tahun_ajaran_id,
@@ -286,9 +322,12 @@ function ProgramSemesterEditor({ id, tahunAjaranList, kelasList, mapelList, onCa
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
-  }, [id])
+  }, [id, sumber])
 
+  // Hanya respons permintaan terakhir yang dipakai (permintaan awal tanpa filter bisa selesai belakangan).
+  const urutanOpsi = useRef(0)
   function loadOpsi() {
+    const ke = ++urutanOpsi.current
     const params = {}
     if (header.tahun_ajaran_id && header.mata_pelajaran_id && header.semester) {
       params.tahun_ajaran_id = header.tahun_ajaran_id
@@ -296,9 +335,9 @@ function ProgramSemesterEditor({ id, tahunAjaranList, kelasList, mapelList, onCa
       params.semester = header.semester
       if (header.kelas_id) params.kelas_id = header.kelas_id
     }
-    api
-      .getOpsiProgramSemester(params)
-      .then(setOpsi)
+    sumber
+      .opsi(params)
+      .then((o) => ke === urutanOpsi.current && setOpsi(o))
       .catch(() => {})
   }
 
@@ -307,8 +346,20 @@ function ProgramSemesterEditor({ id, tahunAjaranList, kelasList, mapelList, onCa
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [header.tahun_ajaran_id, header.mata_pelajaran_id, header.semester, header.kelas_id])
 
+  // Mode guru: kelas harus yang diajar untuk mapel terpilih; fase mengikuti tingkat kelas.
+  function sesuaikanHeader(h, field, value) {
+    const baru = { ...h, [field]: value }
+    if (sumber.guru) {
+      const kelas = kelasDiajar(mengajar, baru.mata_pelajaran_id)
+      if (!kelas.some((k) => String(k.id) === String(baru.kelas_id))) baru.kelas_id = ''
+      if (field === 'kelas_id') baru.fase = kelas.find((k) => String(k.id) === String(value))?.fase || baru.fase
+    }
+    return baru
+  }
+  const pilihanKelas = sumber.guru ? kelasDiajar(mengajar, header.mata_pelajaran_id) : kelasList
+
   function updateHeader(field, value) {
-    setHeader((h) => ({ ...h, [field]: value }))
+    setHeader((h) => sesuaikanHeader(h, field, value))
     if (field === 'semester') {
       setRows((rs) =>
         rs.map((r) => ({
@@ -367,8 +418,8 @@ function ProgramSemesterEditor({ id, tahunAjaranList, kelasList, mapelList, onCa
     }
     setSaving(true)
     try {
-      if (id) await api.updateProgramSemester(id, payload)
-      else await api.createProgramSemester(payload)
+      if (id) await sumber.update(id, payload)
+      else await sumber.create(payload)
       onSaved()
     } catch (err) {
       setError(err.message)
@@ -406,8 +457,8 @@ function ProgramSemesterEditor({ id, tahunAjaranList, kelasList, mapelList, onCa
           </Field>
           <Field label="Kelas">
             <select value={header.kelas_id} onChange={(e) => updateHeader('kelas_id', e.target.value)} className="input" required>
-              <option value="">Pilih kelas...</option>
-              {kelasList.map((k) => (
+              <option value="">{sumber.guru && !header.mata_pelajaran_id ? 'Pilih mata pelajaran dulu...' : 'Pilih kelas...'}</option>
+              {pilihanKelas.map((k) => (
                 <option key={k.id} value={k.id}>
                   {k.nama_kelas}
                 </option>
@@ -434,16 +485,18 @@ function ProgramSemesterEditor({ id, tahunAjaranList, kelasList, mapelList, onCa
               ))}
             </select>
           </Field>
-          <Field label="Guru Pengampu">
-            <select value={header.guru_id} onChange={(e) => updateHeader('guru_id', e.target.value)} className="input">
-              <option value="">Belum ditentukan</option>
-              {opsi.guru.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.nama}
-                </option>
-              ))}
-            </select>
-          </Field>
+{!sumber.guru && (
+            <Field label="Guru Pengampu">
+              <select value={header.guru_id} onChange={(e) => updateHeader('guru_id', e.target.value)} className="input">
+                <option value="">Belum ditentukan</option>
+                {(opsi.guru || []).map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.nama}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
           <Field label="Catatan Program (opsional)">
             <input value={header.catatan} onChange={(e) => updateHeader('catatan', e.target.value)} className="input" />
           </Field>

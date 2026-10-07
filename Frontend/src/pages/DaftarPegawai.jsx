@@ -6,9 +6,7 @@ import { AlertIcon, ArrowRightIcon, AuthTagline, CheckIcon, WavyBackground } fro
 import { Isian } from '../components/FormPendaftaran'
 import { hanyaAngka, kelasInput } from '../lib/formPendaftaran'
 
-const JENIS = ['Guru', 'Tenaga Kependidikan']
-const STATUS = ['PNS', 'PPPK', 'GTY-PTY', 'Honorer']
-const WAJIB_NIP = ['PNS', 'PPPK']
+const PENDIDIK = 'Pendidik'
 
 const KOSONG = {
   nama_lengkap: '',
@@ -27,8 +25,9 @@ const KOSONG = {
 /** Pendaftaran mandiri khusus pendidik & tenaga kependidikan (ditinjau admin sebelum jadi akun). */
 export default function DaftarPegawai() {
   const [f, setF] = useState(KOSONG)
-  const [mapel, setMapel] = useState([])
-  const [jabatan, setJabatan] = useState([])
+  // Pilihan jenis pegawai, status kepegawaian, dan jabatan mengikuti jenis
+  // sekolah (negeri/swasta) dari server.
+  const [opsi, setOpsi] = useState({ jenis_pegawai: [], status_kepegawaian: [], wajib_nip: [], jabatan: {}, mata_pelajaran: [] })
   const [errors, setErrors] = useState({})
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -38,22 +37,25 @@ export default function DaftarPegawai() {
     if (IS_CENTRAL_DOMAIN) return
     api
       .getOpsiPendaftaranPegawai()
-      .then((o) => {
-        setMapel(o.mata_pelajaran || [])
-        setJabatan(o.jabatan || [])
-      })
+      .then((o) => setOpsi((p) => ({ ...p, ...o })))
       .catch(() => {})
   }, [])
 
   const set = (k) => (e) => setF((p) => ({ ...p, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }))
   const setAngka = (k, maks) => (e) => setF((p) => ({ ...p, [k]: hanyaAngka(e.target.value, maks) }))
+  // Jabatan bergantung pada jenis pegawai: kosongkan bila jenisnya diganti.
+  const setJenis = (e) => setF((p) => ({ ...p, jenis_pegawai: e.target.value, jabatan: '' }))
 
-  // Kolom hanya muncul bila relevan: NIP untuk PNS/PPPK, NUPTK/NIK untuk
-  // non-PNS, mata pelajaran untuk guru. Kolom tersembunyi tidak divalidasi
-  // dan tidak ikut dikirim.
-  const tampilNip = WAJIB_NIP.includes(f.status_kepegawaian)
+  // Kolom hanya muncul bila relevan: NIP untuk PNS/PPPK/ASN DPK, NUPTK/NIK
+  // untuk non-PNS, mata pelajaran untuk pendidik. Kolom tersembunyi tidak
+  // divalidasi dan tidak ikut dikirim.
+  const tampilNip = opsi.wajib_nip.includes(f.status_kepegawaian)
   const tampilNuptkNik = f.status_kepegawaian !== '' && f.status_kepegawaian !== 'PNS'
-  const guru = f.jenis_pegawai === 'Guru'
+  const guru = f.jenis_pegawai === PENDIDIK
+  const jabatan = opsi.jabatan[f.jenis_pegawai] || []
+  const keteranganStatus = opsi.status_kepegawaian.find((s) => s.nilai === f.status_kepegawaian)?.keterangan
+  // Status sekolah (negeri/swasta) belum diatur: pendaftaran belum dibuka.
+  const belumDibuka = !!opsi.pesan
 
   const masalah = useMemo(() => {
     const m = {}
@@ -133,23 +135,39 @@ export default function DaftarPegawai() {
               </div>
             )}
 
-            <form onSubmit={kirim} className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4">
+            {belumDibuka && (
+              <div className="flex items-start gap-3 text-amber-800 bg-amber-50 border border-amber-200 rounded-xl text-sm py-3 px-4 mb-5">
+                <AlertIcon className="h-4 w-4 mt-0.5 shrink-0" />
+                <span>{opsi.pesan}</span>
+              </div>
+            )}
+
+            <form
+              onSubmit={kirim}
+              aria-disabled={belumDibuka}
+              className={`grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4 ${belumDibuka ? 'opacity-50 pointer-events-none select-none' : ''}`}
+            >
               <Isian label="Nama Lengkap (dengan gelar)" wajib className="sm:col-span-2" galat={galat('nama_lengkap')}>
                 <input value={f.nama_lengkap} onChange={set('nama_lengkap')} placeholder="mis. Budi Santoso, S.Pd." className={kelasInput} maxLength={255} />
               </Isian>
 
               <Isian label="Jenis Pegawai" wajib galat={galat('jenis_pegawai')}>
-                <select value={f.jenis_pegawai} onChange={set('jenis_pegawai')} className={kelasInput}>
+                <select value={f.jenis_pegawai} onChange={setJenis} className={kelasInput}>
                   <option value="">Pilih…</option>
-                  {JENIS.map((j) => <option key={j}>{j}</option>)}
+                  {opsi.jenis_pegawai.map((j) => (
+                    <option key={j.nilai} value={j.nilai}>{j.label}</option>
+                  ))}
                 </select>
               </Isian>
 
               <Isian label="Status Kepegawaian" wajib galat={galat('status_kepegawaian')}>
                 <select value={f.status_kepegawaian} onChange={set('status_kepegawaian')} className={kelasInput}>
                   <option value="">Pilih…</option>
-                  {STATUS.map((s) => <option key={s}>{s}</option>)}
+                  {opsi.status_kepegawaian.map((s) => (
+                    <option key={s.nilai} value={s.nilai}>{s.nilai}</option>
+                  ))}
                 </select>
+                {keteranganStatus && <p className="text-[11px] text-navy/45 mt-1 ml-1">{keteranganStatus}</p>}
               </Isian>
 
               {tampilNip && (
@@ -195,8 +213,8 @@ export default function DaftarPegawai() {
               </Isian>
 
               <Isian label="Jabatan yang diajukan" galat={galat('jabatan')} className={guru ? '' : 'sm:col-span-2'}>
-                <select value={f.jabatan} onChange={set('jabatan')} className={kelasInput}>
-                  <option value="">Pilih jabatan…</option>
+                <select value={f.jabatan} onChange={set('jabatan')} disabled={!f.jenis_pegawai} className={`${kelasInput} disabled:opacity-60`}>
+                  <option value="">{f.jenis_pegawai ? 'Pilih jabatan…' : 'Pilih jenis pegawai dulu'}</option>
                   {jabatan.map((g) => (
                     <optgroup key={g.kelompok} label={g.kelompok}>
                       {g.jabatan.map((j) => (
@@ -211,7 +229,7 @@ export default function DaftarPegawai() {
                 <Isian label="Mata pelajaran yang diampu" galat={galat('mata_pelajaran')}>
                   <input list="daftar-mapel" value={f.mata_pelajaran} onChange={set('mata_pelajaran')} placeholder="Pilih atau ketik" className={kelasInput} maxLength={255} />
                   <datalist id="daftar-mapel">
-                    {mapel.map((m) => <option key={m} value={m} />)}
+                    {opsi.mata_pelajaran.map((m) => <option key={m} value={m} />)}
                   </datalist>
                 </Isian>
               )}
@@ -226,7 +244,7 @@ export default function DaftarPegawai() {
               <div className="sm:col-span-2 pt-1">
                 <button
                   type="submit"
-                  disabled={loading || !valid}
+                  disabled={loading || !valid || belumDibuka}
                   className="w-full inline-flex items-center justify-center gap-2 bg-navy-light hover:bg-emerald-700 text-white font-bold tracking-wide py-3 rounded-full transition-colors disabled:opacity-50"
                 >
                   {loading ? 'MENGIRIM...' : 'DAFTAR'}

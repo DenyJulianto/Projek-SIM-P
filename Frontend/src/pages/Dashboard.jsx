@@ -1,5 +1,4 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
-import { Navigate, useLocation } from 'react-router-dom'
 import { useViewUrl } from '../lib/useViewUrl'
 import LogoutConfirmModal from '../components/LogoutConfirmModal'
 import MiniCalendar from '../components/MiniCalendar'
@@ -140,7 +139,6 @@ const MENU_GROUPS = [
 
 export default function Dashboard() {
   const { user, logout, hasPermission, isSuperAdmin } = useAuth()
-  const location = useLocation()
   const [view, setView] = useViewUrl()
   const [stats, setStats] = useState({ siswa: null, guru: null, kelas: null })
   const [notices, setNotices] = useState([])
@@ -260,13 +258,8 @@ export default function Dashboard() {
     setView(item.key)
   }
 
-  // Pemeriksaan hak akses per rute: URL bertingkat (mis. /data-master/sekolah)
-  // hanya milik Super Admin. Peran lain memakai URL satu tingkat
-  // (mis. /kelas-saya) dan dikembalikan ke dasbornya bila membuka URL lain.
-  if (!isSuperAdmin() && location.pathname.split('/').filter(Boolean).length > 1) {
-    return <Navigate to="/dashboard" replace />
-  }
-
+  // Alamat /{sekolah}/{peran}/{halaman} sudah dirapikan ProtectedRoute
+  // (sekolah & peran selalu milik user ini) sebelum sampai ke sini.
   if (superAdmin) {
     return <SuperAdminDashboard />
   }

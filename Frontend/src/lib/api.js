@@ -314,6 +314,30 @@ export const api = {
   },
 
   getDashboardNasional: () => request('/api/dashboard-nasional'),
+  // Angka publik landing platform (sekolah, siswa & guru aktif) — tanpa login.
+  getStatistikPlatform: () => request('/api/platform/statistik'),
+  getKontenPlatform: () => request('/api/platform/konten'),
+
+  // Kelola Landing Page (Super Admin)
+  getKelolaLanding: () => request('/api/landing/konten'),
+  updatePengaturanLanding: (data) => request('/api/landing/pengaturan', { method: 'PUT', body: JSON.stringify(data) }),
+  // jenis: 'slide' | 'fitur' | 'manfaat' — dikirim multipart karena bisa disertai gambar.
+  simpanItemLanding: (jenis, id, data, gambar) => {
+    const formData = new FormData()
+    const nilai = (v) => (typeof v === 'boolean' ? (v ? '1' : '0') : (v ?? ''))
+    Object.entries(data).forEach(([k, v]) =>
+      Array.isArray(v) ? v.forEach((x) => formData.append(`${k}[]`, nilai(x))) : formData.append(k, nilai(v)),
+    )
+    if (gambar) formData.append('gambar', gambar)
+    return requestForm(id ? `/api/landing/${jenis}/${id}` : `/api/landing/${jenis}`, formData)
+  },
+  deleteItemLanding: (jenis, id) => request(`/api/landing/${jenis}/${id}`, { method: 'DELETE' }),
+  simpanTestimoniLanding: (id, data) =>
+    request(id ? `/api/landing/testimoni/${id}` : '/api/landing/testimoni', {
+      method: id ? 'PUT' : 'POST',
+      body: JSON.stringify(data),
+    }),
+  deleteTestimoniLanding: (id) => request(`/api/landing/testimoni/${id}`, { method: 'DELETE' }),
 
   getSekolahNasional: (params = {}) => {
     const query = new URLSearchParams(params).toString()
@@ -861,6 +885,7 @@ export const api = {
   getMySiswaTagihan: () => request('/me/siswa/tagihan'),
   getMySiswaPrestasi: () => request('/me/siswa/prestasi'),
   getMySiswaPelanggaran: () => request('/me/siswa/pelanggaran'),
+  getMySiswaPoin: () => request('/me/siswa/poin'),
   submitPrestasiSaya: ({ judul, tingkat, tanggal, keterangan, file }) => {
     const formData = new FormData()
     formData.append('judul', judul)
@@ -906,6 +931,7 @@ export const api = {
   getAnakPrestasi: (siswaId) => request(`/me/anak/${siswaId}/prestasi`),
 
   getAnakPelanggaran: (siswaId) => request(`/me/anak/${siswaId}/pelanggaran`),
+  getAnakPoin: (siswaId) => request(`/me/anak/${siswaId}/poin`),
   getAnakWaliKelas: (siswaId) => request(`/me/anak/${siswaId}/wali-kelas`),
   getAnakVirtualAccount: (siswaId) => request(`/me/anak/${siswaId}/virtual-account`),
   getAnakQris: (siswaId, tagihanId) => request(`/me/anak/${siswaId}/tagihan/${tagihanId}/qris`),
@@ -975,6 +1001,32 @@ export const api = {
   },
   hapusLampiranModulAjar: (id, lampiranId) => request(`/me/guru/modul-ajar/${id}/lampiran/${lampiranId}`, { method: 'DELETE' }),
   unduhLampiranModulAjar: (id, lampiran) => downloadFile(`/me/guru/modul-ajar/${id}/lampiran/${lampiran.id}`, lampiran.nama_file),
+
+  // Dokumen pendukung modul ajar (Silabus, Pemetaan ATP, Jurnal Harian)
+  listDokumenPendukung: (jenis) => request(`/me/guru/dokumen-pendukung?jenis=${jenis}`),
+  getOpsiDokumenPendukung: () => request('/me/guru/dokumen-pendukung/opsi'),
+  getDokumenPendukung: (id) => request(`/me/guru/dokumen-pendukung/${id}`),
+  getSumberDokumenPendukung: (params) => request(`/me/guru/dokumen-pendukung/sumber?${new URLSearchParams(params)}`),
+  getKehadiranDokumenPendukung: (kelasId, tanggal) => {
+    const q = new URLSearchParams({ kelas_id: kelasId })
+    tanggal.forEach((t) => q.append('tanggal[]', t))
+    return request(`/me/guru/dokumen-pendukung/kehadiran?${q}`)
+  },
+  createDokumenPendukung: (data) => request('/me/guru/dokumen-pendukung', { method: 'POST', body: JSON.stringify(data) }),
+  updateDokumenPendukung: (id, data) => request(`/me/guru/dokumen-pendukung/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteDokumenPendukung: (id) => request(`/me/guru/dokumen-pendukung/${id}`, { method: 'DELETE' }),
+  unduhDokumenPendukung: (id, format, namaFile) => downloadFile(`/me/guru/dokumen-pendukung/${id}/unduh/${format}`, namaFile),
+
+  // Program Tahunan / Semester yang disusun guru sendiri (jenis: program-tahunan | program-semester)
+  listProgramGuru: (jenis, params = {}) => request(`/me/guru/${jenis}?${new URLSearchParams(params)}`),
+  getOpsiProgramGuru: (jenis, params = {}) => request(`/me/guru/${jenis}/opsi?${new URLSearchParams(params)}`),
+  getProgramGuru: (jenis, id) => request(`/me/guru/${jenis}/${id}`),
+  createProgramGuru: (jenis, data) => request(`/me/guru/${jenis}`, { method: 'POST', body: JSON.stringify(data) }),
+  updateProgramGuru: (jenis, id, data) => request(`/me/guru/${jenis}/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteProgramGuru: (jenis, id) => request(`/me/guru/${jenis}/${id}`, { method: 'DELETE' }),
+  exportProgramGuru: (jenis, id) => downloadFile(`/me/guru/${jenis}/${id}/export`, `${jenis}.xlsx`),
+  ajukanProgramGuru: (jenis, id) => request(`/me/guru/${jenis}/${id}/ajukan`, { method: 'POST' }),
+  tarikProgramGuru: (jenis, id) => request(`/me/guru/${jenis}/${id}/tarik`, { method: 'POST' }),
   getTinjauanPerangkatAjar: (status) => request(`/perangkat-ajar/tinjau?status=${encodeURIComponent(status)}`),
   setujuiPerangkatAjar: (id, catatan) =>
     request(`/perangkat-ajar/tinjau/${id}/setujui`, { method: 'POST', body: JSON.stringify({ catatan }) }),
@@ -1507,6 +1559,18 @@ export const api = {
   deletePelanggaran: (id) => request(`/pelanggaran/${id}`, { method: 'DELETE' }),
 
   // Alur poin kedisiplinan: BK mengajukan, Kesiswaan menyetujui/menolak.
+  // Poin Siswa (Kesiswaan): sisa poin kedisiplinan & CRUD buku poin
+  // (pengurangan pelanggaran, penambahan apresiasi)
+  listPoinSiswa: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return request(`/poin-siswa${query ? `?${query}` : ''}`)
+  },
+  getPoinSiswa: (siswaId) => request(`/poin-siswa/${siswaId}`),
+  tambahCatatanPoin: (siswaId, data) =>
+    request(`/poin-siswa/${siswaId}/catatan`, { method: 'POST', body: JSON.stringify(data) }),
+  updateCatatanPoin: (id, data) => request(`/catatan-poin/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteCatatanPoin: (id) => request(`/catatan-poin/${id}`, { method: 'DELETE' }),
+
   listPengajuanPenguranganPoin: (params = {}) => {
     const query = new URLSearchParams(params).toString()
     return request(`/pengajuan-pengurangan-poin${query ? `?${query}` : ''}`)

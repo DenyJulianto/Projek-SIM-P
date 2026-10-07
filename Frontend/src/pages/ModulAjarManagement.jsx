@@ -4,19 +4,25 @@ import DokumenPerangkatAjar from '../components/DokumenPerangkatAjar'
 import EditorTeks from '../components/EditorTeks'
 import { api } from '../lib/api'
 import {
-  DIMENSI_PROFIL,
+  atpKosong,
   FIELD,
   formatUkuran,
+  kalimatAtp,
   kekurangan,
   KURIKULUM_META,
   LANGKAH,
   labelFase,
+  METODE,
+  MODA,
   namaFileModul,
   normalisasi,
   pertemuanKosong,
+  PROFIL_PELAJAR,
+  RUMUS_NILAI_BAWAAN,
   STATUS_META,
   TAHAP,
   TARGET_PESERTA,
+  teksPolos,
 } from '../lib/perangkatAjar'
 
 const KARTU = 'bg-white rounded-2xl border border-slate-200 shadow-sm'
@@ -356,6 +362,11 @@ function formAwal(modul, kurikulum, opsi) {
   data[sekolah] = data[sekolah] || idt.institusi || ''
   data.jenjang = data.jenjang || idt.jenjang || ''
   data.tahun_penyusunan = data.tahun_penyusunan || idt.tahun_penyusunan || ''
+  if (kurikulum === 'merdeka') {
+    data.nip_guru = data.nip_guru || idt.nip_guru || ''
+    data.kota = data.kota || idt.kota || ''
+    data.tahun_ajaran = data.tahun_ajaran || idt.tahun_ajaran || ''
+  }
   return {
     id: modul?.id || null,
     kurikulum,
@@ -566,7 +577,7 @@ function FormPerangkatAjar({ modul, kurikulum, opsi, onTutup }) {
         <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden mb-4">
           <div className="h-full bg-emerald-500 transition-all" style={{ width: `${progres}%` }} />
         </div>
-        <ol className="grid grid-cols-5 gap-2">
+        <ol className="grid gap-2" style={{ gridTemplateColumns: `repeat(${langkahList.length}, minmax(0, 1fr))` }}>
           {langkahList.map((l, i) => {
             const n = kurang[l.k].length
             const aktif = i === langkah
@@ -611,8 +622,11 @@ function FormPerangkatAjar({ modul, kurikulum, opsi, onTutup }) {
       <div className="max-w-4xl space-y-4">
         {langkahList[langkah].k === 'identitas' && <LangkahIdentitas {...props} />}
         {langkahList[langkah].k === 'desain' && <LangkahDesain {...props} />}
+        {langkahList[langkah].k === 'umum' && <LangkahUmum {...props} />}
+        {langkahList[langkah].k === 'inti' && <LangkahInti {...props} />}
         {langkahList[langkah].k === 'kegiatan' && <LangkahKegiatan {...props} />}
         {langkahList[langkah].k === 'asesmen' && <LangkahAsesmen {...props} />}
+        {langkahList[langkah].k === 'lampiran' && kurikulum === 'merdeka' && <LampiranMerdeka {...props} />}
         {langkahList[langkah].k === 'lampiran' && (
           <LangkahLampiran
             idModul={form.id}
@@ -737,13 +751,30 @@ function Kotak({ judul, keterangan, children }) {
 }
 
 function FieldEditor({ f, form, ubahData }) {
+  const kosong = !teksPolos(form.data[f.k])
   return (
     <div>
-      <Label wajib={f.wajib} bantu={f.bantu}>
-        {f.label}
-      </Label>
+      <div className="flex items-start justify-between gap-3">
+        <Label wajib={f.wajib} bantu={f.bantu}>
+          {f.label}
+        </Label>
+        {f.kerangka && kosong && <TombolKerangka onClick={() => ubahData(f.k, f.kerangka)} />}
+      </div>
       <EditorTeks value={form.data[f.k]} onChange={(v) => ubahData(f.k, v)} wajib={f.wajib} />
     </div>
+  )
+}
+
+// Menyisipkan kerangka isian (mis. langkah pendahuluan, tabel rubrik) yang lalu dilengkapi guru.
+function TombolKerangka({ onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="shrink-0 text-xs font-semibold text-emerald-700 border border-emerald-200 hover:bg-emerald-50 rounded-full px-3 py-1"
+    >
+      + Sisipkan kerangka
+    </button>
   )
 }
 
@@ -814,6 +845,17 @@ function LangkahIdentitas({ form, ubah, ubahData, opsi, mapel, kelas, kurikulum 
           <IsianTeks label="Jenjang" nilai={d.jenjang} onUbah={(v) => ubahData('jenjang', v)} placeholder="mis. SMA" />
           <IsianTeks label="Tahun Penyusunan" nilai={d.tahun_penyusunan} onUbah={(v) => ubahData('tahun_penyusunan', v)} />
         </div>
+        {kurikulum === 'merdeka' && (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <IsianTeks label="NIP Penyusun" nilai={d.nip_guru} onUbah={(v) => ubahData('nip_guru', v)} placeholder="Kosongkan bila tidak ada" />
+            <IsianTeks label="Kota / Kabupaten" nilai={d.kota} onUbah={(v) => ubahData('kota', v)} />
+            <div>
+              <Label wajib>Tahun Ajaran</Label>
+              <input value={d.tahun_ajaran || ''} onChange={(e) => ubahData('tahun_ajaran', e.target.value)} className={INPUT} maxLength={20} placeholder="mis. 2025/2026" />
+            </div>
+            <IsianTeks label="Bab / Tema / Unit" nilai={d.bab_tema} onUbah={(v) => ubahData('bab_tema', v)} placeholder="mis. Bab 2 – Ekosistem" />
+          </div>
+        )}
         <div>
           <Label wajib>{kurikulum === 'merdeka' ? 'Judul Modul Ajar' : 'Judul RPP'}</Label>
           <input
@@ -919,49 +961,202 @@ function LangkahIdentitas({ form, ubah, ubahData, opsi, mapel, kelas, kurikulum 
 }
 
 function LangkahDesain(props) {
-  const { form, ubahData, kurikulum } = props
+  const { form, ubahData } = props
   const d = form.data
-  if (kurikulum === 'k13') {
-    return (
-      <Kotak judul="Tujuan Pembelajaran">
-        {FIELD.k13.desain.map((f) => (
-          <FieldEditor key={f.k} f={f} {...props} />
-        ))}
-        <div className="w-40">
-          <Label wajib>KKM</Label>
-          <input value={d.kkm || ''} onChange={(e) => ubahData('kkm', e.target.value)} className={INPUT} placeholder="mis. 75" maxLength={10} />
-        </div>
-      </Kotak>
-    )
-  }
+  return (
+    <Kotak judul="Tujuan Pembelajaran">
+      {FIELD.k13.desain.map((f) => (
+        <FieldEditor key={f.k} f={f} {...props} />
+      ))}
+      <div className="w-40">
+        <Label wajib>KKM</Label>
+        <input value={d.kkm || ''} onChange={(e) => ubahData('kkm', e.target.value)} className={INPUT} placeholder="mis. 75" maxLength={10} />
+      </div>
+    </Kotak>
+  )
+}
+
+/** A. Informasi Umum (Kurikulum Merdeka): moda, metode, model, peserta didik, profil, sarana. */
+function LangkahUmum(props) {
+  const { form, ubahData } = props
+  const d = form.data
   return (
     <>
-      <PemilihCpTp {...props} />
-      <Kotak judul="Dimensi Profil Lulusan" keterangan="Dimensi yang dikembangkan melalui pembelajaran ini (kerangka Pembelajaran Mendalam).">
+      <Kotak judul="Pelaksanaan Pembelajaran">
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div>
+            <Label wajib>Moda Pembelajaran</Label>
+            <select value={d.moda || ''} onChange={(e) => ubahData('moda', e.target.value)} className={INPUT}>
+              <option value="">Pilih moda</option>
+              {MODA.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label wajib bantu="mis. PBL, Discovery Learning, CIRC">
+              Model Pembelajaran
+            </Label>
+            <input
+              value={d.model_pembelajaran || ''}
+              onChange={(e) => ubahData('model_pembelajaran', e.target.value)}
+              className={INPUT}
+              placeholder="mis. Problem Based Learning (PBL)"
+              maxLength={255}
+            />
+          </div>
+        </div>
         <div>
-          <Label wajib>Pilih dimensi</Label>
-          <Pilihan
-            daftar={DIMENSI_PROFIL}
-            terpilih={d.dimensi_profil}
-            onUbah={(v) => ubahData('dimensi_profil', v)}
-            kolom="sm:grid-cols-2 lg:grid-cols-4"
+          <Label wajib>Metode Pembelajaran</Label>
+          <Pilihan daftar={METODE} terpilih={d.metode} onUbah={(v) => ubahData('metode', v)} kolom="grid-cols-2 sm:grid-cols-5" />
+          <input
+            value={d.metode_lain || ''}
+            onChange={(e) => ubahData('metode_lain', e.target.value)}
+            className={`${INPUT} mt-2`}
+            placeholder="Metode lain (opsional), mis. eksperimen"
+            maxLength={255}
           />
         </div>
       </Kotak>
-      <Kotak judul="Informasi Pendukung">
-        {FIELD.merdeka.desain.slice(0, 2).map((f) => (
-          <FieldEditor key={f.k} f={f} {...props} />
-        ))}
+      <Kotak judul="Peserta Didik">
         <div>
           <Label>Target Peserta Didik</Label>
           <Pilihan daftar={TARGET_PESERTA} terpilih={d.target_peserta} onUbah={(v) => ubahData('target_peserta', v)} kolom="sm:grid-cols-3" />
         </div>
-        {FIELD.merdeka.desain.slice(2).map((f) => (
+        <div className="w-56">
+          <Label bantu="Jumlah yang direkomendasikan">Jumlah Peserta Didik</Label>
+          <input
+            type="number"
+            min={1}
+            value={d.jumlah_peserta || ''}
+            onChange={(e) => ubahData('jumlah_peserta', e.target.value)}
+            className={INPUT}
+            placeholder="mis. 32"
+          />
+        </div>
+        <FieldEditor f={FIELD.merdeka.umum[0]} {...props} />
+      </Kotak>
+      <Kotak judul="Profil Pelajar Pancasila" keterangan="Dimensi yang dikembangkan melalui pembelajaran ini.">
+        <div>
+          <Label wajib>Pilih dimensi</Label>
+          <Pilihan daftar={PROFIL_PELAJAR} terpilih={d.profil_pelajar} onUbah={(v) => ubahData('profil_pelajar', v)} kolom="sm:grid-cols-2 lg:grid-cols-3" />
+        </div>
+      </Kotak>
+      <Kotak judul="Sarana dan Prasarana">
+        <FieldEditor f={FIELD.merdeka.umum[1]} {...props} />
+      </Kotak>
+    </>
+  )
+}
+
+/** B. Komponen Inti 1–5 (Kurikulum Merdeka): CP, TP, ATP, pemahaman bermakna, materi inti. */
+function LangkahInti(props) {
+  const f = FIELD.merdeka.inti
+  return (
+    <>
+      <PemilihCpTp {...props} />
+      <EditorAtp {...props} />
+      <Kotak judul="Pemahaman Bermakna & Materi Inti">
+        <FieldEditor f={f.pemahaman_bermakna} {...props} />
+        <FieldEditor f={f.materi_inti} {...props} />
+      </Kotak>
+    </>
+  )
+}
+
+/** Alur Tujuan Pembelajaran: "Melalui kegiatan …, peserta didik dapat …" per minggu/pertemuan. */
+function EditorAtp({ form, ubah }) {
+  const atp = form.data.atp || []
+  const ubahAtp = (fn) => ubah((x) => ({ ...x, data: { ...x.data, atp: fn(x.data.atp || []) } }))
+  const ubahBaris = (i, k, v) => ubahAtp((a) => a.map((b, j) => (j === i ? { ...b, [k]: v } : b)))
+  return (
+    <Kotak
+      judul="Alur Tujuan Pembelajaran (ATP)"
+      keterangan='Dirumuskan dengan pola "Melalui kegiatan …, peserta didik dapat …", dikelompokkan per minggu atau pertemuan.'
+    >
+      <Label wajib>Baris ATP</Label>
+      <div className="space-y-3">
+        {atp.map((a, i) => (
+          <div key={i} className="rounded-xl border border-slate-200 p-3 space-y-2">
+            <div className="grid md:grid-cols-[9rem_1fr_1fr_auto] gap-2 items-start">
+              <input
+                value={a.waktu}
+                onChange={(e) => ubahBaris(i, 'waktu', e.target.value)}
+                className={INPUT}
+                placeholder="Pertemuan 1"
+                maxLength={60}
+                aria-label="Waktu (minggu/pertemuan)"
+              />
+              <input
+                value={a.kegiatan}
+                onChange={(e) => ubahBaris(i, 'kegiatan', e.target.value)}
+                className={INPUT}
+                placeholder="Melalui kegiatan … (mis. mengamati gambar ekosistem)"
+                maxLength={500}
+                aria-label="Melalui kegiatan"
+              />
+              <input
+                value={a.kemampuan}
+                onChange={(e) => ubahBaris(i, 'kemampuan', e.target.value)}
+                className={INPUT}
+                placeholder="peserta didik dapat … (mis. mengidentifikasi komponen ekosistem)"
+                maxLength={500}
+                aria-label="Peserta didik dapat"
+              />
+              <button
+                type="button"
+                onClick={() => ubahAtp((x) => x.filter((_, j) => j !== i))}
+                disabled={atp.length === 1}
+                className="text-xs font-semibold text-red-600 hover:bg-red-50 rounded-full px-3 py-2 disabled:opacity-30"
+              >
+                Hapus
+              </button>
+            </div>
+            {a.kegiatan?.trim() && a.kemampuan?.trim() && <p className="text-xs text-slate-500 italic">{kalimatAtp(a)}</p>}
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={() => ubahAtp((x) => [...x, atpKosong(x[x.length - 1]?.waktu || '')])}
+        className="w-full rounded-xl border-2 border-dashed border-slate-300 hover:border-emerald-400 hover:bg-emerald-50/50 py-2 text-sm font-semibold text-slate-600"
+      >
+        + Tambah baris ATP
+      </button>
+    </Kotak>
+  )
+}
+
+/** C. Lampiran isian teks (Kurikulum Merdeka); unggah berkas tetap di LangkahLampiran. */
+function LampiranMerdeka(props) {
+  const { form, ubahData } = props
+  const daftar = FIELD.merdeka.lampiran
+  return (
+    <>
+      <Kotak judul="Bahan Bacaan & LKPD">
+        {daftar.slice(0, 2).map((f) => (
           <FieldEditor key={f.k} f={f} {...props} />
         ))}
       </Kotak>
-      <Kotak judul="Komponen Pembelajaran Mendalam">
-        {FIELD.merdeka.pembelajaranMendalam.map((f) => (
+      <Kotak judul="Rubrik Penilaian">
+        {daftar.slice(2, 4).map((f) => (
+          <FieldEditor key={f.k} f={f} {...props} />
+        ))}
+        <div>
+          <Label bantu="Kosongkan untuk memakai rumus bawaan">Rumus Pengolahan Nilai</Label>
+          <input
+            value={form.data.rumus_nilai || ''}
+            onChange={(e) => ubahData('rumus_nilai', e.target.value)}
+            className={INPUT}
+            placeholder={RUMUS_NILAI_BAWAAN}
+            maxLength={255}
+          />
+        </div>
+      </Kotak>
+      <Kotak judul="Remedial, Pengayaan & Daftar Pustaka">
+        {daftar.slice(4).map((f) => (
           <FieldEditor key={f.k} f={f} {...props} />
         ))}
       </Kotak>
@@ -1186,9 +1381,14 @@ function LangkahKegiatan(props) {
               {TAHAP[kurikulum].map((t) => (
                 <div key={t.k} className="grid md:grid-cols-[1fr_7rem] gap-3">
                   <div>
-                    <Label wajib bantu={t.bantu}>
-                      {t.label}
-                    </Label>
+                    <div className="flex items-start justify-between gap-3">
+                      <Label wajib bantu={t.bantu}>
+                        {t.label}
+                      </Label>
+                      {t.kerangka && !teksPolos(p.tahap[t.k]?.isi) && (
+                        <TombolKerangka onClick={() => ubahTahap(i, t.k, 'isi', t.kerangka)} />
+                      )}
+                    </div>
                     <EditorTeks value={p.tahap[t.k]?.isi} onChange={(v) => ubahTahap(i, t.k, 'isi', v)} tinggi="min-h-[72px]" wajib />
                   </div>
                   <div>
@@ -1224,7 +1424,7 @@ function LangkahKegiatan(props) {
         + Tambah Pertemuan
       </button>
       {FIELD[kurikulum].kegiatan.length > 0 && (
-        <Kotak judul="Diferensiasi">
+        <Kotak judul={kurikulum === 'merdeka' ? 'Kegiatan Alternatif' : 'Diferensiasi'}>
           {FIELD[kurikulum].kegiatan.map((f) => (
             <FieldEditor key={f.k} f={f} {...props} />
           ))}
@@ -1244,12 +1444,9 @@ function LangkahAsesmen(props) {
       </Kotak>
     )
   }
-  const a = FIELD.merdeka.asesmen
   const grup = [
-    ['Asesmen', null, a.slice(0, 4)],
-    ['Pengayaan dan Remedial', null, a.slice(4, 6)],
-    ['Refleksi', 'Pertanyaan refleksi untuk guru dan peserta didik setelah pembelajaran.', a.slice(6, 8)],
-    ['Glosarium & Daftar Pustaka', null, a.slice(8)],
+    ['Asesmen', 'Diagnostik di awal, formatif selama, dan sumatif di akhir pembelajaran.', FIELD.merdeka.asesmen],
+    ['Refleksi & Interaksi dengan Orang Tua', null, FIELD.merdeka.refleksi],
   ]
   return grup.map(([judul, ket, daftar]) => (
     <Kotak key={judul} judul={judul} keterangan={ket}>
@@ -1384,7 +1581,7 @@ export function TombolTutup({ onClick }) {
   )
 }
 
-function ModalKonfirmasi({ judul, pesan, labelYa, bahaya, sibuk, onBatal, onYa }) {
+export function ModalKonfirmasi({ judul, pesan, labelYa, bahaya, sibuk, onBatal, onYa }) {
   return (
     <ModalBingkai onTutup={() => !sibuk && onBatal()}>
       <div className="p-7 text-center">
@@ -1415,11 +1612,11 @@ function ModalPilihKurikulum({ onTutup, onPilih }) {
         <p className="text-sm text-slate-500 mt-1 mb-5">Bentuk formulir menyesuaikan kurikulum yang Anda pilih.</p>
         <div className="grid sm:grid-cols-2 gap-4">
           <button onClick={() => onPilih('merdeka')} className="text-left rounded-2xl border-2 border-slate-200 hover:border-emerald-500 p-5 transition-colors">
-            <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${KURIKULUM_META.merdeka.badge}`}>Modul Ajar</span>
+            <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${KURIKULUM_META.merdeka.badge}`}>Modul Ajar (RPP+)</span>
             <h3 className="font-bold text-slate-900 mt-3">Kurikulum Merdeka</h3>
             <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-              CP dari data master, TP, 8 Dimensi Profil Lulusan, komponen Pembelajaran Mendalam, kegiatan per pertemuan
-              (memahami – mengaplikasi – merefleksi), asesmen, refleksi, dan lampiran.
+              Sampul, informasi umum (moda, metode, model, Profil Pelajar Pancasila), CP, TP, ATP, kegiatan per pertemuan
+              (pendahuluan – inti – penutup), asesmen, refleksi, LKPD, rubrik, dan lembar pengesahan.
             </p>
           </button>
           <button onClick={() => onPilih('k13')} className="text-left rounded-2xl border-2 border-slate-200 hover:border-amber-500 p-5 transition-colors">

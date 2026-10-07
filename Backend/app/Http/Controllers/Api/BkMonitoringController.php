@@ -32,7 +32,7 @@ class BkMonitoringController extends Controller
                     'siswa' => $first->siswa,
                     'jumlah_kasus_aktif' => $kasusList->count(),
                     'tingkat_tertinggi' => $kasusList->pluck('tingkat')->sort(function ($a, $b) {
-                        $order = ['ringan' => 1, 'sedang' => 2, 'berat' => 3];
+                        $order = ['ringan' => 1, 'sedang' => 2, 'berat' => 3, 'sangat_berat' => 4];
 
                         return $order[$b] <=> $order[$a];
                     })->first(),

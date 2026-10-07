@@ -16,7 +16,8 @@ class Prestasi extends Model
     protected function casts(): array
     {
         return [
-            'tanggal' => 'date',
+            // Tanpa jam supaya tidak bergeser sehari saat dibaca di zona waktu lain (JSON ISO UTC).
+            'tanggal' => 'date:Y-m-d',
         ];
     }
 

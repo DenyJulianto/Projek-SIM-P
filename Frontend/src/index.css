@@ -361,3 +361,15 @@ body {
 .modal-pop {
   animation: modal-pop 0.18s ease-out;
 }
+
+/* Slide hero landing platform: teks muncul sambil naik sedikit. */
+@keyframes muncul {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

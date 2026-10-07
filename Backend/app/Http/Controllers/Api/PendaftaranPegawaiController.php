@@ -33,16 +33,34 @@ class PendaftaranPegawaiController extends Controller
     private const PESAN_TERKIRIM = 'Pendaftaran berhasil. Akun Anda akan aktif setelah disetujui oleh admin sekolah. '
         .'Informasi login akan dikirim ke email Anda.';
 
+    private const PESAN_JENIS_SEKOLAH_KOSONG = 'Pendaftaran pegawai belum dibuka: status sekolah (Negeri/Swasta) '
+        .'belum diatur oleh admin. Silakan hubungi pihak sekolah.';
+
+    /**
+     * Pilihan form pendaftaran sesuai status sekolah (negeri ATAU swasta).
+     * Bila status sekolah belum diatur Super Admin, pilihannya kosong dan
+     * form menampilkan pemberitahuan (pendaftaran belum dibuka).
+     */
     public function opsi(): JsonResponse
     {
+        $jenisSekolah = PendaftaranPegawai::jenisSekolah();
+
         return response()->json([
-            'jenis_pegawai' => PendaftaranPegawai::JENIS,
-            'status_kepegawaian' => PendaftaranPegawai::STATUS_KEPEGAWAIAN,
-            'wajib_nip' => PendaftaranPegawai::WAJIB_NIP,
-            'mata_pelajaran' => MataPelajaran::orderBy('nama_mapel')->pluck('nama_mapel')->unique()->values(),
-            'jabatan' => collect(PendaftaranPegawai::JABATAN)
-                ->map(fn ($daftar, $kelompok) => ['kelompok' => $kelompok, 'jabatan' => $daftar])
+            'jenis_sekolah' => $jenisSekolah,
+            'pesan' => $jenisSekolah ? null : self::PESAN_JENIS_SEKOLAH_KOSONG,
+            'jenis_pegawai' => collect(PendaftaranPegawai::JENIS)
+                ->map(fn ($label, $nilai) => ['nilai' => $nilai, 'label' => $label])
                 ->values(),
+            'status_kepegawaian' => collect(PendaftaranPegawai::statusUntuk($jenisSekolah))
+                ->map(fn ($ket, $nilai) => ['nilai' => $nilai, 'keterangan' => $ket])
+                ->values(),
+            'wajib_nip' => PendaftaranPegawai::WAJIB_NIP,
+            'jabatan' => collect(array_keys(PendaftaranPegawai::JENIS))->mapWithKeys(fn ($jenis) => [
+                $jenis => collect(PendaftaranPegawai::jabatanUntuk($jenisSekolah, $jenis))
+                    ->map(fn ($daftar, $kelompok) => ['kelompok' => $kelompok, 'jabatan' => $daftar])
+                    ->values(),
+            ]),
+            'mata_pelajaran' => MataPelajaran::orderBy('nama_mapel')->pluck('nama_mapel')->unique()->values(),
         ]);
     }
 
@@ -53,21 +71,26 @@ class PendaftaranPegawaiController extends Controller
             abort(429, 'Terlalu banyak pendaftaran dari jaringan ini. Silakan coba lagi dalam 1 jam.');
         }
 
+        $jenisSekolah = PendaftaranPegawai::jenisSekolah();
+        abort_unless($jenisSekolah, 422, self::PESAN_JENIS_SEKOLAH_KOSONG);
+
         $data = $request->validate([
             'nama_lengkap' => ['required', 'string', 'max:255'],
-            'jenis_pegawai' => ['required', Rule::in(PendaftaranPegawai::JENIS)],
-            'status_kepegawaian' => ['required', Rule::in(PendaftaranPegawai::STATUS_KEPEGAWAIAN)],
+            'jenis_pegawai' => ['required', Rule::in(array_keys(PendaftaranPegawai::JENIS))],
+            'status_kepegawaian' => ['required', Rule::in(PendaftaranPegawai::daftarStatus($jenisSekolah))],
             'nip' => [Rule::requiredIf(in_array($request->input('status_kepegawaian'), PendaftaranPegawai::WAJIB_NIP, true)), 'nullable', 'digits:18'],
             'nuptk' => ['nullable', 'digits:16'],
             'nik' => ['nullable', 'digits:16'],
             'email' => ['required', 'email:rfc', 'max:255'],
             'no_hp' => ['required', 'regex:/^[0-9]{9,15}$/'],
-            'jabatan' => ['nullable', 'string', Rule::in(PendaftaranPegawai::daftarJabatan())],
+            'jabatan' => ['nullable', 'string', Rule::in(PendaftaranPegawai::daftarJabatan($jenisSekolah, (string) $request->input('jenis_pegawai')))],
             'mata_pelajaran' => ['nullable', 'string', 'max:255'],
             'pernyataan' => ['accepted'],
             'recaptcha_token' => ['nullable', 'string'],
         ], [
-            'nip.required' => 'NIP wajib diisi untuk pegawai berstatus PNS/PPPK.',
+            'jenis_pegawai.in' => 'Pilih jenis pegawai dari daftar yang tersedia.',
+            'status_kepegawaian.in' => 'Pilih status kepegawaian dari daftar yang tersedia.',
+            'nip.required' => 'NIP wajib diisi untuk pegawai berstatus PNS/PPPK/ASN DPK.',
             'nip.digits' => 'NIP harus 18 digit angka.',
             'nuptk.digits' => 'NUPTK harus 16 digit angka.',
             'nik.digits' => 'NIK harus 16 digit angka.',
@@ -112,7 +135,7 @@ class PendaftaranPegawaiController extends Controller
             ...$data,
             'email' => $email,
             'nik_hash' => $nikHash,
-            'mata_pelajaran' => $data['jenis_pegawai'] === 'Guru' ? ($data['mata_pelajaran'] ?? null) : null,
+            'mata_pelajaran' => $data['jenis_pegawai'] === PendaftaranPegawai::PENDIDIK ? ($data['mata_pelajaran'] ?? null) : null,
             'ip_address' => $request->ip(),
         ]);
 

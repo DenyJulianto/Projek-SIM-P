@@ -6,6 +6,7 @@ import { useViewUrl } from '../lib/useViewUrl'
 import QRCode from 'qrcode'
 import { useAuth } from '../lib/AuthContext'
 import { api, BASE_URL } from '../lib/api'
+import { DaftarRiwayatPoin, PedomanPoin, RingkasanPoin } from '../components/RiwayatPoin'
 import MyProfile from './MyProfile'
 
 const MENU_GROUPS = [
@@ -34,6 +35,7 @@ const MENU_GROUPS = [
       { key: 'tugas', label: 'Tugas', icon: TaskIcon },
       { key: 'prestasi', label: 'Prestasi', icon: TrophyIcon },
       { key: 'pelanggaran', label: 'Pelanggaran', icon: ShieldIcon },
+      { key: 'poin', label: 'Poin Anak', icon: ShieldIcon },
     ],
   },
 ]
@@ -42,6 +44,7 @@ const TINGKAT_PELANGGARAN_STYLE = {
   ringan: { label: 'Ringan', badge: 'bg-amber-100 text-amber-700', icon: 'bg-amber-500' },
   sedang: { label: 'Sedang', badge: 'bg-orange-100 text-orange-700', icon: 'bg-orange-500' },
   berat: { label: 'Berat', badge: 'bg-red-100 text-red-600', icon: 'bg-red-500' },
+  sangat_berat: { label: 'Sangat Berat', badge: 'bg-red-600 text-white', icon: 'bg-red-700' },
 }
 
 const KONFIRMASI_STATUS_TONE = {
@@ -277,6 +280,7 @@ export default function OrangTuaDashboard() {
               {view === 'tugas' && <TugasAnakView onBack={() => setView('home')} anak={anak} />}
               {view === 'prestasi' && <PrestasiAnakView onBack={() => setView('home')} anak={anak} />}
               {view === 'pelanggaran' && <PelanggaranAnakView onBack={() => setView('home')} anak={anak} />}
+              {view === 'poin' && <PoinAnakView key={anak?.id} onBack={() => setView('home')} anak={anak} />}
               {view === 'pengumuman' && <PengumumanView onBack={() => setView('home')} />}
               {view === 'profile' && <MyProfile onBack={() => setView('home')} />}
             </>
@@ -2581,6 +2585,50 @@ function PrestasiAnakView({ onBack, anak }) {
   )
 }
 
+/** Menu "Poin Anak" (baca-saja): sisa poin kedisiplinan anak & riwayat potongannya. */
+function PoinAnakView({ onBack, anak }) {
+  const [data, setData] = useState(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    // Komponen dipasang ulang per anak (key), jadi cukup ambil datanya di sini.
+    if (!anak?.id) return
+    api.getAnakPoin(anak.id).then(setData).catch((err) => setError(err.message))
+  }, [anak?.id])
+
+  return (
+    <div>
+      <button onClick={onBack} className="text-sm text-navy/50 hover:text-navy mb-3 block">
+        ← Kembali ke Dashboard
+      </button>
+      <div className="flex items-center gap-3 mb-6">
+        <div className="h-11 w-11 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
+          <ShieldIcon className="h-5.5 w-5.5 text-emerald-700" />
+        </div>
+        <div>
+          <h1 className="text-xl font-extrabold text-navy">Poin Kedisiplinan</h1>
+          <p className="text-xs text-navy/40">
+            Poin {anak?.nama ?? 'anak'} Anda dimulai dari 100: berkurang karena pelanggaran, bertambah lagi karena prestasi & perilaku terpuji.
+          </p>
+        </div>
+      </div>
+
+      {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
+      {!data && !error && <EmptyState text="Memuat..." />}
+      {data && (
+        <div className="space-y-5">
+          <RingkasanPoin data={data} />
+          <div>
+            <h2 className="text-sm font-bold text-navy mb-3">Riwayat Pelanggaran & Sisa Poin</h2>
+            <DaftarRiwayatPoin data={data} />
+          </div>
+          <PedomanPoin kategori={data.kategori} />
+        </div>
+      )}
+    </div>
+  )
+}
+
 function PelanggaranAnakView({ onBack, anak }) {
   const [pelanggaran, setPelanggaran] = useState(null)
 
@@ -2595,7 +2643,7 @@ function PelanggaranAnakView({ onBack, anak }) {
   const tigaBulanTerakhir = list.filter(
     (p) => p.tanggal && (Date.now() - new Date(p.tanggal).getTime()) / (1000 * 60 * 60 * 24) <= 90
   ).length
-  const berat = list.filter((p) => p.tingkat === 'berat').length
+  const berat = list.filter((p) => ['berat', 'sangat_berat'].includes(p.tingkat)).length
 
   const sorted = [...list].sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
 

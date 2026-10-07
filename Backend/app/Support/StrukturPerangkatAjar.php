@@ -9,35 +9,39 @@ namespace App\Support;
  * Frontend/src/lib/perangkatAjar.js (form, pratinjau) — dipakai di sini
  * untuk membersihkan isian, memeriksa kelengkapan saat diajukan, dan
  * menyusun dokumen PDF/Word.
+ *
+ * Kurikulum Merdeka memakai kerangka Modul Ajar Kurikulum Merdeka Belajar
+ * (RPP+): sampul, A. Informasi Umum, B. Komponen Inti (1–9), C. Lampiran,
+ * dan penutup bertanda tangan. K13 memakai RPP 1 lembar.
  */
 class StrukturPerangkatAjar
 {
-    /** 8 Dimensi Profil Lulusan (kerangka Pembelajaran Mendalam). */
-    public const DIMENSI_PROFIL = [
-        'Keimanan dan Ketakwaan terhadap Tuhan YME',
-        'Kewargaan',
-        'Penalaran Kritis',
-        'Kreativitas',
-        'Kolaborasi',
-        'Kemandirian',
-        'Kesehatan',
-        'Komunikasi',
+    /** 6 dimensi Profil Pelajar Pancasila. */
+    public const PROFIL_PELAJAR = [
+        'Beriman, bertakwa kepada Tuhan YME, dan berakhlak mulia',
+        'Berkebinekaan global',
+        'Bergotong royong',
+        'Mandiri',
+        'Bernalar kritis',
+        'Kreatif',
     ];
 
     public const TARGET_PESERTA = [
         'Peserta didik reguler / tipikal',
-        'Peserta didik dengan kesulitan belajar',
-        'Peserta didik dengan pencapaian tinggi',
+        'Peserta didik berkebutuhan khusus',
+        'Peserta didik pencapaian tinggi (pengayaan)',
     ];
 
-    /** Tahap kegiatan tiap pertemuan. */
+    public const MODA = ['Tatap muka', 'Daring', 'Blended (tatap muka dan daring)'];
+
+    public const METODE = ['Ceramah', 'Tanya jawab', 'Diskusi', 'Demonstrasi', 'Penugasan'];
+
+    /** Tahap kegiatan tiap pertemuan (bawaan durasi dalam menit, null = sisa waktu). */
     public const TAHAP = [
         'merdeka' => [
-            'pendahuluan' => 'Pendahuluan',
-            'memahami' => 'Memahami',
-            'mengaplikasi' => 'Mengaplikasi',
-            'merefleksi' => 'Merefleksi',
-            'penutup' => 'Penutup',
+            'pendahuluan' => 'Kegiatan Pendahuluan',
+            'inti' => 'Kegiatan Inti',
+            'penutup' => 'Kegiatan Penutup',
         ],
         'k13' => [
             'pendahuluan' => 'Pendahuluan',
@@ -48,71 +52,44 @@ class StrukturPerangkatAjar
 
     /** Field teks berformat (HTML dari editor) yang harus dibersihkan. */
     public const TEKS_FORMAT = [
-        'tujuan_pembelajaran', 'kompetensi_awal', 'sarana_prasarana', 'pemahaman_bermakna', 'pertanyaan_pemantik',
-        'praktik_pedagogis', 'kemitraan_pembelajaran', 'lingkungan_pembelajaran', 'pemanfaatan_digital', 'lintas_disiplin',
-        'strategi_diferensiasi', 'asesmen_diagnostik', 'asesmen_formatif', 'asesmen_sumatif', 'kktp',
-        'pengayaan', 'remedial', 'refleksi_guru', 'refleksi_siswa', 'glosarium', 'daftar_pustaka',
+        // Kurikulum Merdeka (RPP+)
+        'karakteristik_peserta', 'sarana_prasarana', 'cp_umum', 'tujuan_pembelajaran', 'pemahaman_bermakna', 'materi_inti',
+        'asesmen_diagnostik', 'asesmen_formatif', 'asesmen_sumatif', 'kegiatan_alternatif',
+        'refleksi_guru', 'refleksi_siswa', 'pemetaan_kemampuan', 'interaksi_ortu',
+        'bahan_bacaan', 'lkpd', 'rubrik_sikap', 'rubrik_pengetahuan', 'remedial', 'pengayaan', 'daftar_pustaka',
+        // K13
         'kompetensi_dasar', 'penilaian_sikap', 'penilaian_pengetahuan', 'penilaian_keterampilan',
     ];
 
     /** Field teks satu baris. */
-    public const TEKS_BIASA = ['materi_pokok', 'kkm', 'model_pembelajaran', 'semester', 'nama_guru', 'institusi', 'nama_sekolah', 'jenjang', 'tahun_penyusunan', 'fase'];
-
-    /**
-     * Bagian dokumen (setelah tabel identitas). Tiap butir: [kunci, label].
-     * Kunci khusus: _cp, _tp, _dimensi, _target, _pertemuan.
-     */
-    public const BAGIAN = [
-        'merdeka' => [
-            ['Capaian Pembelajaran', [['_cp', null]]],
-            ['Tujuan Pembelajaran', [['_tp', null]]],
-            ['Dimensi Profil Lulusan', [['_dimensi', null]]],
-            ['Kompetensi Awal', [['kompetensi_awal', null]]],
-            ['Sarana dan Prasarana', [['sarana_prasarana', null]]],
-            ['Target Peserta Didik', [['_target', null]]],
-            ['Pemahaman Bermakna', [['pemahaman_bermakna', null]]],
-            ['Pertanyaan Pemantik', [['pertanyaan_pemantik', null]]],
-            ['Desain Pembelajaran Mendalam', [
-                ['praktik_pedagogis', 'Praktik Pedagogis (Model / Metode)'],
-                ['kemitraan_pembelajaran', 'Kemitraan Pembelajaran'],
-                ['lingkungan_pembelajaran', 'Lingkungan Pembelajaran'],
-                ['pemanfaatan_digital', 'Pemanfaatan Digital'],
-                ['lintas_disiplin', 'Lintas Disiplin Ilmu'],
-            ]],
-            ['Kegiatan Pembelajaran', [['_pertemuan', null], ['strategi_diferensiasi', 'Strategi Diferensiasi']]],
-            ['Asesmen', [
-                ['asesmen_diagnostik', 'Asesmen Diagnostik (Awal)'],
-                ['asesmen_formatif', 'Asesmen Formatif (Proses)'],
-                ['asesmen_sumatif', 'Asesmen Sumatif (Akhir)'],
-                ['kktp', 'Kriteria Ketercapaian Tujuan Pembelajaran (KKTP)'],
-            ]],
-            ['Pengayaan dan Remedial', [['pengayaan', 'Pengayaan'], ['remedial', 'Remedial']]],
-            ['Refleksi', [['refleksi_guru', 'Refleksi Guru'], ['refleksi_siswa', 'Refleksi Peserta Didik']]],
-            ['Glosarium', [['glosarium', null]]],
-            ['Daftar Pustaka', [['daftar_pustaka', null]]],
-        ],
-        'k13' => [
-            ['Tujuan Pembelajaran', [
-                ['kompetensi_dasar', 'Kompetensi Dasar (KD)'],
-                ['tujuan_pembelajaran', 'Tujuan Pembelajaran'],
-                ['kkm', 'Kriteria Ketuntasan Minimal (KKM)'],
-            ]],
-            ['Langkah-Langkah Pembelajaran', [
-                ['model_pembelajaran', 'Model Pembelajaran'],
-                ['_pertemuan', null],
-            ]],
-            ['Penilaian Pembelajaran', [
-                ['penilaian_sikap', 'Penilaian Sikap'],
-                ['penilaian_pengetahuan', 'Penilaian Pengetahuan'],
-                ['penilaian_keterampilan', 'Penilaian Keterampilan'],
-            ]],
-        ],
+    public const TEKS_BIASA = [
+        'materi_pokok', 'kkm', 'model_pembelajaran', 'semester', 'nama_guru', 'nip_guru', 'institusi', 'nama_sekolah',
+        'kota', 'jenjang', 'tahun_penyusunan', 'tahun_ajaran', 'fase', 'bab_tema', 'moda', 'metode_lain',
+        'jumlah_peserta', 'rumus_nilai',
     ];
 
-    /** Field wajib saat diajukan (selain identitas, alokasi, dan pertemuan). */
+    /** Bagian RPP K13 (setelah tabel identitas). Tiap butir: [kunci, label]; _pertemuan = tabel kegiatan. */
+    public const BAGIAN_K13 = [
+        ['Tujuan Pembelajaran', [
+            ['kompetensi_dasar', 'Kompetensi Dasar (KD)'],
+            ['tujuan_pembelajaran', 'Tujuan Pembelajaran'],
+            ['kkm', 'Kriteria Ketuntasan Minimal (KKM)'],
+        ]],
+        ['Langkah-Langkah Pembelajaran', [
+            ['model_pembelajaran', 'Model Pembelajaran'],
+            ['_pertemuan', null],
+        ]],
+        ['Penilaian Pembelajaran', [
+            ['penilaian_sikap', 'Penilaian Sikap'],
+            ['penilaian_pengetahuan', 'Penilaian Pengetahuan'],
+            ['penilaian_keterampilan', 'Penilaian Keterampilan'],
+        ]],
+    ];
+
+    /** Field teks berformat wajib saat diajukan (selain identitas, alokasi, dan pertemuan). */
     public const WAJIB = [
         'merdeka' => [
-            'praktik_pedagogis' => 'Praktik pedagogis',
+            'materi_inti' => 'Materi inti',
             'asesmen_formatif' => 'Asesmen formatif',
             'asesmen_sumatif' => 'Asesmen sumatif',
         ],
@@ -125,6 +102,8 @@ class StrukturPerangkatAjar
             'penilaian_pengetahuan' => 'Penilaian pengetahuan',
         ],
     ];
+
+    public const RUMUS_NILAI_BAWAAN = 'Nilai = (skor perolehan ÷ skor maksimal) × 100';
 
     /** Fase Kurikulum Merdeka dari tingkat kelas (angka atau romawi). */
     public static function faseDariTingkat(?string $tingkat): ?string
@@ -208,11 +187,37 @@ class StrukturPerangkatAjar
         }
 
         if ($kurikulum === 'merdeka') {
-            $hasil['dimensi_profil'] = array_values(array_intersect(self::DIMENSI_PROFIL, (array) ($data['dimensi_profil'] ?? [])));
+            $hasil['profil_pelajar'] = array_values(array_intersect(self::PROFIL_PELAJAR, (array) ($data['profil_pelajar'] ?? [])));
             $hasil['target_peserta'] = array_values(array_intersect(self::TARGET_PESERTA, (array) ($data['target_peserta'] ?? [])));
+            $hasil['metode'] = array_values(array_intersect(self::METODE, (array) ($data['metode'] ?? [])));
+            if (isset($hasil['moda']) && ! in_array($hasil['moda'], self::MODA, true)) {
+                $hasil['moda'] = '';
+            }
+
+            // Alur Tujuan Pembelajaran: "Melalui kegiatan …, peserta didik dapat …" per minggu/pertemuan.
+            $hasil['atp'] = [];
+            foreach (array_slice(is_array($data['atp'] ?? null) ? $data['atp'] : [], 0, 60) as $a) {
+                if (! is_array($a)) {
+                    continue;
+                }
+                $hasil['atp'][] = [
+                    'waktu' => mb_substr(trim((string) ($a['waktu'] ?? '')), 0, 60),
+                    'kegiatan' => mb_substr(trim((string) ($a['kegiatan'] ?? '')), 0, 500),
+                    'kemampuan' => mb_substr(trim((string) ($a['kemampuan'] ?? '')), 0, 500),
+                ];
+            }
         }
 
         return $hasil;
+    }
+
+    /** Baris ATP yang lengkap (kegiatan & kemampuan terisi). */
+    public static function atpLengkap(array $d): array
+    {
+        return array_values(array_filter(
+            (array) ($d['atp'] ?? []),
+            fn ($a) => filled($a['kegiatan'] ?? null) && filled($a['kemampuan'] ?? null),
+        ));
     }
 
     /** Daftar kekurangan sebelum perangkat ajar boleh diajukan. */
@@ -239,14 +244,29 @@ class StrukturPerangkatAjar
             $kurang[] = 'Alokasi waktu';
         }
         if ($kurikulum === 'merdeka') {
+            if (! filled($d['tahun_ajaran'] ?? null)) {
+                $kurang[] = 'Tahun ajaran';
+            }
+            if (! filled($d['moda'] ?? null)) {
+                $kurang[] = 'Moda pembelajaran';
+            }
+            if (empty($d['metode']) && ! filled($d['metode_lain'] ?? null)) {
+                $kurang[] = 'Metode pembelajaran';
+            }
+            if (! filled($d['model_pembelajaran'] ?? null)) {
+                $kurang[] = 'Model pembelajaran';
+            }
+            if (empty($d['profil_pelajar'])) {
+                $kurang[] = 'Profil Pelajar Pancasila';
+            }
             if (empty($d['cp'])) {
                 $kurang[] = 'Capaian pembelajaran';
             }
             if (empty($d['tp_master']) && HtmlAman::teksPolos($d['tujuan_pembelajaran'] ?? '') === '') {
                 $kurang[] = 'Tujuan pembelajaran';
             }
-            if (empty($d['dimensi_profil'])) {
-                $kurang[] = 'Dimensi profil lulusan';
+            if (! self::atpLengkap($d)) {
+                $kurang[] = 'Alur tujuan pembelajaran (minimal 1 baris)';
             }
         }
         foreach (self::WAJIB[$kurikulum] as $k => $label) {
@@ -269,43 +289,30 @@ class StrukturPerangkatAjar
         return $kurang;
     }
 
-    /**
-     * Seragamkan data lama (sebelum struktur ini) supaya tetap bisa dibuka
-     * di form dan dicetak: P3 6 dimensi -> 8 dimensi profil lulusan,
-     * kegiatan tunggal -> pertemuan 1, alokasi teks bebas dipertahankan.
-     */
+    /** Seragamkan data lama supaya tetap bisa dibuka di form dan dicetak. */
     public static function normalisasi(array $d, string $kurikulum): array
     {
-        if (empty($d['dimensi_profil']) && ! empty($d['profil_pelajar'])) {
-            $peta = [
-                'Beriman, bertakwa kepada Tuhan YME, dan berakhlak mulia' => 'Keimanan dan Ketakwaan terhadap Tuhan YME',
-                'Berkebinekaan global' => 'Kewargaan',
-                'Bergotong royong' => 'Kolaborasi',
-                'Mandiri' => 'Kemandirian',
-                'Bernalar kritis' => 'Penalaran Kritis',
-                'Kreatif' => 'Kreativitas',
-            ];
-            $d['dimensi_profil'] = array_values(array_unique(array_filter(array_map(fn ($x) => $peta[$x] ?? null, (array) $d['profil_pelajar']))));
-        }
         if (empty($d['pertemuan']) && (filled($d['pendahuluan'] ?? null) || filled($d['kegiatan_inti'] ?? null) || filled($d['penutup'] ?? null))) {
-            $inti = $kurikulum === 'merdeka' ? 'memahami' : 'inti';
             $tahap = [];
             foreach (array_keys(self::TAHAP[$kurikulum]) as $t) {
                 $tahap[$t] = ['isi' => '', 'durasi' => null];
             }
             $tahap['pendahuluan']['isi'] = (string) ($d['pendahuluan'] ?? '');
-            $tahap[$inti]['isi'] = (string) ($d['kegiatan_inti'] ?? '');
+            $tahap['inti']['isi'] = (string) ($d['kegiatan_inti'] ?? '');
             $tahap['penutup']['isi'] = (string) ($d['penutup'] ?? '');
             $d['pertemuan'] = [['topik' => '', 'tahap' => $tahap]];
         }
-        if (! empty($d['target_peserta'])) {
-            $d['target_peserta'] = array_values(array_map(
-                fn ($x) => str_replace('Siswa ', 'Peserta didik ', (string) $x),
-                (array) $d['target_peserta'],
-            ));
-        }
 
         return $d;
+    }
+
+    /** Kalimat ATP: "Melalui kegiatan …, peserta didik dapat …." (awalan ganda dibuang). */
+    public static function kalimatAtp(string $kegiatan, string $kemampuan): string
+    {
+        $kegiatan = preg_replace('/^melalui kegiatan\s+/i', '', rtrim(trim($kegiatan), ' .,'));
+        $kemampuan = preg_replace('/^peserta didik (dapat|mampu)\s+/i', '', rtrim(trim($kemampuan), ' .'));
+
+        return 'Melalui kegiatan '.lcfirst($kegiatan).', peserta didik dapat '.lcfirst($kemampuan).'.';
     }
 
     /** Teks alokasi waktu, mis. "2 pertemuan × 2 JP × 45 menit (180 menit)". */

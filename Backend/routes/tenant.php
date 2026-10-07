@@ -13,49 +13,31 @@ use App\Http\Controllers\Api\AvatarController;
 use App\Http\Controllers\Api\BackupController;
 use App\Http\Controllers\Api\BkMonitoringController;
 use App\Http\Controllers\Api\CapaianPembelajaranController;
+use App\Http\Controllers\Api\Central\TwoFactorController;
 use App\Http\Controllers\Api\DashboardController;
-use App\Http\Controllers\Api\GuruController;
-use App\Http\Controllers\Api\GuruPenggantiController;
-use App\Http\Controllers\Api\GuruSelfController;
-use App\Http\Controllers\Api\StaffProfileController;
-use App\Http\Controllers\Api\MonitoringNilaiController;
-use App\Http\Controllers\Api\ModulAjarController;
-use App\Http\Controllers\Api\NotifikasiSelfController;
-use App\Http\Controllers\Api\PenerbitanRaporController;
-use App\Http\Controllers\Api\PenguncianNilaiController;
-use App\Http\Controllers\Api\VerifikasiNilaiController;
-use App\Http\Controllers\Api\PerubahanJadwalController;
-use App\Http\Controllers\Api\IntegrationController;
-use App\Http\Controllers\Api\InventarisController;
-use App\Http\Controllers\Api\JadwalPelajaranController;
-use App\Http\Controllers\Api\JamBelajarController;
-use App\Http\Controllers\Api\KalenderAkademikController;
 use App\Http\Controllers\Api\EkskulAnggotaController;
 use App\Http\Controllers\Api\EkskulController;
 use App\Http\Controllers\Api\EkskulKegiatanController;
 use App\Http\Controllers\Api\EkskulLaporanController;
 use App\Http\Controllers\Api\EkskulPenilaianController;
-use App\Http\Controllers\Api\LaporanAkademikController;
-use App\Http\Controllers\Api\LaporanKesiswaanController;
-use App\Http\Controllers\Api\MutasiSiswaController;
-use App\Http\Controllers\Api\PembinaanTindakLanjutController;
-use App\Http\Controllers\Api\RekapPembinaanController;
-use App\Http\Controllers\Api\WakasekController;
-use App\Http\Controllers\Api\PpdbPemantauController;
-use App\Http\Controllers\Api\PpdbPendaftarController;
-use App\Http\Controllers\Api\PpdbPenerimaanController;
-use App\Http\Controllers\Api\PpdbPengumumanController;
-use App\Http\Controllers\Api\PpdbPeriodeController;
-use App\Http\Controllers\Api\PpdbSeleksiController;
-use App\Http\Controllers\Api\PerpusAnggotaController;
-use App\Http\Controllers\Api\PerpusBukuController;
-use App\Http\Controllers\Api\PerpusDashboardController;
-use App\Http\Controllers\Api\PerpusDendaController;
-use App\Http\Controllers\Api\PerpusKegiatanController;
-use App\Http\Controllers\Api\PerpusLaporanController;
-use App\Http\Controllers\Api\PerpusPengembalianController;
-use App\Http\Controllers\Api\PerpusPeminjamanController;
-use App\Http\Controllers\Api\PerpusReservasiController;
+use App\Http\Controllers\Api\GuruController;
+use App\Http\Controllers\Api\GuruPenggantiController;
+use App\Http\Controllers\Api\GuruSelfController;
+use App\Http\Controllers\Api\HariEfektifController;
+use App\Http\Controllers\Api\ImportStafController;
+use App\Http\Controllers\Api\IntegrationController;
+use App\Http\Controllers\Api\InventarisController;
+use App\Http\Controllers\Api\JadwalPelajaranController;
+use App\Http\Controllers\Api\JamBelajarController;
+use App\Http\Controllers\Api\KalenderAkademikController;
+use App\Http\Controllers\Api\KasusController;
+use App\Http\Controllers\Api\KegiatanController;
+use App\Http\Controllers\Api\KelasController;
+use App\Http\Controllers\Api\KkmKktpController;
+use App\Http\Controllers\Api\KompetensiIndikatorController;
+use App\Http\Controllers\Api\KonfirmasiPembayaranController;
+use App\Http\Controllers\Api\KonselingController;
+use App\Http\Controllers\Api\KurikulumDashboardController;
 use App\Http\Controllers\Api\LabBahanController;
 use App\Http\Controllers\Api\LabDashboardController;
 use App\Http\Controllers\Api\LabJadwalController;
@@ -65,46 +47,69 @@ use App\Http\Controllers\Api\LabLaporanController;
 use App\Http\Controllers\Api\LabPemeliharaanController;
 use App\Http\Controllers\Api\LabPeminjamanController;
 use App\Http\Controllers\Api\LabPeralatanController;
-use App\Http\Controllers\Api\KasusController;
-use App\Http\Controllers\Api\KegiatanController;
-use App\Http\Controllers\Api\KelasController;
-use App\Http\Controllers\Api\HariEfektifController;
-use App\Http\Controllers\Api\PembagianMapelController;
-use App\Http\Controllers\Api\RombelController;
-use App\Http\Controllers\Api\KkmKktpController;
-use App\Http\Controllers\Api\KompetensiIndikatorController;
-use App\Http\Controllers\Api\ReviewPerangkatAjarController;
-use App\Http\Controllers\Api\KonfirmasiPembayaranController;
-use App\Http\Controllers\Api\KonselingController;
-use App\Http\Controllers\Api\KurikulumDashboardController;
+use App\Http\Controllers\Api\LaporanAkademikController;
+use App\Http\Controllers\Api\LaporanKesiswaanController;
 use App\Http\Controllers\Api\LaporanKeuanganController;
 use App\Http\Controllers\Api\LaporanTataUsahaController;
 use App\Http\Controllers\Api\MataPelajaranController;
 use App\Http\Controllers\Api\MateriController;
+use App\Http\Controllers\Api\ModulAjarController;
+use App\Http\Controllers\Api\DokumenPendukungController;
+use App\Http\Controllers\Api\GuruProgramController;
+use App\Http\Controllers\Api\MonitoringNilaiController;
+use App\Http\Controllers\Api\MutasiSiswaController;
 use App\Http\Controllers\Api\NilaiController;
 use App\Http\Controllers\Api\NilaiSikapController;
 use App\Http\Controllers\Api\NotifikasiController;
+use App\Http\Controllers\Api\NotifikasiSelfController;
+use App\Http\Controllers\Api\ParentSelfController;
 use App\Http\Controllers\Api\PelanggaranController;
-use App\Http\Controllers\Api\PembayaranController;
 use App\Http\Controllers\Api\PemanggilanController;
-use App\Http\Controllers\Api\PengajuanPenguranganPoinController;
+use App\Http\Controllers\Api\PembagianMapelController;
+use App\Http\Controllers\Api\PembayaranController;
+use App\Http\Controllers\Api\PembayaranOnlineController;
+use App\Http\Controllers\Api\PembinaanTindakLanjutController;
+use App\Http\Controllers\Api\PendaftaranPegawaiController;
+use App\Http\Controllers\Api\PendaftaranSiswaController;
+use App\Http\Controllers\Api\PenerbitanRaporController;
 use App\Http\Controllers\Api\PengajuanAnggaranController;
 use App\Http\Controllers\Api\PengajuanKepegawaianController;
+use App\Http\Controllers\Api\PengajuanPenguranganPoinController;
 use App\Http\Controllers\Api\PengumumanController;
+use App\Http\Controllers\Api\PenguncianNilaiController;
+use App\Http\Controllers\Api\PerpusAnggotaController;
+use App\Http\Controllers\Api\PerpusBukuController;
+use App\Http\Controllers\Api\PerpusDashboardController;
+use App\Http\Controllers\Api\PerpusDendaController;
+use App\Http\Controllers\Api\PerpusKegiatanController;
+use App\Http\Controllers\Api\PerpusLaporanController;
+use App\Http\Controllers\Api\PerpusPeminjamanController;
+use App\Http\Controllers\Api\PerpusPengembalianController;
+use App\Http\Controllers\Api\PerpusReservasiController;
+use App\Http\Controllers\Api\PerubahanJadwalController;
+use App\Http\Controllers\Api\PoinSiswaController;
+use App\Http\Controllers\Api\PpdbPemantauController;
+use App\Http\Controllers\Api\PpdbPendaftarController;
+use App\Http\Controllers\Api\PpdbPenerimaanController;
+use App\Http\Controllers\Api\PpdbPengumumanController;
+use App\Http\Controllers\Api\PpdbPeriodeController;
+use App\Http\Controllers\Api\PpdbSeleksiController;
 use App\Http\Controllers\Api\PrestasiController;
-use App\Http\Controllers\Api\ProgramSemesterController;
-use App\Http\Controllers\Api\ProgramTahunanController;
 use App\Http\Controllers\Api\PrincipalController;
 use App\Http\Controllers\Api\ProfilPublikController;
+use App\Http\Controllers\Api\ProgramSemesterController;
+use App\Http\Controllers\Api\ProgramTahunanController;
 use App\Http\Controllers\Api\RaporController;
 use App\Http\Controllers\Api\RaporPengesahanController;
 use App\Http\Controllers\Api\RealisasiAnggaranController;
+use App\Http\Controllers\Api\RekapPembinaanController;
+use App\Http\Controllers\Api\ReviewPerangkatAjarController;
 use App\Http\Controllers\Api\RoleController;
+use App\Http\Controllers\Api\RombelController;
 use App\Http\Controllers\Api\SemesterController;
 use App\Http\Controllers\Api\SinkronisasiController;
 use App\Http\Controllers\Api\SiswaController;
-use App\Http\Controllers\Api\ParentSelfController;
-use App\Http\Controllers\Api\PembayaranOnlineController;
+use App\Http\Controllers\Api\StaffProfileController;
 use App\Http\Controllers\Api\StrukturKurikulumController;
 use App\Http\Controllers\Api\StudentSelfController;
 use App\Http\Controllers\Api\SumberDanaController;
@@ -112,17 +117,16 @@ use App\Http\Controllers\Api\SuratController;
 use App\Http\Controllers\Api\SystemSettingsController;
 use App\Http\Controllers\Api\TagihanController;
 use App\Http\Controllers\Api\TahunAjaranController;
-use App\Http\Controllers\Api\TujuanPembelajaranController;
 use App\Http\Controllers\Api\TugasController;
+use App\Http\Controllers\Api\TujuanPembelajaranController;
 use App\Http\Controllers\Api\UjianController;
-use App\Http\Controllers\Api\ImportStafController;
-use App\Http\Controllers\Api\PendaftaranPegawaiController;
-use App\Http\Controllers\Api\PendaftaranSiswaController;
 use App\Http\Controllers\Api\UndanganController;
-use App\Http\Controllers\Api\Central\TwoFactorController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\VerifikasiNilaiController;
+use App\Http\Controllers\Api\WakasekController;
 use App\Http\Controllers\Api\WaliKelasSelfController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 
@@ -210,6 +214,7 @@ Route::middleware([
         Route::post('/me/siswa/prestasi', [StudentSelfController::class, 'submitPrestasi']);
         Route::delete('/me/siswa/prestasi/{prestasi}', [StudentSelfController::class, 'destroyPrestasi']);
         Route::get('/me/siswa/pelanggaran', [StudentSelfController::class, 'pelanggaran']);
+        Route::get('/me/siswa/poin', [StudentSelfController::class, 'poin']);
         Route::get('/me/siswa/materi', [StudentSelfController::class, 'materi']);
         Route::get('/me/siswa/tugas', [StudentSelfController::class, 'tugas']);
         Route::post('/me/siswa/tugas/{tugas}/jawaban', [StudentSelfController::class, 'submitTugas']);
@@ -228,6 +233,7 @@ Route::middleware([
         Route::get('/me/anak/{siswa}/riwayat-pembayaran', [ParentSelfController::class, 'riwayatPembayaran']);
         Route::get('/me/anak/{siswa}/prestasi', [ParentSelfController::class, 'prestasi']);
         Route::get('/me/anak/{siswa}/pelanggaran', [ParentSelfController::class, 'pelanggaran']);
+        Route::get('/me/anak/{siswa}/poin', [ParentSelfController::class, 'poin']);
         Route::get('/me/anak/{siswa}/wali-kelas', [ParentSelfController::class, 'waliKelas']);
 
         Route::post('/me/konfirmasi-pembayaran', [KonfirmasiPembayaranController::class, 'store']);
@@ -266,6 +272,30 @@ Route::middleware([
         Route::post('/me/guru/modul-ajar/{modul}/lampiran', [ModulAjarController::class, 'unggahLampiran']);
         Route::get('/me/guru/modul-ajar/{modul}/lampiran/{lampiran}', [ModulAjarController::class, 'unduhLampiran']);
         Route::delete('/me/guru/modul-ajar/{modul}/lampiran/{lampiran}', [ModulAjarController::class, 'hapusLampiran']);
+
+        // Dokumen pendukung modul ajar: Silabus, Pemetaan ATP, Jurnal Harian.
+        Route::get('/me/guru/dokumen-pendukung', [DokumenPendukungController::class, 'index']);
+        Route::get('/me/guru/dokumen-pendukung/opsi', [DokumenPendukungController::class, 'opsi']);
+        Route::get('/me/guru/dokumen-pendukung/sumber', [DokumenPendukungController::class, 'sumber']);
+        Route::get('/me/guru/dokumen-pendukung/kehadiran', [DokumenPendukungController::class, 'kehadiran']);
+        Route::post('/me/guru/dokumen-pendukung', [DokumenPendukungController::class, 'store']);
+        Route::get('/me/guru/dokumen-pendukung/{dokumen}', [DokumenPendukungController::class, 'show']);
+        Route::put('/me/guru/dokumen-pendukung/{dokumen}', [DokumenPendukungController::class, 'update']);
+        Route::delete('/me/guru/dokumen-pendukung/{dokumen}', [DokumenPendukungController::class, 'destroy']);
+        Route::get('/me/guru/dokumen-pendukung/{dokumen}/unduh/{format}', [DokumenPendukungController::class, 'unduh'])->whereIn('format', ['pdf', 'docx']);
+
+        // Program Tahunan/Semester yang disusun guru sendiri (diverifikasi Kurikulum).
+        Route::prefix('/me/guru/{jenis}')->whereIn('jenis', ['program-tahunan', 'program-semester'])->group(function () {
+            Route::get('/', [GuruProgramController::class, 'index']);
+            Route::get('opsi', [GuruProgramController::class, 'opsi']);
+            Route::post('/', [GuruProgramController::class, 'store']);
+            Route::get('{id}', [GuruProgramController::class, 'show'])->whereNumber('id');
+            Route::put('{id}', [GuruProgramController::class, 'update'])->whereNumber('id');
+            Route::delete('{id}', [GuruProgramController::class, 'destroy'])->whereNumber('id');
+            Route::get('{id}/export', [GuruProgramController::class, 'export'])->whereNumber('id');
+            Route::post('{id}/ajukan', [GuruProgramController::class, 'ajukan'])->whereNumber('id');
+            Route::post('{id}/tarik', [GuruProgramController::class, 'tarik'])->whereNumber('id');
+        });
 
         // Peninjauan perangkat ajar oleh Kepala Sekolah / Waka Kurikulum
         // (pemeriksaan peran ada di controller).
@@ -1050,6 +1080,18 @@ Route::middleware([
             ->only(['store', 'update', 'destroy'])
             ->middleware('permission:pelanggaran.manage|kesiswaan.pelanggaran');
 
+        // Menu "Poin Siswa" Kesiswaan: sisa poin kedisiplinan (mulai 100) &
+        // CRUD buku poin (pengurangan pelanggaran, penambahan apresiasi).
+        // Memakai izin persetujuan poin milik Kesiswaan, jadi BK tetap lewat
+        // alur pengajuan.
+        Route::middleware('permission:pengurangan-poin.approve')->group(function () {
+            Route::get('poin-siswa', [PoinSiswaController::class, 'index']);
+            Route::get('poin-siswa/{siswa}', [PoinSiswaController::class, 'show'])->whereNumber('siswa');
+            Route::post('poin-siswa/{siswa}/catatan', [PoinSiswaController::class, 'store'])->whereNumber('siswa');
+            Route::put('catatan-poin/{catatan}', [PoinSiswaController::class, 'update'])->whereNumber('catatan');
+            Route::delete('catatan-poin/{catatan}', [PoinSiswaController::class, 'destroy'])->whereNumber('catatan');
+        });
+
         Route::middleware('module.enabled:bk')->group(function () {
             Route::middleware('permission:konseling.manage')->group(function () {
                 Route::apiResource('konseling', KonselingController::class)
@@ -1094,7 +1136,7 @@ Route::middleware([
                 'dashboard', 'kepala-sekolah', 'kurikulum', 'pembelajaran', 'nilai-rapor', 'siswa', 'pelanggaran', 'prestasi',
                 'guru', 'beban-mengajar', 'aktivitas-guru', 'kehadiran', 'jadwal', 'jam-pelajaran', 'persetujuan',
             ] as $endpoint) {
-                Route::get($endpoint, [WakasekController::class, \Illuminate\Support\Str::camel($endpoint)]);
+                Route::get($endpoint, [WakasekController::class, Str::camel($endpoint)]);
             }
         });
 

@@ -6,8 +6,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Absensi;
-use App\Models\AnggaranPos;
 use App\Models\AbsensiGuru;
+use App\Models\AnggaranPos;
 use App\Models\Guru;
 use App\Models\Inventaris;
 use App\Models\Kelas;
@@ -22,6 +22,7 @@ use App\Models\Siswa;
 use App\Models\Tagihan;
 use App\Models\TahunAjaran;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -418,7 +419,7 @@ class PrincipalController extends Controller
                 ->orderByDesc('total')
                 ->limit(3)
                 ->pluck('total', 'jenis'),
-            'berat' => (clone $hariIni)->where('tingkat', 'berat')->count(),
+            'berat' => (clone $hariIni)->whereIn('tingkat', ['berat', 'sangat_berat'])->count(),
         ];
     }
 
@@ -473,7 +474,7 @@ class PrincipalController extends Controller
             });
     }
 
-    private function kehadiranPersenBulan($query, \Illuminate\Support\Carbon $bulan): float
+    private function kehadiranPersenBulan($query, Carbon $bulan): float
     {
         $total = (clone $query)->whereMonth('tanggal', $bulan->month)->whereYear('tanggal', $bulan->year)->count();
 
@@ -557,7 +558,7 @@ class PrincipalController extends Controller
             ->filter(fn (Siswa $s) => $s->rata_nilai !== null && (float) $s->rata_nilai < self::AMBANG_NILAI)
             ->map(fn (Siswa $s) => [
                 'siswa' => $s,
-                'alasan' => 'Rata-rata nilai ' . round((float) $s->rata_nilai, 1),
+                'alasan' => 'Rata-rata nilai '.round((float) $s->rata_nilai, 1),
                 'skor' => (float) $s->rata_nilai,
             ])
             ->values();
@@ -631,7 +632,7 @@ class PrincipalController extends Controller
             $items[] = [
                 'tipe' => $selisih >= 0 ? 'positif' : 'perhatian',
                 'judul' => $selisih >= 0 ? 'Kehadiran siswa meningkat' : 'Kehadiran siswa menurun',
-                'deskripsi' => 'Kehadiran siswa ' . ($selisih >= 0 ? 'naik' : 'turun') . ' ' . abs($selisih) . '% dibanding bulan lalu.',
+                'deskripsi' => 'Kehadiran siswa '.($selisih >= 0 ? 'naik' : 'turun').' '.abs($selisih).'% dibanding bulan lalu.',
             ];
         }
 
@@ -639,7 +640,7 @@ class PrincipalController extends Controller
         if (count($siswaPerlu) > 0) {
             $items[] = [
                 'tipe' => 'perhatian',
-                'judul' => count($siswaPerlu) . ' siswa perlu perhatian',
+                'judul' => count($siswaPerlu).' siswa perlu perhatian',
                 'deskripsi' => 'Kehadiran atau nilai berada di bawah ambang batas bulan ini.',
             ];
         }
@@ -650,8 +651,8 @@ class PrincipalController extends Controller
         if ($kelasBermasalah->count() > 0) {
             $items[] = [
                 'tipe' => 'perhatian',
-                'judul' => $kelasBermasalah->count() . ' kelas di bawah rata-rata',
-                'deskripsi' => $kelasBermasalah->pluck('kelas')->implode(', ') . ' perlu perhatian tambahan.',
+                'judul' => $kelasBermasalah->count().' kelas di bawah rata-rata',
+                'deskripsi' => $kelasBermasalah->pluck('kelas')->implode(', ').' perlu perhatian tambahan.',
             ];
         }
 
